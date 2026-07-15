@@ -8,7 +8,7 @@ import { syncAppDataToWebdav, type AppSyncDomainKey, type AppSyncProgressEvent }
 import { testWebdavConnection, WEBDAV_MANIFEST_FILE_NAME } from "@/services/webdav-sync";
 import { audioFormatOptions, audioVoiceOptions, normalizeAudioSpeedValue } from "@/lib/audio-generation";
 import { useCanvasAgentStore } from "@/stores/canvas/use-canvas-agent-store";
-import { createModelChannel, defaultBaseUrlForApiFormat, filterModelsByCapability, modelOptionLabel, modelOptionsFromChannels, normalizeModelOptionValue, useConfigStore, type AiConfig, type ApiCallFormat, type ConfigTabKey, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
+import { modelOptionName, createModelChannel, defaultBaseUrlForApiFormat, filterModelsByCapability, modelOptionLabel, modelOptionsFromChannels, normalizeModelOptionValue, useConfigStore, type AiConfig, type ApiCallFormat, type ConfigTabKey, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
 
 type ModelGroup = {
     capability: ModelCapability;
@@ -79,6 +79,7 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
     const agentUrl = useCanvasAgentStore((state) => state.url);
     const agentToken = useCanvasAgentStore((state) => state.token);
     const agentConnected = useCanvasAgentStore((state) => state.connected);
+    const agentOnline = useCanvasAgentStore((state) => state.agentOnline);
     const agentEnabled = useCanvasAgentStore((state) => state.enabled);
     const agentActivity = useCanvasAgentStore((state) => state.activity);
     const agentConnectError = useCanvasAgentStore((state) => state.connectError);
@@ -227,7 +228,7 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
         if (patch.token !== undefined) localStorage.setItem("canvas-agent-token", patch.token);
     };
 
-    const toggleAgentConnection = () => (agentEnabled ? disconnectAgent({ connectError: "" }) : connectAgent());
+    const toggleAgentConnection = () => (agentEnabled || agentOnline || agentConnected ? disconnectAgent({ connectError: "" }) : connectAgent());
 
     return (
         <>
@@ -436,7 +437,17 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                                             </div>
                                             <div className="mt-1 text-xs text-stone-500">用于画布 Agent 连接本机 Codex 插件启动的 Canvas Agent。</div>
                                         </div>
-                                        <div className={agentConnectError ? "text-xs text-red-600" : "text-xs text-stone-500"}>{agentConnectError ? "连接失败" : agentConnected ? agentActivity || "已连接" : agentEnabled ? "连接中" : "未连接"}</div>
+                                        <div className={agentConnectError ? "text-xs text-red-600" : "text-xs text-stone-500"}>
+                                            {agentConnectError
+                                                ? "连接失败"
+                                                : agentConnected
+                                                  ? agentActivity || "画布已连接"
+                                                  : agentOnline
+                                                    ? "Agent 在线（进入画布后可操作）"
+                                                    : agentEnabled
+                                                      ? "连接中"
+                                                      : "未连接"}
+                                        </div>
                                     </div>
                                     <div className="mb-4 grid gap-2 md:grid-cols-3">
                                         {codexSetupSteps.map((step, index) => (
@@ -453,13 +464,18 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                                             <Input prefix={<Link2 className="mr-1 size-4 text-stone-400" />} value={agentUrl} placeholder="http://127.0.0.1:17371" onChange={(event) => updateAgentConfig({ url: event.target.value })} />
                                         </Form.Item>
                                         <Form.Item label="Connect token" className="mb-4">
-                                            <Input.Password prefix={<KeyRound className="mr-1 size-4 text-stone-400" />} value={agentToken} placeholder="自动发现，或手动填入 Connect token" onChange={(event) => updateAgentConfig({ token: event.target.value })} />
+                                            <Input.Password prefix={<KeyRound className="mr-1 size-4 text-stone-400" />} value={agentToken} placeholder="启动输出 / canvas-agent.json / 已绑定 Origin 时可自动发现" onChange={(event) => updateAgentConfig({ token: event.target.value })} />
                                         </Form.Item>
                                     </div>
                                     {agentConnectError ? <div className="mb-3 rounded-md border border-red-200 px-3 py-2 text-xs text-red-600 dark:border-red-900/60">{agentConnectError}</div> : null}
+                                    {!agentConnectError && agentOnline && !agentConnected ? (
+                                        <div className="mb-3 rounded-md border border-amber-200 px-3 py-2 text-xs text-amber-700 dark:border-amber-900/60 dark:text-amber-300">
+                                            Agent 已在线。请打开具体画布页面，网页会自动挂上工具桥；只有工具桥就绪后，Codex MCP 才能读写节点。
+                                        </div>
+                                    ) : null}
                                     <div className="mb-3 flex justify-end">
-                                        <Button type={agentEnabled ? "default" : "primary"} icon={<Wifi className="size-4" />} onClick={toggleAgentConnection}>
-                                            {agentConnected ? "断开" : agentEnabled ? "取消连接" : "连接"}
+                                        <Button type={agentEnabled || agentOnline || agentConnected ? "default" : "primary"} icon={<Wifi className="size-4" />} onClick={toggleAgentConnection}>
+                                            {agentConnected || agentOnline || agentEnabled ? "断开" : "连接"}
                                         </Button>
                                     </div>
                                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-stone-200 px-3 py-2 dark:border-stone-800">
@@ -467,7 +483,7 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                                             <ShieldCheck className="size-4 text-stone-500" />
                                             <div>
                                                 <div className="text-sm font-medium">执行画布操作前确认</div>
-                                                <div className="mt-0.5 text-xs text-stone-500">关闭后，本地 Codex 可直接执行画布工具调用。不再需要人工确认</div>
+                                                <div className="mt-0.5 text-xs text-stone-500">默认关闭，便于 Codex MCP 直接改画布。开启后写操作需在侧边栏确认（25 秒超时）。插件 / headless 连接不受此项影响。</div>
                                             </div>
                                         </div>
                                         <Switch checked={agentConfirmTools} onChange={(confirmTools) => setAgentState({ confirmTools })} />
@@ -515,7 +531,7 @@ export function AppConfigModal() {
 
 function withChannels(config: AiConfig, channels: ModelChannel[]): AiConfig {
     const models = modelOptionsFromChannels(channels);
-    const imageModels = keepOrSuggest(config.imageModels, filterModelsByCapability(models, "image"), models);
+    const imageModels = withLocalComfyModels(keepOrSuggest(config.imageModels, filterModelsByCapability(models, "image"), models), models);
     const videoModels = keepOrSuggest(config.videoModels, filterModelsByCapability(models, "video"), models);
     const textModels = keepOrSuggest(config.textModels, filterModelsByCapability(models, "text"), models);
     const audioModels = keepOrSuggest(config.audioModels, filterModelsByCapability(models, "audio"), models);
@@ -535,6 +551,11 @@ function withChannels(config: AiConfig, channels: ModelChannel[]): AiConfig {
         textModel: normalizeDefaultModel(config.textModel, textModels),
         audioModel: normalizeDefaultModel(config.audioModel, audioModels),
     };
+}
+
+function withLocalComfyModels(current: string[], allModels: string[]) {
+    const comfyModels = allModels.filter((model) => modelOptionName(model).toLowerCase().startsWith("comfy/"));
+    return uniqueModels([...current, ...comfyModels]);
 }
 
 function keepOrSuggest(current: string[], suggested: string[], allModels: string[]) {

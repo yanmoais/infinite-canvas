@@ -8,8 +8,8 @@ import { requestEdit, requestGeneration, requestImageQuestion } from "@/services
 import { requestAudioGeneration, storeGeneratedAudio } from "@/services/api/audio";
 import { requestVideoGeneration, storeGeneratedVideo } from "@/services/api/video";
 import { DOCS_URL } from "@/constant/env";
-import { defaultConfig, type AiConfig, useConfigStore, useEffectiveConfig } from "@/stores/use-config-store";
-import { resolveImageUrl, uploadImage, type UploadedImage } from "@/services/image-storage";
+import { defaultConfig, type AiConfig, type ComfyExtraConfig, useConfigStore, useEffectiveConfig } from "@/stores/use-config-store";
+import { imageToDataUrl, resolveImageUrl, uploadImage, type UploadedImage } from "@/services/image-storage";
 import { resolveMediaUrl, uploadMediaFile, type UploadedFile } from "@/services/file-storage";
 import { nanoid } from "nanoid";
 import { getDataUrlByteSize, readImageMeta } from "@/lib/image-utils";
@@ -29,9 +29,14 @@ import { CanvasNodeContextMenu } from "@/components/canvas/canvas-context-menu";
 import { CanvasNodeAngleDialog, type CanvasImageAngleParams } from "@/components/canvas/canvas-node-angle-dialog";
 import { CanvasNodeCropDialog, type CanvasImageCropRect } from "@/components/canvas/canvas-node-crop-dialog";
 import { CanvasNodeMaskEditDialog, type CanvasImageMaskEditPayload } from "@/components/canvas/canvas-node-mask-edit-dialog";
+import { CanvasNodeOutpaintDialog, type CanvasImageOutpaintPayload } from "@/components/canvas/canvas-node-outpaint-dialog";
 import { CanvasNodeSplitDialog, type CanvasImageSplitParams } from "@/components/canvas/canvas-node-split-dialog";
 import { CanvasNodeUpscaleDialog, type CanvasImageUpscaleParams } from "@/components/canvas/canvas-node-upscale-dialog";
+import { CanvasNodeSuperResolveDialog, type CanvasImageSuperResolveParams } from "@/components/canvas/canvas-node-super-resolve-dialog";
 import { buildNodeGenerationContext, buildNodeGenerationInputs, buildNodeResponseMessages, hydrateNodeGenerationContext, type NodeGenerationInput } from "@/components/canvas/canvas-node-generation";
+import { applySmartPromptForGeneration, extractIdentityPack, isTrueReferencePoseChange, joinPromptTokens, splitPromptTokens } from "@/lib/canvas/smart-compose-prompt";
+import { calculateDownwardOutpaintGeometry, prepareDownwardOutpaint, type DownwardOutpaintGeometry, type DownwardOutpaintPrepared } from "@/lib/canvas/canvas-outpaint-data";
+import { buildManagedImageExecution, manualNodeSettingsFromMetadata, sourceGenerationRecipeFromConfig, sourceGenerationRecipeFromMetadata } from "@/lib/canvas/generation-plan";
 import { CanvasNodeHoverToolbar, CanvasNodeInfoModal } from "@/components/canvas/canvas-node-hover-toolbar";
 import { InfiniteCanvas } from "@/components/canvas/infinite-canvas";
 import { Minimap } from "@/components/canvas/canvas-mini-map";
@@ -41,6 +46,7 @@ import { CanvasToolbar } from "@/components/canvas/canvas-toolbar";
 import { AssetPickerModal, type InsertAssetPayload } from "@/components/canvas/asset-picker-modal";
 import { CanvasZoomControls } from "@/components/canvas/canvas-zoom-controls";
 import { CanvasLocalAgentPanel } from "@/components/canvas/canvas-local-agent-panel";
+import { findComfyGatewayBase, isComfyModel, requestSuperResolve } from "@/services/api/comfy";
 import { useCanvasAgentStore } from "@/stores/canvas/use-canvas-agent-store";
 import { useCanvasStore } from "@/stores/canvas/use-canvas-store";
 import { applyCanvasAgentOps, type CanvasAgentOp, type CanvasAgentSnapshot } from "@/lib/canvas/canvas-agent-ops";
@@ -53,11 +59,14 @@ import {
     type CanvasImageGenerationType,
     type CanvasNodeData,
     type CanvasNodeMetadata,
+    type CanvasOperationProfile,
+    type CanvasOutpaintMode,
     type ConnectionHandle,
     type ContextMenuState,
     type Position,
     type SelectionBox,
     type ViewportTransform,
+    type CanvasOutpaintDirection,
 } from "@/types/canvas";
 import type { ReferenceImage } from "@/types/image";
 import type { ReferenceAudio } from "@/types/media";
@@ -171,7 +180,15 @@ function CanvasRefreshShell() {
     );
 }
 
-function ConnectionCreateMenu({ pending, onCreate, onClose }: { pending: PendingConnectionCreate; onCreate: (type: CanvasNodeType.Image | CanvasNodeType.Text | CanvasNodeType.Config | CanvasNodeType.Video | CanvasNodeType.Audio) => void; onClose: () => void }) {
+function ConnectionCreateMenu({
+    pending,
+    onCreate,
+    onClose,
+}: {
+    pending: PendingConnectionCreate;
+    onCreate: (type: CanvasNodeType.Image | CanvasNodeType.Text | CanvasNodeType.Config | CanvasNodeType.Video | CanvasNodeType.Audio) => void;
+    onClose: () => void;
+}) {
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
     return (
         <div
@@ -202,13 +219,24 @@ function ConnectionCreateMenu({ pending, onCreate, onClose }: { pending: Pending
 
 function ConnectionCreateOption({ theme, icon, title, description, onClick }: { theme: (typeof canvasThemes)[keyof typeof canvasThemes]; icon: React.ReactNode; title: string; description?: string; onClick?: () => void }) {
     return (
-        <button type="button" className="flex h-16 w-full cursor-pointer items-center gap-3 rounded-2xl px-3 text-left transition" style={{ color: theme.node.text }} onClick={onClick} onMouseEnter={(event) => (event.currentTarget.style.background = theme.node.fill)} onMouseLeave={(event) => (event.currentTarget.style.background = "transparent")}>
+        <button
+            type="button"
+            className="flex h-16 w-full cursor-pointer items-center gap-3 rounded-2xl px-3 text-left transition"
+            style={{ color: theme.node.text }}
+            onClick={onClick}
+            onMouseEnter={(event) => (event.currentTarget.style.background = theme.node.fill)}
+            onMouseLeave={(event) => (event.currentTarget.style.background = "transparent")}
+        >
             <span className="grid size-11 shrink-0 place-items-center rounded-xl" style={{ background: theme.node.fill, color: theme.node.muted }}>
                 {icon}
             </span>
             <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2 text-base font-semibold leading-5">{title}</span>
-                {description ? <span className="mt-1 block truncate text-sm" style={{ color: theme.node.muted }}>{description}</span> : null}
+                {description ? (
+                    <span className="mt-1 block truncate text-sm" style={{ color: theme.node.muted }}>
+                        {description}
+                    </span>
+                ) : null}
             </span>
         </button>
     );
@@ -216,11 +244,23 @@ function ConnectionCreateOption({ theme, icon, title, description, onClick }: { 
 
 function InfiniteCanvasPage() {
     const { message, modal } = App.useApp();
+    useEffect(() => {
+        const onNote = (event: Event) => {
+            const detail = (event as CustomEvent<{ nannanNote?: string; nannanReferenceMode?: string }>).detail;
+            const note = detail?.nannanNote?.trim();
+            if (!note) return;
+            const mode = detail?.nannanReferenceMode ? `（当前模式: ${detail.nannanReferenceMode}）` : "";
+            message.warning(`${note}${mode}`, 6);
+        };
+        window.addEventListener("nannan-image-note", onNote as EventListener);
+        return () => window.removeEventListener("nannan-image-note", onNote as EventListener);
+    }, [message]);
     const params = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const projectId = params.id || "";
     const localAgentConnected = useCanvasAgentStore((state) => state.connected);
+    const localAgentOnline = useCanvasAgentStore((state) => state.agentOnline);
     const localAgentActivity = useCanvasAgentStore((state) => state.activity);
     const localAgentEnabled = useCanvasAgentStore((state) => state.enabled);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -294,6 +334,7 @@ function InfiniteCanvasPage() {
     const [infoNodeId, setInfoNodeId] = useState<string | null>(null);
     const [cropNodeId, setCropNodeId] = useState<string | null>(null);
     const [maskEditNodeId, setMaskEditNodeId] = useState<string | null>(null);
+    const [outpaintNodeId, setOutpaintNodeId] = useState<string | null>(null);
     const [splitNodeId, setSplitNodeId] = useState<string | null>(null);
     const [upscaleNodeId, setUpscaleNodeId] = useState<string | null>(null);
     const [superResolveNodeId, setSuperResolveNodeId] = useState<string | null>(null);
@@ -367,13 +408,7 @@ function InfiniteCanvasPage() {
         });
         setRunningNodeId((current) => (current === runningId ? null : current));
         if (!affectedNodeIds.size) return;
-        setNodes((prev) =>
-            prev.map((node) =>
-                affectedNodeIds.has(node.id) && node.metadata?.status === NODE_STATUS_LOADING
-                    ? { ...node, metadata: { ...node.metadata, status: NODE_STATUS_IDLE, errorDetails: undefined } }
-                    : node,
-            ),
-        );
+        setNodes((prev) => prev.map((node) => (affectedNodeIds.has(node.id) && node.metadata?.status === NODE_STATUS_LOADING ? { ...node, metadata: { ...node.metadata, status: NODE_STATUS_IDLE, errorDetails: undefined } } : node)));
     }, []);
 
     const confirmStopGeneration = useCallback(
@@ -393,15 +428,17 @@ function InfiniteCanvasPage() {
     useEffect(() => {
         if (!hydrated) return;
         setProjectLoaded(false);
-        const project = openProject(projectId);
+        const project = useCanvasStore.getState().openProject(projectId);
         if (!project) {
             navigate("/canvas", { replace: true });
             return;
         }
 
+        let cancelled = false;
         const restore = async () => {
             const restoredNodes = await hydrateCanvasImages(resetInterruptedGeneration(project.nodes));
             const restoredSessions = await hydrateAssistantImages(project.chatSessions || []);
+            if (cancelled) return;
             setNodes(restoredNodes);
             setConnections(project.connections);
             setChatSessions(restoredSessions);
@@ -426,7 +463,10 @@ function InfiniteCanvasPage() {
             setProjectLoaded(true);
         };
         void restore();
-    }, [hydrated, navigate, openProject, projectId]);
+        return () => {
+            cancelled = true;
+        };
+    }, [hydrated, navigate, projectId]);
 
     useEffect(() => {
         if (!projectLoaded || !["new", "recent", "choose"].includes(searchParams.get("mode") || "")) return;
@@ -437,7 +477,15 @@ function InfiniteCanvasPage() {
         if (!projectLoaded || applyingHistoryRef.current || historyPausedRef.current) return;
         const next = createHistoryEntry();
         const previous = lastHistoryRef.current;
-        if (previous?.nodes === next.nodes && previous.connections === next.connections && previous.chatSessions === next.chatSessions && previous.activeChatId === next.activeChatId && previous.backgroundMode === next.backgroundMode && previous.showImageInfo === next.showImageInfo) return;
+        if (
+            previous?.nodes === next.nodes &&
+            previous.connections === next.connections &&
+            previous.chatSessions === next.chatSessions &&
+            previous.activeChatId === next.activeChatId &&
+            previous.backgroundMode === next.backgroundMode &&
+            previous.showImageInfo === next.showImageInfo
+        )
+            return;
 
         if (historyCommitTimerRef.current) clearTimeout(historyCommitTimerRef.current);
         historyCommitTimerRef.current = setTimeout(() => {
@@ -546,10 +594,13 @@ function InfiniteCanvasPage() {
         }
     }, []);
 
-    const keepNodeToolbar = useCallback((nodeId: string) => {
-        if (nodeDraggingRef.current || nodeImageSettingsOpen || !selectedNodeIdsRef.current.has(nodeId)) return;
-        setToolbarNodeId(nodeId);
-    }, [nodeImageSettingsOpen]);
+    const keepNodeToolbar = useCallback(
+        (nodeId: string) => {
+            if (nodeDraggingRef.current || nodeImageSettingsOpen || !selectedNodeIdsRef.current.has(nodeId)) return;
+            setToolbarNodeId(nodeId);
+        },
+        [nodeImageSettingsOpen],
+    );
 
     const hideNodeToolbar = useCallback(() => {}, []);
 
@@ -574,7 +625,20 @@ function InfiniteCanvasPage() {
 
     const createConnectedNode = useCallback(
         (type: CanvasNodeType.Image | CanvasNodeType.Text | CanvasNodeType.Config | CanvasNodeType.Video | CanvasNodeType.Audio, pending: PendingConnectionCreate) => {
-            const metadata = type === CanvasNodeType.Config ? { model: effectiveConfig.imageModel || effectiveConfig.model, size: effectiveConfig.size, count: getGenerationCount(effectiveConfig.canvasImageCount || effectiveConfig.count) } : undefined;
+            const sourceNode = nodesRef.current.find((node) => node.id === pending.connection.nodeId);
+            const inherited = inheritedGenerationMetadata(sourceNode);
+            const metadata =
+                type === CanvasNodeType.Config
+                    ? {
+                          model: effectiveConfig.imageModel || effectiveConfig.model,
+                          promptModel: effectiveConfig.textModel,
+                          size: effectiveConfig.size,
+                          count: getGenerationCount(effectiveConfig.canvasImageCount || effectiveConfig.count),
+                          ...inherited,
+                      }
+                    : Object.keys(inherited).length
+                      ? inherited
+                      : undefined;
             const newNode = createCanvasNode(type, pending.position, metadata);
             const connection = normalizeConnection(pending.connection.nodeId, newNode.id, [...nodesRef.current, newNode], pending.connection.handleType);
             if (!connection) {
@@ -585,11 +649,11 @@ function InfiniteCanvasPage() {
             setConnections((prev) => [...prev, { id: nanoid(), ...connection }]);
             setSelectedNodeIds(new Set([newNode.id]));
             setSelectedConnectionId(null);
-            if (type !== CanvasNodeType.Text && type !== CanvasNodeType.Audio && type !== CanvasNodeType.Group) setDialogNodeId(newNode.id);
+            if (type !== CanvasNodeType.Text && type !== CanvasNodeType.Audio) setDialogNodeId(newNode.id);
             setPendingConnectionCreate(null);
             setConnecting(null);
         },
-        [effectiveConfig.canvasImageCount, effectiveConfig.count, effectiveConfig.imageModel, effectiveConfig.model, effectiveConfig.size, message, setConnecting],
+        [effectiveConfig.canvasImageCount, effectiveConfig.count, effectiveConfig.imageModel, effectiveConfig.model, effectiveConfig.size, effectiveConfig.textModel, message, setConnecting],
     );
 
     const cancelPendingConnectionCreate = useCallback(() => {
@@ -652,6 +716,7 @@ function InfiniteCanvasPage() {
     const infoNode = infoNodeId ? nodeById.get(infoNodeId) || null : null;
     const cropNode = cropNodeId ? nodeById.get(cropNodeId) || null : null;
     const maskEditNode = maskEditNodeId ? nodeById.get(maskEditNodeId) || null : null;
+    const outpaintNode = outpaintNodeId ? nodeById.get(outpaintNodeId) || null : null;
     const splitNode = splitNodeId ? nodeById.get(splitNodeId) || null : null;
     const upscaleNode = upscaleNodeId ? nodeById.get(upscaleNodeId) || null : null;
     const superResolveNode = superResolveNodeId ? nodeById.get(superResolveNodeId) || null : null;
@@ -729,7 +794,10 @@ function InfiniteCanvasPage() {
             const safeOps = Array.isArray(ops) ? ops.filter((op) => op?.type) : [];
             const before = { projectId, title: currentProject?.title || "未命名画布", nodes: nodesRef.current, connections: connectionsRef.current, selectedNodeIds: Array.from(selectedNodeIdsRef.current), viewport: viewportRef.current };
             const generationOps = safeOps.filter((op): op is Extract<CanvasAgentOp, { type: "run_generation" }> => op.type === "run_generation" && Boolean(op.nodeId));
-            const next = applyCanvasAgentOps(before, safeOps.filter((op) => op.type !== "run_generation"));
+            const next = applyCanvasAgentOps(
+                before,
+                safeOps.filter((op) => op.type !== "run_generation"),
+            );
             nodesRef.current = next.nodes;
             connectionsRef.current = next.connections;
             selectedNodeIdsRef.current = new Set(next.selectedNodeIds);
@@ -745,7 +813,7 @@ function InfiniteCanvasPage() {
                 queueMicrotask(() =>
                     generationOps.forEach((op) => {
                         const target = nodesRef.current.find((node) => node.id === op.nodeId);
-                        const prompt = op.prompt?.trim() ? op.prompt : target?.metadata?.composerContent ?? target?.metadata?.prompt ?? "";
+                        const prompt = op.prompt?.trim() ? op.prompt : (target?.metadata?.composerContent ?? target?.metadata?.prompt ?? "");
                         void generateNodeRef.current?.(op.nodeId, op.mode || target?.metadata?.generationMode || "image", prompt);
                     }),
                 );
@@ -776,6 +844,7 @@ function InfiniteCanvasPage() {
                 type === CanvasNodeType.Config
                     ? {
                           model: effectiveConfig.imageModel || effectiveConfig.model,
+                          promptModel: effectiveConfig.textModel,
                           size: effectiveConfig.size,
                           count: getGenerationCount(effectiveConfig.canvasImageCount || effectiveConfig.count),
                       }
@@ -787,7 +856,7 @@ function InfiniteCanvasPage() {
             setSelectedConnectionId(null);
             if (type !== CanvasNodeType.Text && type !== CanvasNodeType.Audio && type !== CanvasNodeType.Group) setDialogNodeId(newNode.id);
         },
-        [effectiveConfig.canvasImageCount, effectiveConfig.count, effectiveConfig.imageModel, effectiveConfig.model, effectiveConfig.size, getCanvasCenter],
+        [effectiveConfig.canvasImageCount, effectiveConfig.count, effectiveConfig.imageModel, effectiveConfig.model, effectiveConfig.size, effectiveConfig.textModel, getCanvasCenter],
     );
 
     const deleteNodes = useCallback(
@@ -1559,6 +1628,22 @@ function InfiniteCanvasPage() {
         setNodes((prev) => prev.map((node) => (node.id === nodeId ? { ...node, metadata: { ...node.metadata, prompt } } : node)));
     }, []);
 
+    const reusePromptFromNode = useCallback(
+        (node: CanvasNodeData) => {
+            const prompt = node.metadata?.prompt?.trim();
+            if (!prompt) {
+                message.warning("该图片没有可复用的提示词");
+                return;
+            }
+            setNodes((prev) => prev.map((item) => (item.id === node.id ? { ...item, metadata: { ...item.metadata, promptDraft: prompt } } : item)));
+            setSelectedNodeIds(new Set([node.id]));
+            setSelectedConnectionId(null);
+            setDialogNodeId(node.id);
+            message.success("提示词已回填到输入框，可切换模型直接生成");
+        },
+        [message],
+    );
+
     const handleConfigNodeChange = useCallback((nodeId: string, patch: Partial<CanvasNodeData["metadata"]>) => {
         setNodes((prev) => prev.map((node) => (node.id === nodeId ? applyNodeConfigPatch(node, patch) : node)));
     }, []);
@@ -1579,7 +1664,15 @@ function InfiniteCanvasPage() {
             }
             if (node.type === CanvasNodeType.Video) {
                 if (!node.metadata?.content) return message.error("没有可保存的视频");
-                addAsset({ kind: "video", title: node.metadata?.prompt?.slice(0, 24) || "画布视频", coverUrl: "", tags: [], source: "Canvas", data: { url: node.metadata.content, storageKey: node.metadata.storageKey, width: node.width, height: node.height, bytes: node.metadata.bytes || 0, mimeType: node.metadata.mimeType || "video/mp4" }, metadata: { source: "canvas", nodeId: node.id, prompt: node.metadata?.prompt } });
+                addAsset({
+                    kind: "video",
+                    title: node.metadata?.prompt?.slice(0, 24) || "画布视频",
+                    coverUrl: "",
+                    tags: [],
+                    source: "Canvas",
+                    data: { url: node.metadata.content, storageKey: node.metadata.storageKey, width: node.width, height: node.height, bytes: node.metadata.bytes || 0, mimeType: node.metadata.mimeType || "video/mp4" },
+                    metadata: { source: "canvas", nodeId: node.id, prompt: node.metadata?.prompt },
+                });
                 message.success("已加入我的素材");
                 return;
             }
@@ -1618,11 +1711,7 @@ function InfiniteCanvasPage() {
             const configSpec = NODE_DEFAULT_SIZE[CanvasNodeType.Config];
             const centerY = node.position.y + node.height / 2;
             const textNode = {
-                ...createCanvasNode(
-                    CanvasNodeType.Text,
-                    { x: node.position.x + node.width + gap + textSpec.width / 2, y: centerY },
-                    { content: IMAGE_PROMPT_REVERSE_PRESET, prompt: IMAGE_PROMPT_REVERSE_PRESET, status: NODE_STATUS_SUCCESS, fontSize: 14 },
-                ),
+                ...createCanvasNode(CanvasNodeType.Text, { x: node.position.x + node.width + gap + textSpec.width / 2, y: centerY }, { content: IMAGE_PROMPT_REVERSE_PRESET, prompt: IMAGE_PROMPT_REVERSE_PRESET, status: NODE_STATUS_SUCCESS, fontSize: 14 }),
                 title: "反推提示词",
             };
             const configNode = {
@@ -1640,11 +1729,7 @@ function InfiniteCanvasPage() {
             };
 
             setNodes((prev) => [...prev, textNode, configNode]);
-            setConnections((prev) => [
-                ...prev,
-                { id: nanoid(), fromNodeId: node.id, toNodeId: configNode.id },
-                { id: nanoid(), fromNodeId: textNode.id, toNodeId: configNode.id },
-            ]);
+            setConnections((prev) => [...prev, { id: nanoid(), fromNodeId: node.id, toNodeId: configNode.id }, { id: nanoid(), fromNodeId: textNode.id, toNodeId: configNode.id }]);
             setSelectedNodeIds(new Set([configNode.id]));
             setSelectedConnectionId(null);
             setDialogNodeId(configNode.id);
@@ -1719,16 +1804,29 @@ function InfiniteCanvasPage() {
     const maskEditImageNode = useCallback(
         async (node: CanvasNodeData, payload: CanvasImageMaskEditPayload) => {
             if (!node.metadata?.content) return;
-            const generationConfig = { ...buildGenerationConfig(effectiveConfig, node, "image"), count: "1", size: node.metadata?.size || "auto" };
+            const maskImage = await uploadImage(payload.maskDataUrl);
+            const operationProfile: CanvasOperationProfile = {
+                kind: "inpaint",
+                managed: true,
+                sourceNodeId: node.id,
+                originalPixelLock: true,
+                inheritSourceRecipe: true,
+                faceProtection: true,
+                denoise: 0.78,
+                baseStorageKey: node.metadata.storageKey,
+                maskStorageKey: maskImage.storageKey,
+            };
+            const execution = buildManagedImageExecution(effectiveConfig, node.metadata, operationProfile);
+            const generationConfig = execution.config;
             if (!isAiConfigReady(generationConfig, generationConfig.model)) {
                 openConfigDialog(true);
                 return;
             }
             const userPrompt = payload.prompt.trim();
-            const prompt = `只修改蒙版透明区域，其他区域保持不变。${userPrompt}`;
+            const prompt = isComfyModel(generationConfig.model) ? userPrompt : `只修改蒙版透明区域，其他区域保持不变。${userPrompt}`;
             const childId = nanoid();
             const source = { id: node.id, name: `${node.title || node.id}.png`, type: node.metadata.mimeType || "image/png", dataUrl: node.metadata.content, storageKey: node.metadata.storageKey };
-            const generationMetadata = buildImageGenerationMetadata("edit", generationConfig, 1, [source]);
+            const generationMetadata = buildImageGenerationMetadata("edit", generationConfig, 1, [source], operationProfile, execution.plan);
             setMaskEditNodeId(null);
             setRunningNodeId(childId);
             setNodes((prev) => [
@@ -1752,15 +1850,262 @@ function InfiniteCanvasPage() {
                 const image = await requestEdit(generationConfig, prompt, [source], { id: `${node.id}-mask`, name: "mask.png", type: "image/png", dataUrl: payload.maskDataUrl }, { signal: controller.signal }).then((items) => items[0]);
                 const uploaded = await uploadImage(image.dataUrl);
                 const size = fitNodeSize(uploaded.width, uploaded.height, node.width, node.height);
-                setNodes((prev) => prev.map((item) => (item.id === childId ? { ...item, width: size.width, height: size.height, metadata: { ...item.metadata, ...imageMetadata(uploaded), prompt, ...generationMetadata } } : item)));
+                setNodes((prev) =>
+                    prev.map((item) =>
+                        item.id === childId
+                            ? {
+                                  ...item,
+                                  width: size.width,
+                                  height: size.height,
+                                  metadata: {
+                                      ...item.metadata,
+                                      ...generationMetadata,
+                                      ...imageMetadata(uploaded),
+                                      prompt,
+                                      status: NODE_STATUS_SUCCESS,
+                                      errorDetails: undefined,
+                                  },
+                              }
+                            : item,
+                    ),
+                );
             } catch (error) {
-                if (isGenerationCanceled(error)) return;
+                if (isGenerationCanceled(error)) {
+                    setNodes((prev) => prev.map((item) => (item.id === childId && item.metadata?.status === NODE_STATUS_LOADING ? { ...item, metadata: { ...item.metadata, status: NODE_STATUS_ERROR, errorDetails: "生成已取消，可点重试继续。" } } : item)));
+                    return;
+                }
                 const errorDetails = error instanceof Error ? error.message : "局部修改失败";
                 message.error(errorDetails);
                 setNodes((prev) => prev.map((item) => (item.id === childId ? { ...item, metadata: { ...item.metadata, status: NODE_STATUS_ERROR, errorDetails } } : item)));
             } finally {
                 finishGenerationRequest(childId, controller);
-                setRunningNodeId(null);
+                setRunningNodeId((current) => (current === childId ? null : current));
+            }
+        },
+        [effectiveConfig, finishGenerationRequest, isAiConfigReady, message, openConfigDialog, startGenerationRequest],
+    );
+
+    const outpaintImageNode = useCallback(
+        async (node: CanvasNodeData, payload: CanvasImageOutpaintPayload) => {
+            if (!node.metadata?.content) return;
+            const sourceRecipe = sourceGenerationRecipeFromMetadata(node.metadata);
+            const sourceModel = sourceRecipe.model || node.metadata.model || effectiveConfig.imageModel || effectiveConfig.model;
+            if (!isComfyModel(sourceModel)) {
+                message.warning("托管向下扩图目前只走本地 ComfyUI 工作流，请先让源图使用本地 comfy/ 模型生成");
+                return;
+            }
+            setOutpaintNodeId(null);
+            const isFullBody = payload.mode === "full_body";
+            try {
+                const sourceDataUrl = await imageToDataUrl({
+                    dataUrl: node.metadata.content,
+                    storageKey: node.metadata.storageKey,
+                });
+                // full_body 只需要目标尺寸；extend 才做垫图+蒙版续接
+                let prepared: DownwardOutpaintPrepared | null = null;
+                let geometry: DownwardOutpaintGeometry;
+                if (isFullBody) {
+                    const probe = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+                        const img = new Image();
+                        const timer = window.setTimeout(() => reject(new Error("读取扩图源图片超时")), 15000);
+                        img.onload = () => {
+                            window.clearTimeout(timer);
+                            resolve({ w: img.naturalWidth || img.width, h: img.naturalHeight || img.height });
+                        };
+                        img.onerror = () => {
+                            window.clearTimeout(timer);
+                            reject(new Error("读取扩图源图片失败"));
+                        };
+                        img.src = sourceDataUrl;
+                    });
+                    const w = node.metadata.naturalWidth || probe.w;
+                    const h = node.metadata.naturalHeight || probe.h;
+                    geometry = calculateDownwardOutpaintGeometry(w, h, payload);
+                } else {
+                    prepared = await prepareDownwardOutpaint(sourceDataUrl, payload);
+                    geometry = prepared;
+                }
+                const targetWidth = geometry.targetWidth;
+                const targetHeight = geometry.targetHeight;
+
+                let baseImage: Awaited<ReturnType<typeof uploadImage>> | null = null;
+                let maskImage: Awaited<ReturnType<typeof uploadImage>> | null = null;
+                let originalUpload: Awaited<ReturnType<typeof uploadImage>> | null = null;
+
+                if (isFullBody) {
+                    originalUpload = await uploadImage(sourceDataUrl);
+                } else {
+                    const pair = await Promise.all([uploadImage(prepared!.baseDataUrl), uploadImage(prepared!.maskDataUrl)]);
+                    baseImage = pair[0];
+                    maskImage = pair[1];
+                }
+
+                const operationProfile: CanvasOperationProfile = {
+                    kind: "outpaint",
+                    managed: true,
+                    sourceNodeId: node.id,
+                    direction: isFullBody ? "down" : (payload.direction || "down"),
+                    outpaintMode: payload.mode,
+                    originalPixelLock: !isFullBody,
+                    inheritSourceRecipe: true,
+                    faceProtection: true,
+                    denoise: isFullBody ? undefined : payload.denoise,
+                    seamOverlapPixels: geometry.seamOverlapPixels,
+                    extensionPixels: geometry.extensionPixels,
+                    sourceScale: geometry.sourceScale,
+                    sourceOffsetX: geometry.sourceOffsetX,
+                    sourceOffsetY: geometry.sourceOffsetY,
+                    sourceDrawWidth: geometry.sourceDrawWidth,
+                    sourceDrawHeight: geometry.sourceDrawHeight,
+                    sourceWidth: geometry.sourceWidth,
+                    sourceHeight: geometry.sourceHeight,
+                    targetWidth,
+                    targetHeight,
+                    ...(baseImage ? { baseStorageKey: baseImage.storageKey } : {}),
+                    ...(maskImage ? { maskStorageKey: maskImage.storageKey } : {}),
+                };
+                const execution = buildManagedImageExecution(effectiveConfig, node.metadata, operationProfile);
+                // full_body：把身份原文塞进 extra，供网关 densify；并显式 denoise=false
+                if (isFullBody) {
+                    const identitySeedForExtra = node.metadata.originalIdentityPrompt || node.metadata.originalPrompt || node.metadata.prompt || "";
+                    execution.config = {
+                        ...execution.config,
+                        comfyExtra: {
+                            ...execution.config.comfyExtra,
+                            // soft IPAdapter：借脸/发色/服装气质；denoise=false 走 EmptyLatent，构图不吃近景
+                            reference_mode: "ipadapter",
+                            denoise: false,
+                            face_detailer: false,
+                            prompt_optimize: false,
+                            full_body_rebuild: true,
+                            character_lock: true,
+                            // 关闭换姿分部位流水线；full_body 专用 face refine 仍由网关在主图后执行
+                            part_refine: 0,
+                            face_refine: 0,
+                            skirt_refine: 0,
+                            ...(identitySeedForExtra ? { identity_prompt: identitySeedForExtra, reference_prompt: identitySeedForExtra } : {}),
+                        },
+                    };
+                }
+                const generationConfig = execution.config;
+                if (!isAiConfigReady(generationConfig, generationConfig.model)) {
+                    openConfigDialog(true);
+                    return;
+                }
+                const identitySeed = node.metadata.originalIdentityPrompt || node.metadata.originalPrompt || node.metadata.prompt || "";
+                const identityPack = extractIdentityPack(identitySeed, { hasReferenceImages: true, includeLocks: true, includePoseChange: false });
+                const childId = nanoid();
+                const source = isFullBody
+                    ? {
+                          id: `${node.id}-outpaint-identity`,
+                          name: `${node.title || node.id}-identity.png`,
+                          type: originalUpload!.mimeType || "image/png",
+                          dataUrl: originalUpload!.url || sourceDataUrl,
+                          storageKey: originalUpload!.storageKey,
+                      }
+                    : {
+                          id: `${node.id}-outpaint-base`,
+                          name: `${node.title || node.id}-outpaint-base.png`,
+                          type: baseImage!.mimeType || "image/png",
+                          dataUrl: baseImage!.url,
+                          storageKey: baseImage!.storageKey,
+                      };
+                const mask = !isFullBody
+                    ? {
+                          id: `${node.id}-outpaint-mask`,
+                          name: "outpaint-mask.png",
+                          type: "image/png",
+                          dataUrl: prepared!.maskDataUrl,
+                          storageKey: maskImage!.storageKey,
+                      }
+                    : undefined;
+                const outpaintDirection = payload.direction || "down";
+                // 身份词只在延伸区确实包含人物身体时有用(向下补身体/外扩含下方);
+                // up/left/right 纯背景延伸拼身份词反而诱导模型在背景区再画一个人/头发/手。
+                const identityTagsForDirection = isFullBody || outpaintDirection === "down" || outpaintDirection === "outward" ? identityPack.tags : [];
+                const rawPrompt = joinPromptTokens([...identityTagsForDirection, ...splitPromptTokens(outpaintModePrompt(payload.mode, outpaintDirection)), ...splitPromptTokens(payload.prompt)]);
+                const fallbackPrompt = buildEnglishOutpaintFallback(payload.mode, payload.prompt, identityTagsForDirection, outpaintDirection);
+                const generationMetadata = buildImageGenerationMetadata("edit", generationConfig, 1, [source], operationProfile, execution.plan);
+                const previewSize = fitNodeSize(targetWidth, targetHeight, Math.max(node.width, 420), 720);
+                setRunningNodeId(childId);
+                setNodes((prev) => [
+                    ...prev,
+                    {
+                        id: childId,
+                        type: CanvasNodeType.Image,
+                        title: isFullBody ? "完整全身补全结果" : `${directionLabel(payload.direction || "down")}结果`,
+                        position: { x: node.position.x + node.width + 96, y: node.position.y },
+                        width: previewSize.width,
+                        height: previewSize.height,
+                        metadata: {
+                            prompt: fallbackPrompt,
+                            composerContent: payload.prompt,
+                            originalIdentityPrompt: identitySeed || fallbackPrompt,
+                            originalPrompt: node.metadata?.originalPrompt || node.metadata?.prompt || fallbackPrompt,
+                            status: NODE_STATUS_LOADING,
+                            ...generationMetadata,
+                        },
+                    },
+                ]);
+                setConnections((prev) => [...prev, { id: nanoid(), fromNodeId: node.id, toNodeId: childId }]);
+                setSelectedNodeIds(new Set([childId]));
+                setSelectedConnectionId(null);
+                setDialogNodeId(childId);
+                const controller = startGenerationRequest(childId, node.id, childId);
+                try {
+                    let prompt: string;
+                    if (isFullBody) {
+                        // full_body 禁止走通用优化器：其 system 词默认“不要输出 standing”，会把站立全身洗崩成畸形姿势
+                        prompt = ensureFullBodyFramingPrompt(fallbackPrompt, fallbackPrompt);
+                        prompt = ensureFullBodyStandingPose(prompt);
+                    } else {
+                        const optimizedPrompt = await optimizeLocalImagePrompt(generationConfig, rawPrompt, [source], identitySeed, controller.signal);
+                        prompt = normalizeEnglishOutpaintPrompt(optimizedPrompt, fallbackPrompt);
+                    }
+                    setNodes((prev) =>
+                        prev.map((item) =>
+                            item.id === childId
+                                ? {
+                                      ...item,
+                                      metadata: { ...item.metadata, prompt },
+                                  }
+                                : item,
+                        ),
+                    );
+                    const image = await requestEdit(generationConfig, prompt, [source], mask, { signal: controller.signal }).then((items) => items[0]);
+                    const uploaded = await uploadImage(image.dataUrl);
+                    const size = fitNodeSize(uploaded.width, uploaded.height, Math.max(node.width, 420), 720);
+                    setNodes((prev) =>
+                        prev.map((item) =>
+                            item.id === childId
+                                ? {
+                                      ...item,
+                                      width: size.width,
+                                      height: size.height,
+                                      metadata: {
+                                          ...item.metadata,
+                                          ...generationMetadata,
+                                          ...imageMetadata(uploaded),
+                                          prompt,
+                                          status: NODE_STATUS_SUCCESS,
+                                          errorDetails: undefined,
+                                      },
+                                  }
+                                : item,
+                        ),
+                    );
+                    message.success(isFullBody ? "完整全身补全完成：soft 角色参考锁身份 + 构图优先，脸部已二次精修" : `${directionLabel(payload.direction || "down")}完成，原图非接缝区域已像素锁定`);
+                } catch (error) {
+                    const errorDetails = isGenerationCanceled(error) ? "生成已取消，可点重试继续。" : error instanceof Error ? error.message : "画面扩图失败";
+                    if (!isGenerationCanceled(error)) message.error(errorDetails);
+                    setNodes((prev) => prev.map((item) => (item.id === childId ? { ...item, metadata: { ...item.metadata, status: NODE_STATUS_ERROR, errorDetails } } : item)));
+                } finally {
+                    finishGenerationRequest(childId, controller);
+                    setRunningNodeId((current) => (current === childId ? null : current));
+                }
+            } catch (error) {
+                const errorDetails = error instanceof Error ? error.message : "准备向下扩图失败";
+                message.error(errorDetails);
             }
         },
         [effectiveConfig, finishGenerationRequest, isAiConfigReady, message, openConfigDialog, startGenerationRequest],
@@ -1790,6 +2135,73 @@ function InfiniteCanvasPage() {
         setSelectedNodeIds(new Set([childId]));
         setDialogNodeId(childId);
     }, []);
+
+    const superResolveImageNode = useCallback(
+        async (node: CanvasNodeData, params: CanvasImageSuperResolveParams) => {
+            if (!node.metadata?.content) return;
+            const gatewayBase = findComfyGatewayBase(effectiveConfig);
+            if (!gatewayBase) {
+                message.error("未找到本地 ComfyUI 网关渠道，请先在设置里添加 comfy/ 模型渠道");
+                return;
+            }
+            setSuperResolveNodeId(null);
+            const childId = nanoid();
+            setRunningNodeId(childId);
+            setNodes((prev) => [
+                ...prev,
+                {
+                    id: childId,
+                    type: CanvasNodeType.Image,
+                    title: "AI 超分",
+                    position: { x: node.position.x + node.width + 96, y: node.position.y },
+                    width: node.width,
+                    height: node.height,
+                    metadata: { ...findInheritedGenerationMetadata(node.id, nodesRef.current, connectionsRef.current), prompt: node.metadata?.prompt, status: NODE_STATUS_LOADING },
+                },
+            ]);
+            setConnections((prev) => [...prev, { id: nanoid(), fromNodeId: node.id, toNodeId: childId }]);
+            setSelectedNodeIds(new Set([childId]));
+            setSelectedConnectionId(null);
+            const controller = startGenerationRequest(childId, node.id, childId);
+            try {
+                const dataUrl = await imageToDataUrl({ dataUrl: node.metadata.content, storageKey: node.metadata.storageKey });
+                const blob = await requestSuperResolve(gatewayBase, params.model, dataUrl, { signal: controller.signal });
+                const uploaded = await uploadImage(blob);
+                const size = fitNodeSize(uploaded.width, uploaded.height, node.width, node.height);
+                setNodes((prev) =>
+                    prev.map((item) =>
+                        item.id === childId
+                            ? {
+                                  ...item,
+                                  width: size.width,
+                                  height: size.height,
+                                  metadata: {
+                                      ...item.metadata,
+                                      ...imageMetadata(uploaded),
+                                      prompt: node.metadata?.prompt,
+                                      status: NODE_STATUS_SUCCESS,
+                                      errorDetails: undefined,
+                                  },
+                              }
+                            : item,
+                    ),
+                );
+                setDialogNodeId(childId);
+            } catch (error) {
+                if (isGenerationCanceled(error)) {
+                    setNodes((prev) => prev.map((item) => (item.id === childId && item.metadata?.status === NODE_STATUS_LOADING ? { ...item, metadata: { ...item.metadata, status: NODE_STATUS_ERROR, errorDetails: "超分已取消。" } } : item)));
+                    return;
+                }
+                const errorDetails = error instanceof Error ? error.message : "AI 超分失败";
+                message.error(errorDetails);
+                setNodes((prev) => prev.map((item) => (item.id === childId ? { ...item, metadata: { ...item.metadata, status: NODE_STATUS_ERROR, errorDetails } } : item)));
+            } finally {
+                finishGenerationRequest(childId, controller);
+                setRunningNodeId((current) => (current === childId ? null : current));
+            }
+        },
+        [effectiveConfig, finishGenerationRequest, message, startGenerationRequest],
+    );
 
     const generateAngleNode = useCallback(
         async (node: CanvasNodeData, params: CanvasImageAngleParams) => {
@@ -1825,9 +2237,13 @@ function InfiniteCanvasPage() {
             setDialogNodeId(childId);
             const controller = startGenerationRequest(childId, node.id, childId);
             try {
-                const image = await requestEdit(generationConfig, prompt, [{ id: node.id, name: `${node.title || node.id}.png`, type: node.metadata.mimeType || "image/png", dataUrl: node.metadata.content, storageKey: node.metadata.storageKey }], undefined, { signal: controller.signal }).then(
-                    (items) => items[0],
-                );
+                const image = await requestEdit(
+                    generationConfig,
+                    prompt,
+                    [{ id: node.id, name: `${node.title || node.id}.png`, type: node.metadata.mimeType || "image/png", dataUrl: node.metadata.content, storageKey: node.metadata.storageKey }],
+                    undefined,
+                    { signal: controller.signal },
+                ).then((items) => items[0]);
                 const uploaded = await uploadImage(image.dataUrl);
                 const size = fitNodeSize(uploaded.width, uploaded.height, imageConfig.width, imageConfig.height);
                 setNodes((prev) => prev.map((item) => (item.id === childId ? { ...item, width: size.width, height: size.height, metadata: { ...item.metadata, ...imageMetadata(uploaded), prompt, ...generationMetadata } } : item)));
@@ -1862,7 +2278,21 @@ function InfiniteCanvasPage() {
                 if (isAudioFile(file)) {
                     const audio = await uploadMediaFile(file, "audio");
                     const spec = NODE_DEFAULT_SIZE[CanvasNodeType.Audio];
-                    setNodes((prev) => prev.map((node) => (node.id === target.nodeId ? { ...node, type: CanvasNodeType.Audio, title: file.name, position: { x: node.position.x + node.width / 2 - spec.width / 2, y: node.position.y + node.height / 2 - spec.height / 2 }, width: spec.width, height: spec.height, metadata: { ...node.metadata, ...audioMetadata(audio), errorDetails: undefined } } : node)));
+                    setNodes((prev) =>
+                        prev.map((node) =>
+                            node.id === target.nodeId
+                                ? {
+                                      ...node,
+                                      type: CanvasNodeType.Audio,
+                                      title: file.name,
+                                      position: { x: node.position.x + node.width / 2 - spec.width / 2, y: node.position.y + node.height / 2 - spec.height / 2 },
+                                      width: spec.width,
+                                      height: spec.height,
+                                      metadata: { ...node.metadata, ...audioMetadata(audio), errorDetails: undefined },
+                                  }
+                                : node,
+                        ),
+                    );
                     setSelectedNodeIds(new Set([target.nodeId]));
                     setSelectedConnectionId(null);
                     uploadTargetRef.current = null;
@@ -1872,7 +2302,21 @@ function InfiniteCanvasPage() {
                 if (file.type.startsWith("video/")) {
                     const video = await uploadMediaFile(file, "video");
                     const nextSize = fitNodeSize(video.width || 1280, video.height || 720, VIDEO_NODE_MAX_WIDTH, VIDEO_NODE_MAX_HEIGHT);
-                    setNodes((prev) => prev.map((node) => (node.id === target.nodeId ? { ...node, type: CanvasNodeType.Video, title: file.name, position: { x: node.position.x + node.width / 2 - nextSize.width / 2, y: node.position.y + node.height / 2 - nextSize.height / 2 }, width: nextSize.width, height: nextSize.height, metadata: { ...node.metadata, ...videoMetadata(video), errorDetails: undefined } } : node)));
+                    setNodes((prev) =>
+                        prev.map((node) =>
+                            node.id === target.nodeId
+                                ? {
+                                      ...node,
+                                      type: CanvasNodeType.Video,
+                                      title: file.name,
+                                      position: { x: node.position.x + node.width / 2 - nextSize.width / 2, y: node.position.y + node.height / 2 - nextSize.height / 2 },
+                                      width: nextSize.width,
+                                      height: nextSize.height,
+                                      metadata: { ...node.metadata, ...videoMetadata(video), errorDetails: undefined },
+                                  }
+                                : node,
+                        ),
+                    );
                     setSelectedNodeIds(new Set([target.nodeId]));
                     setSelectedConnectionId(null);
                     setDialogNodeId(target.nodeId);
@@ -1971,10 +2415,14 @@ function InfiniteCanvasPage() {
     }, []);
 
     const handleGenerateNode = useCallback(
-        async (nodeId: string, mode: CanvasNodeGenerationMode, prompt: string) => {
+        async (nodeId: string, mode: CanvasNodeGenerationMode, prompt: string, promptSource: "direct" | "composer" = "direct") => {
             const sourceNode = nodesRef.current.find((node) => node.id === nodeId);
             const generationConfig = buildGenerationConfig(effectiveConfig, sourceNode, mode);
             if (!isAiConfigReady(generationConfig, generationConfig.model)) {
+                openConfigDialog(true);
+                return;
+            }
+            if (mode === "image" && isComfyModel(generationConfig.model) && generationConfig.textModel && !isAiConfigReady(generationConfig, generationConfig.textModel)) {
                 openConfigDialog(true);
                 return;
             }
@@ -2013,6 +2461,96 @@ function InfiniteCanvasPage() {
                             ? [{ id: sourceNode.id, name: `${sourceNode.title || sourceNode.id}.png`, type: sourceNode.metadata.mimeType || "image/png", dataUrl: sourceNode.metadata.content, storageKey: sourceNode.metadata.storageKey }]
                             : [];
                     const referenceImages = sourceReference.length ? sourceReference : generationContext.referenceImages;
+                    // 图片节点上点组合器生成时：本节点图=参考图，本节点原始 prompt=身份源（不能用组合器草稿覆盖）
+                    const referencePrompt = (sourceNode?.metadata?.originalIdentityPrompt || sourceNode?.metadata?.originalPrompt || sourceNode?.metadata?.prompt || "").trim();
+                    // 提示词组合器只能处理从组合器按钮发起的请求。
+                    // 普通输入框/节点直接生图必须保留原始 prompt，不能被组合器重排、消歧或自动补词。
+                    const smartPrompt = promptSource === "composer" ? applySmartPromptForGeneration(effectivePrompt, { hasReferenceImages: referenceImages.length > 0 }) : null;
+                    const preparedPrompt = smartPrompt?.prompt || effectivePrompt;
+                    // 真换姿（体位/显式 change pose）才强制 faceid；普通站姿/全身/换装参考不进这条链
+                    const truePoseChange = Boolean(Boolean(smartPrompt?.hasReferencePoseChange) || isTrueReferencePoseChange(preparedPrompt, referenceImages.length > 0) || isTrueReferencePoseChange(effectivePrompt, referenceImages.length > 0));
+                    const poseChangeFromImageNode = Boolean(isImageNode && sourceNode?.metadata?.content && truePoseChange);
+                    if (truePoseChange && isComfyModel(generationConfig.model) && referenceImages.length > 0) {
+                        // 换姿保角色策略（不跟面板参考模式）：
+                        // - 不用完整角色 IPAdapter/Img2Img：会把站姿构图锁死 → 双头双躯干
+                        // - FaceID 强锁脸 + 身份包文字锁发色/瞳色/服装 + 局部精修
+                        // = 「完整角色特征固定」，但姿势仍交给 prompt
+                        const prevExtra = generationConfig.comfyExtra || {};
+                        const refineOpts = (
+                            sourceNode?.metadata as
+                                | {
+                                      poseRefineOptions?: {
+                                          face_refine?: boolean;
+                                          skirt_refine?: boolean;
+                                          part_refine?: boolean;
+                                          hair_refine?: boolean;
+                                      };
+                                  }
+                                | undefined
+                        )?.poseRefineOptions;
+                        const faceOn = refineOpts?.face_refine ?? true;
+                        const skirtOn = refineOpts?.skirt_refine ?? true;
+                        const hairOn = refineOpts?.hair_refine ?? false;
+                        const partOn = refineOpts?.part_refine ?? true;
+                        const parts: string[] = [];
+                        if (partOn && faceOn) parts.push("face");
+                        if (partOn && skirtOn) parts.push("skirt");
+                        if (partOn && hairOn) parts.push("hair");
+                        generationConfig.comfyExtra = {
+                            ...prevExtra,
+                            reference_mode: "faceid",
+                            denoise: false,
+                            prompt_optimize: false,
+                            pose_change: true,
+                            // 角色固定：身份源 + 强化 densify（网关）
+                            character_lock: true,
+                            identity_prompt: referencePrompt || undefined,
+                            reference_prompt: referencePrompt || undefined,
+                            face_refine: faceOn ? 1 : 0,
+                            skirt_refine: skirtOn ? 1 : 0,
+                            hair_refine: hairOn ? 1 : 0,
+                            part_refine: partOn ? 1 : 0,
+                            parts: parts.join(",") || "face,skirt",
+                        };
+                        console.info("[canvas] pose-change character-lock: faceid + identity pack densify", {
+                            nodeId,
+                            hasReferencePrompt: Boolean(referencePrompt),
+                            referencePromptPreview: referencePrompt.slice(0, 120),
+                        });
+                        try {
+                            message.info("检测到真换姿：已临时使用 faceid 只锁脸（不锁站姿构图）；若 InsightFace 检脸失败将自动降级", 4);
+                        } catch {}
+                    }
+                    // 大改姿势：禁止视觉改写；并把参考图原 prompt / 身份包补回（发色瞳色服装）
+                    let imagePrompt: string;
+                    if (truePoseChange && isComfyModel(generationConfig.model) && referenceImages.length > 0) {
+                        const merged = mergeReferenceIdentityIntoPosePrompt(preparedPrompt, referencePrompt);
+                        const pack = extractIdentityPack(referencePrompt || preparedPrompt, {
+                            hasReferenceImages: true,
+                            includeLocks: true,
+                            includePoseChange: true,
+                            currentPrompt: merged,
+                        });
+                        const existing = new Set(
+                            splitPromptTokens(merged)
+                                .map((t) => t.trim().toLowerCase())
+                                .filter(Boolean),
+                        );
+                        const injected: string[] = [];
+                        for (const term of pack.tags) {
+                            const key = term.trim().toLowerCase();
+                            if (!key || existing.has(key)) continue;
+                            existing.add(key);
+                            injected.push(term.trim());
+                        }
+                        imagePrompt = injected.length ? joinPromptTokens([...splitPromptTokens(merged), ...injected]) : merged;
+                        if (injected.length) {
+                            console.info("[canvas] character-lock injected identity pack", { count: injected.length, preview: injected.slice(0, 10) });
+                        }
+                    } else {
+                        imagePrompt = await optimizeLocalImagePrompt(generationConfig, preparedPrompt, referenceImages, referencePrompt, runController.signal);
+                    }
+                    if (runController.signal.aborted) return;
                     const generationType = referenceImages.length ? ("edit" as const) : ("generation" as const);
                     const generationMetadata = buildImageGenerationMetadata(generationType, generationConfig, count, referenceImages);
                     const parentConfig = NODE_DEFAULT_SIZE[isConfigNode ? CanvasNodeType.Config : isImageNode ? CanvasNodeType.Image : CanvasNodeType.Text];
@@ -2027,7 +2565,7 @@ function InfiniteCanvasPage() {
                     const rootNode: CanvasNodeData = {
                         id: rootId,
                         type: CanvasNodeType.Image,
-                        title: effectivePrompt.slice(0, 32) || "Generated Image",
+                        title: imagePrompt.slice(0, 32) || "Generated Image",
                         position: {
                             x: isEmptyImageNode ? parentPosition.x : parentPosition.x + parentConfig.width + gap,
                             y: parentPosition.y + parentConfig.height / 2 - imageConfig.height / 2,
@@ -2035,7 +2573,10 @@ function InfiniteCanvasPage() {
                         width: isEmptyImageNode ? sourceNode?.width || imageConfig.width : imageConfig.width,
                         height: isEmptyImageNode ? sourceNode?.height || imageConfig.height : imageConfig.height,
                         metadata: {
-                            prompt: effectivePrompt,
+                            prompt: imagePrompt,
+                            // 首次生成时固化身份源；后续从该图节点改姿势时仍可找回发色/服装
+                            originalIdentityPrompt: referenceImages.length ? referencePrompt || imagePrompt : imagePrompt,
+                            originalPrompt: referenceImages.length ? referencePrompt || imagePrompt : imagePrompt,
                             status: NODE_STATUS_LOADING,
                             isBatchRoot: count > 1,
                             batchChildIds: count > 1 ? childIds : undefined,
@@ -2047,14 +2588,14 @@ function InfiniteCanvasPage() {
                     const childNodes: CanvasNodeData[] = childIds.map((id, index) => ({
                         id,
                         type: CanvasNodeType.Image,
-                        title: effectivePrompt.slice(0, 32) || "Generated Image",
+                        title: imagePrompt.slice(0, 32) || "Generated Image",
                         position: {
                             x: rootNode.position.x + rootNode.width + 120 + (index % 2) * (imageConfig.width + 36),
                             y: rootNode.position.y + Math.floor(index / 2) * (imageConfig.height + rowGap),
                         },
                         width: imageConfig.width,
                         height: imageConfig.height,
-                        metadata: { prompt: effectivePrompt, status: NODE_STATUS_LOADING, batchRootId: count > 1 ? rootId : undefined, ...generationMetadata },
+                        metadata: { prompt: imagePrompt, status: NODE_STATUS_LOADING, batchRootId: count > 1 ? rootId : undefined, ...generationMetadata },
                     }));
                     const batchConnections = [...(isEmptyImageNode ? [] : [{ id: nanoid(), fromNodeId: nodeId, toNodeId: rootId }]), ...childIds.map((childId) => ({ id: nanoid(), fromNodeId: rootId, toNodeId: childId }))];
 
@@ -2078,7 +2619,14 @@ function InfiniteCanvasPage() {
                                       : isImageNode
                                         ? {
                                               ...node,
-                                              metadata: { ...node.metadata, status: NODE_STATUS_SUCCESS, errorDetails: undefined },
+                                              metadata: {
+                                                  ...node.metadata,
+                                                  // 固化身份源，避免以后只剩 same face
+                                                  originalIdentityPrompt: node.metadata?.originalIdentityPrompt || node.metadata?.originalPrompt || node.metadata?.prompt,
+                                                  originalPrompt: node.metadata?.originalPrompt || node.metadata?.prompt,
+                                                  status: NODE_STATUS_SUCCESS,
+                                                  errorDetails: undefined,
+                                              },
                                           }
                                         : {
                                               ...node,
@@ -2107,8 +2655,8 @@ function InfiniteCanvasPage() {
                         targetIds.map(async (targetId) => {
                             try {
                                 const image = referenceImages.length
-                                    ? await requestEdit({ ...generationConfig, count: "1" }, effectivePrompt, referenceImages, undefined, { signal: controller.signal }).then((items) => items[0])
-                                    : await requestGeneration({ ...generationConfig, count: "1" }, effectivePrompt, { signal: controller.signal }).then((items) => items[0]);
+                                    ? await requestEdit({ ...generationConfig, count: "1" }, imagePrompt, referenceImages, undefined, { signal: controller.signal }).then((items) => items[0])
+                                    : await requestGeneration({ ...generationConfig, count: "1" }, imagePrompt, { signal: controller.signal }).then((items) => items[0]);
                                 const uploaded = await uploadImage(image.dataUrl);
                                 const imageSize = fitNodeSize(uploaded.width, uploaded.height, imageConfig.width, imageConfig.height);
                                 setNodes((prev) => {
@@ -2181,16 +2729,55 @@ function InfiniteCanvasPage() {
                         position: isEmptyVideoNode ? sourceNode.position : { x: parent.x + (sourceNode?.width || spec.width) + 96, y: parent.y },
                         width: isEmptyVideoNode ? sourceNode.width : spec.width,
                         height: isEmptyVideoNode ? sourceNode.height : spec.height,
-                        metadata: { prompt: effectivePrompt, status: NODE_STATUS_LOADING, model: generationConfig.model, size: generationConfig.size, seconds: generationConfig.videoSeconds, vquality: generationConfig.vquality, generateAudio: generationConfig.videoGenerateAudio, watermark: generationConfig.videoWatermark, references: generationReferenceUrls(generationContext) },
+                        metadata: {
+                            prompt: effectivePrompt,
+                            status: NODE_STATUS_LOADING,
+                            model: generationConfig.model,
+                            size: generationConfig.size,
+                            seconds: generationConfig.videoSeconds,
+                            vquality: generationConfig.vquality,
+                            generateAudio: generationConfig.videoGenerateAudio,
+                            watermark: generationConfig.videoWatermark,
+                            references: generationReferenceUrls(generationContext),
+                        },
                     };
                     pendingChildIds = [videoId];
-                    setNodes((prev) => (isEmptyVideoNode ? prev.map((node) => (node.id === nodeId ? { ...node, ...videoNode } : node)) : [...prev.map((node) => (node.id === nodeId ? { ...node, metadata: { ...node.metadata, status: NODE_STATUS_SUCCESS } } : node)), videoNode]));
+                    setNodes((prev) =>
+                        isEmptyVideoNode
+                            ? prev.map((node) => (node.id === nodeId ? { ...node, ...videoNode } : node))
+                            : [...prev.map((node) => (node.id === nodeId ? { ...node, metadata: { ...node.metadata, status: NODE_STATUS_SUCCESS } } : node)), videoNode],
+                    );
                     if (!isEmptyVideoNode) setConnections((prev) => [...prev, { id: nanoid(), fromNodeId: nodeId, toNodeId: videoId }]);
                     const controller = startGenerationRequest(videoId, nodeId, nodeId, runController);
                     try {
-                        const video = await storeGeneratedVideo(await requestVideoGeneration(generationConfig, effectivePrompt, generationContext.referenceImages, generationContext.referenceVideos, generationContext.referenceAudios, { signal: controller.signal }));
+                        const video = await storeGeneratedVideo(
+                            await requestVideoGeneration(generationConfig, effectivePrompt, generationContext.referenceImages, generationContext.referenceVideos, generationContext.referenceAudios, { signal: controller.signal }),
+                        );
                         const videoSize = fitNodeSize(video.width || spec.width, video.height || spec.height, VIDEO_NODE_MAX_WIDTH, VIDEO_NODE_MAX_HEIGHT);
-                        setNodes((prev) => prev.map((node) => (node.id === videoId ? { ...node, width: videoSize.width, height: videoSize.height, position: { x: node.position.x + node.width / 2 - videoSize.width / 2, y: node.position.y + node.height / 2 - videoSize.height / 2 }, metadata: { ...node.metadata, ...videoMetadata(video), prompt: effectivePrompt, model: generationConfig.model, size: generationConfig.size, seconds: generationConfig.videoSeconds, vquality: generationConfig.vquality, generateAudio: generationConfig.videoGenerateAudio, watermark: generationConfig.videoWatermark, references: generationReferenceUrls(generationContext) } } : node)));
+                        setNodes((prev) =>
+                            prev.map((node) =>
+                                node.id === videoId
+                                    ? {
+                                          ...node,
+                                          width: videoSize.width,
+                                          height: videoSize.height,
+                                          position: { x: node.position.x + node.width / 2 - videoSize.width / 2, y: node.position.y + node.height / 2 - videoSize.height / 2 },
+                                          metadata: {
+                                              ...node.metadata,
+                                              ...videoMetadata(video),
+                                              prompt: effectivePrompt,
+                                              model: generationConfig.model,
+                                              size: generationConfig.size,
+                                              seconds: generationConfig.videoSeconds,
+                                              vquality: generationConfig.vquality,
+                                              generateAudio: generationConfig.videoGenerateAudio,
+                                              watermark: generationConfig.videoWatermark,
+                                              references: generationReferenceUrls(generationContext),
+                                          },
+                                      }
+                                    : node,
+                            ),
+                        );
                     } finally {
                         finishGenerationRequest(videoId, controller);
                     }
@@ -2212,7 +2799,11 @@ function InfiniteCanvasPage() {
                         metadata: { prompt: effectivePrompt, status: NODE_STATUS_LOADING, ...buildAudioGenerationMetadata(generationConfig) },
                     };
                     pendingChildIds = [audioId];
-                    setNodes((prev) => (isEmptyAudioNode ? prev.map((node) => (node.id === nodeId ? { ...node, ...audioNode } : node)) : [...prev.map((node) => (node.id === nodeId ? { ...node, metadata: { ...node.metadata, status: NODE_STATUS_SUCCESS } } : node)), audioNode]));
+                    setNodes((prev) =>
+                        isEmptyAudioNode
+                            ? prev.map((node) => (node.id === nodeId ? { ...node, ...audioNode } : node))
+                            : [...prev.map((node) => (node.id === nodeId ? { ...node, metadata: { ...node.metadata, status: NODE_STATUS_SUCCESS } } : node)), audioNode],
+                    );
                     if (!isEmptyAudioNode) setConnections((prev) => [...prev, { id: nanoid(), fromNodeId: nodeId, toNodeId: audioId }]);
                     const controller = startGenerationRequest(audioId, nodeId, nodeId, runController);
                     try {
@@ -2255,12 +2846,19 @@ function InfiniteCanvasPage() {
                 const answers = await Promise.all(
                     textTargetIds.map((targetNodeId) => {
                         let localStreamed = "";
-                        return requestImageQuestion(generationConfig, buildNodeResponseMessages({ ...generationContext, prompt: effectivePrompt }), (text) => {
-                            localStreamed = text;
-                            streamed = text;
-                            if (isConfigNode) return;
-                            setNodes((prev) => prev.map((node) => (node.id === targetNodeId ? { ...node, type: CanvasNodeType.Text, metadata: { ...node.metadata, content: text, status: NODE_STATUS_LOADING } } : node)));
-                        }, { signal: controller.signal }).then((answer) => ({ nodeId: targetNodeId, content: answer || localStreamed })).finally(() => finishGenerationRequest(targetNodeId, controller));
+                        return requestImageQuestion(
+                            generationConfig,
+                            buildNodeResponseMessages({ ...generationContext, prompt: effectivePrompt }),
+                            (text) => {
+                                localStreamed = text;
+                                streamed = text;
+                                if (isConfigNode) return;
+                                setNodes((prev) => prev.map((node) => (node.id === targetNodeId ? { ...node, type: CanvasNodeType.Text, metadata: { ...node.metadata, content: text, status: NODE_STATUS_LOADING } } : node)));
+                            },
+                            { signal: controller.signal },
+                        )
+                            .then((answer) => ({ nodeId: targetNodeId, content: answer || localStreamed }))
+                            .finally(() => finishGenerationRequest(targetNodeId, controller));
                     }),
                 );
                 if (controller.signal.aborted) return;
@@ -2298,13 +2896,16 @@ function InfiniteCanvasPage() {
         async (node: CanvasNodeData) => {
             const sourceNode = findRetrySourceNode(node.id, nodesRef.current, connectionsRef.current) || node;
             const batchRoot = node.metadata?.batchRootId ? nodesRef.current.find((item) => item.id === node.metadata?.batchRootId) : null;
-            const savedImageMetadata = node.type === CanvasNodeType.Image ? { ...batchRoot?.metadata, ...node.metadata } : undefined;
+            const savedImageMetadata = node.type === CanvasNodeType.Image ? { ...pickGenerationMetadata(sourceNode.metadata), ...batchRoot?.metadata, ...node.metadata } : undefined;
             const hasSavedImageMetadata = Boolean(savedImageMetadata?.generationType);
+            const retryComfyExtra = comfyExtraFromMetadata(savedImageMetadata);
             const generationConfig =
-                hasSavedImageMetadata && savedImageMetadata
+                node.type === CanvasNodeType.Image && savedImageMetadata
                     ? {
                           ...effectiveConfig,
+                          ...(retryComfyExtra ? { comfyExtra: retryComfyExtra } : {}),
                           model: savedImageMetadata.model || effectiveConfig.imageModel || effectiveConfig.model,
+                          textModel: savedImageMetadata.promptModel || effectiveConfig.textModel,
                           quality: savedImageMetadata.quality || effectiveConfig.quality,
                           size: savedImageMetadata.size || effectiveConfig.size,
                           count: "1",
@@ -2322,35 +2923,98 @@ function InfiniteCanvasPage() {
                 return;
             }
             const generationType = savedImageMetadata?.generationType;
-            const useReferenceImages = generationType ? generationType === "edit" : Boolean(context?.referenceImages.length);
-            const retryReferenceImages =
-                hasSavedImageMetadata && savedImageMetadata ? await resolveMetadataReferences(savedImageMetadata) : useReferenceImages ? (context?.referenceImages.length ? context.referenceImages : sourceNodeReferenceImages(batchRoot || sourceNode)) : [];
-            if (useReferenceImages && !retryReferenceImages) {
+            const regenerateAsChild = node.type === CanvasNodeType.Image && Boolean(node.metadata?.content);
+            // 有图的节点再生成时，锚定自身图片走 edit 链路，保持角色/构图一致，避免纯 txt2img 重抽完全变样
+            const anchorToSelf = regenerateAsChild && generationType !== "edit";
+            const useReferenceImages = anchorToSelf ? true : generationType ? generationType === "edit" : Boolean(context?.referenceImages.length);
+            const retryReferenceImages = anchorToSelf
+                ? sourceNodeReferenceImages(node)
+                : hasSavedImageMetadata && savedImageMetadata
+                  ? await resolveMetadataReferences(savedImageMetadata)
+                  : useReferenceImages
+                    ? context?.referenceImages.length
+                        ? context.referenceImages
+                        : sourceNodeReferenceImages(batchRoot || sourceNode)
+                    : [];
+            if (useReferenceImages && (!retryReferenceImages || !retryReferenceImages.length)) {
                 message.error("参考图片已丢失，无法继续重试");
                 setNodes((prev) => prev.map((item) => (item.id === node.id ? { ...item, metadata: { ...item.metadata, status: NODE_STATUS_ERROR, errorDetails: "参考图片已丢失，无法继续重试" } } : item)));
                 return;
             }
             const retryImages = retryReferenceImages || [];
-
-            setRunningNodeId(node.id);
-            setNodes((prev) => prev.map((item) => (item.id === node.id ? { ...item, metadata: { ...item.metadata, status: NODE_STATUS_LOADING, errorDetails: undefined } } : item)));
-            const controller = startGenerationRequest(node.id, sourceNode.id, node.id);
+            const retryMask = savedImageMetadata?.operationProfile?.maskStorageKey ? await resolveOperationMask(savedImageMetadata.operationProfile.maskStorageKey) : undefined;
+            const isFullBodyRetry = savedImageMetadata?.operationProfile?.kind === "outpaint" && savedImageMetadata.operationProfile.outpaintMode === "full_body";
+            const requiresManagedMask =
+                savedImageMetadata?.operationProfile?.managed &&
+                (savedImageMetadata.operationProfile.kind === "inpaint" || (savedImageMetadata.operationProfile.kind === "outpaint" && !isFullBodyRetry)) &&
+                Boolean(savedImageMetadata.operationProfile.maskStorageKey || savedImageMetadata.operationProfile.kind === "inpaint" || savedImageMetadata.operationProfile.outpaintMode === "extend");
+            if (requiresManagedMask && !retryMask) {
+                message.error("托管编辑蒙版已丢失，无法按原执行计划重试");
+                return;
+            }
+            const targetId = regenerateAsChild ? nanoid() : node.id;
+            if (regenerateAsChild) {
+                const childNode: CanvasNodeData = {
+                    id: targetId,
+                    type: CanvasNodeType.Image,
+                    title: prompt.slice(0, 32) || "Generated Image",
+                    position: { x: node.position.x + node.width + 96, y: node.position.y },
+                    width: node.width,
+                    height: node.height,
+                    metadata: { ...pickGenerationMetadata(savedImageMetadata), prompt, status: NODE_STATUS_LOADING, count: 1 },
+                };
+                setNodes((prev) => [...prev, childNode]);
+                setConnections((prev) => [...prev, { id: nanoid(), fromNodeId: node.id, toNodeId: targetId }]);
+                setSelectedNodeIds(new Set([targetId]));
+                setSelectedConnectionId(null);
+            } else {
+                setNodes((prev) => prev.map((item) => (item.id === node.id ? { ...item, metadata: { ...item.metadata, status: NODE_STATUS_LOADING, errorDetails: undefined } } : item)));
+            }
+            setRunningNodeId(targetId);
+            const controller = startGenerationRequest(targetId, sourceNode.id, targetId);
 
             try {
                 if (node.type === CanvasNodeType.Text) {
                     if (!context) return;
                     let streamed = "";
-                    const answer = await requestImageQuestion(generationConfig, buildNodeResponseMessages({ ...context, prompt }), (text) => {
-                        streamed = text;
-                        setNodes((prev) => prev.map((item) => (item.id === node.id ? { ...item, type: CanvasNodeType.Text, metadata: { ...item.metadata, content: text, status: NODE_STATUS_LOADING } } : item)));
-                    }, { signal: controller.signal });
+                    const answer = await requestImageQuestion(
+                        generationConfig,
+                        buildNodeResponseMessages({ ...context, prompt }),
+                        (text) => {
+                            streamed = text;
+                            setNodes((prev) => prev.map((item) => (item.id === node.id ? { ...item, type: CanvasNodeType.Text, metadata: { ...item.metadata, content: text, status: NODE_STATUS_LOADING } } : item)));
+                        },
+                        { signal: controller.signal },
+                    );
                     setNodes((prev) => prev.map((item) => (item.id === node.id ? { ...item, type: CanvasNodeType.Text, metadata: { ...item.metadata, content: answer || streamed, prompt, status: NODE_STATUS_SUCCESS } } : item)));
                     return;
                 }
                 if (node.type === CanvasNodeType.Video) {
                     const video = await storeGeneratedVideo(await requestVideoGeneration(generationConfig, prompt, retryImages, context?.referenceVideos || [], context?.referenceAudios || [], { signal: controller.signal }));
                     const videoSize = fitNodeSize(video.width || node.width, video.height || node.height, VIDEO_NODE_MAX_WIDTH, VIDEO_NODE_MAX_HEIGHT);
-                    setNodes((prev) => prev.map((item) => (item.id === node.id ? { ...item, width: videoSize.width, height: videoSize.height, position: { x: item.position.x + item.width / 2 - videoSize.width / 2, y: item.position.y + item.height / 2 - videoSize.height / 2 }, metadata: { ...item.metadata, ...videoMetadata(video), prompt, model: generationConfig.model, size: generationConfig.size, seconds: generationConfig.videoSeconds, vquality: generationConfig.vquality, generateAudio: generationConfig.videoGenerateAudio, watermark: generationConfig.videoWatermark } } : item)));
+                    setNodes((prev) =>
+                        prev.map((item) =>
+                            item.id === node.id
+                                ? {
+                                      ...item,
+                                      width: videoSize.width,
+                                      height: videoSize.height,
+                                      position: { x: item.position.x + item.width / 2 - videoSize.width / 2, y: item.position.y + item.height / 2 - videoSize.height / 2 },
+                                      metadata: {
+                                          ...item.metadata,
+                                          ...videoMetadata(video),
+                                          prompt,
+                                          model: generationConfig.model,
+                                          size: generationConfig.size,
+                                          seconds: generationConfig.videoSeconds,
+                                          vquality: generationConfig.vquality,
+                                          generateAudio: generationConfig.videoGenerateAudio,
+                                          watermark: generationConfig.videoWatermark,
+                                      },
+                                  }
+                                : item,
+                        ),
+                    );
                     return;
                 }
                 if (node.type === CanvasNodeType.Audio) {
@@ -2359,16 +3023,33 @@ function InfiniteCanvasPage() {
                     return;
                 }
 
-                const image = useReferenceImages ? await requestEdit(generationConfig, prompt, retryImages, undefined, { signal: controller.signal }).then((items) => items[0]) : await requestGeneration(generationConfig, prompt, { signal: controller.signal }).then((items) => items[0]);
+                const image = useReferenceImages
+                    ? await requestEdit(generationConfig, prompt, retryImages, retryMask, { signal: controller.signal }).then((items) => items[0])
+                    : await requestGeneration(generationConfig, prompt, { signal: controller.signal }).then((items) => items[0]);
                 const uploadedImage = await uploadImage(image.dataUrl);
                 const imageConfig = NODE_DEFAULT_SIZE[CanvasNodeType.Image];
                 const imageSize = fitNodeSize(uploadedImage.width, uploadedImage.height, imageConfig.width, imageConfig.height);
-                const generationMetadata = savedImageMetadata?.generationType
-                    ? { generationType: savedImageMetadata.generationType, model: generationConfig.model, size: generationConfig.size, quality: generationConfig.quality, count: savedImageMetadata.count || 1, references: savedImageMetadata.references }
-                    : buildImageGenerationMetadata(useReferenceImages ? "edit" : "generation", generationConfig, 1, retryImages);
+                const replayPlan = savedImageMetadata?.executionPlan
+                    ? {
+                          ...savedImageMetadata.executionPlan,
+                          operation: "exact_replay" as const,
+                          createdAt: new Date().toISOString(),
+                          values: Object.fromEntries(
+                              Object.entries(savedImageMetadata.executionPlan.values).map(([key, value]) => [key, value ? { ...value, value: Array.isArray(value.value) ? [...value.value] : value.value, source: "exact_replay" as const } : value]),
+                          ),
+                      }
+                    : undefined;
+                const generationMetadata = buildImageGenerationMetadata(
+                    anchorToSelf ? "edit" : savedImageMetadata?.generationType || (useReferenceImages ? "edit" : "generation"),
+                    generationConfig,
+                    1,
+                    retryImages,
+                    savedImageMetadata?.operationProfile,
+                    replayPlan,
+                );
                 setNodes((prev) =>
                     prev.map((item) =>
-                        item.id === node.id
+                        item.id === targetId
                             ? {
                                   ...item,
                                   type: CanvasNodeType.Image,
@@ -2383,9 +3064,9 @@ function InfiniteCanvasPage() {
                 if (isGenerationCanceled(error)) return;
                 const errorDetails = error instanceof Error ? error.message : "生成失败";
                 message.error(errorDetails);
-                setNodes((prev) => prev.map((item) => (item.id === node.id ? { ...item, metadata: { ...item.metadata, status: NODE_STATUS_ERROR, errorDetails } } : item)));
+                setNodes((prev) => prev.map((item) => (item.id === targetId ? { ...item, metadata: { ...item.metadata, status: NODE_STATUS_ERROR, errorDetails } } : item)));
             } finally {
-                finishGenerationRequest(node.id, controller);
+                finishGenerationRequest(targetId, controller);
                 setRunningNodeId(null);
             }
         },
@@ -2411,6 +3092,7 @@ function InfiniteCanvasPage() {
                 {
                     prompt: "",
                     model: effectiveConfig.imageModel || effectiveConfig.model,
+                    promptModel: effectiveConfig.textModel,
                     size: effectiveConfig.size,
                     count: getGenerationCount(effectiveConfig.canvasImageCount || effectiveConfig.count),
                 },
@@ -2478,7 +3160,18 @@ function InfiniteCanvasPage() {
                 const center = screenToCanvas((containerRef.current?.getBoundingClientRect().left || 0) + size.width / 2, (containerRef.current?.getBoundingClientRect().top || 0) + size.height / 2);
                 const id = `video-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
                 const nextSize = fitNodeSize(payload.width || spec.width, payload.height || spec.height, VIDEO_NODE_MAX_WIDTH, VIDEO_NODE_MAX_HEIGHT);
-                setNodes((prev) => [...prev, { id, type: CanvasNodeType.Video, title: payload.title, position: { x: center.x - nextSize.width / 2, y: center.y - nextSize.height / 2 }, width: nextSize.width, height: nextSize.height, metadata: { content: payload.url, storageKey: payload.storageKey, status: NODE_STATUS_SUCCESS, naturalWidth: payload.width, naturalHeight: payload.height } }]);
+                setNodes((prev) => [
+                    ...prev,
+                    {
+                        id,
+                        type: CanvasNodeType.Video,
+                        title: payload.title,
+                        position: { x: center.x - nextSize.width / 2, y: center.y - nextSize.height / 2 },
+                        width: nextSize.width,
+                        height: nextSize.height,
+                        metadata: { content: payload.url, storageKey: payload.storageKey, status: NODE_STATUS_SUCCESS, naturalWidth: payload.width, naturalHeight: payload.height },
+                    },
+                ]);
                 setSelectedNodeIds(new Set([id]));
             } else {
                 insertAssistantImage({ id: `asset-${Date.now()}`, prompt: payload.title, dataUrl: payload.dataUrl, storageKey: payload.storageKey });
@@ -2532,7 +3225,7 @@ function InfiniteCanvasPage() {
                     onUndo={undoCanvas}
                     onRedo={redoCanvas}
                     agentOpen={assistantOpen}
-                    compactAgentStatus={{ connected: localAgentConnected, enabled: localAgentEnabled, activity: localAgentActivity }}
+                    compactAgentStatus={{ connected: localAgentConnected, agentOnline: localAgentOnline, enabled: localAgentEnabled, activity: localAgentActivity }}
                     onToggleAgent={() => (assistantOpen ? closeAgent() : openAgent())}
                 />
 
@@ -2639,9 +3332,9 @@ function InfiniteCanvasPage() {
                                     onConfigChange={handleConfigNodeChange}
                                     onComposerToggle={() => setDialogNodeId((current) => (current === contentNode.id ? null : contentNode.id))}
                                     onStop={confirmStopGeneration}
-                                    onGenerate={(nodeId) => {
+                                    onGenerate={(nodeId, promptOverride, promptSource) => {
                                         const target = nodesRef.current.find((item) => item.id === nodeId);
-                                        void handleGenerateNode(nodeId, target?.metadata?.generationMode || "image", target?.metadata?.composerContent ?? target?.metadata?.prompt ?? "");
+                                        void handleGenerateNode(nodeId, target?.metadata?.generationMode || "image", promptOverride ?? target?.metadata?.composerContent ?? target?.metadata?.prompt ?? "", promptSource);
                                     }}
                                 />
                             )}
@@ -2701,12 +3394,14 @@ function InfiniteCanvasPage() {
                     onDownload={downloadNodeImage}
                     onSaveAsset={(node) => void saveNodeAsset(node)}
                     onMaskEdit={(node) => setMaskEditNodeId(node.id)}
+                    onOutpaint={(node) => setOutpaintNodeId(node.id)}
                     onCrop={(node) => setCropNodeId(node.id)}
                     onSplit={(node) => setSplitNodeId(node.id)}
                     onUpscale={(node) => setUpscaleNodeId(node.id)}
                     onSuperResolve={(node) => setSuperResolveNodeId(node.id)}
                     onAngle={(node) => setAngleNodeId(node.id)}
                     onViewImage={(node) => setPreviewNodeId(node.id)}
+                    onReusePrompt={reusePromptFromNode}
                     onReversePrompt={createImageReversePromptNodes}
                     onRetry={(node) => void handleRetryNode(node)}
                     onToggleFreeResize={(node) => toggleNodeFreeResize(node.id)}
@@ -2768,15 +3463,21 @@ function InfiniteCanvasPage() {
 
                 {cropNode?.metadata?.content ? <CanvasNodeCropDialog dataUrl={cropNode.metadata.content} open={Boolean(cropNode)} onClose={() => setCropNodeId(null)} onConfirm={(crop) => void cropImageNode(cropNode!, crop)} /> : null}
 
-                {maskEditNode?.metadata?.content ? <CanvasNodeMaskEditDialog dataUrl={maskEditNode.metadata.content} open={Boolean(maskEditNode)} onClose={() => setMaskEditNodeId(null)} onConfirm={(payload) => void maskEditImageNode(maskEditNode!, payload)} /> : null}
+                {maskEditNode?.metadata?.content ? (
+                    <CanvasNodeMaskEditDialog dataUrl={maskEditNode.metadata.content} open={Boolean(maskEditNode)} onClose={() => setMaskEditNodeId(null)} onConfirm={(payload) => void maskEditImageNode(maskEditNode!, payload)} />
+                ) : null}
+
+                <CanvasNodeOutpaintDialog node={outpaintNode} open={Boolean(outpaintNode)} onClose={() => setOutpaintNodeId(null)} onConfirm={(payload) => void outpaintImageNode(outpaintNode!, payload)} />
 
                 {splitNode?.metadata?.content ? <CanvasNodeSplitDialog dataUrl={splitNode.metadata.content} open={Boolean(splitNode)} onClose={() => setSplitNodeId(null)} onConfirm={(params) => void splitImageNode(splitNode!, params)} /> : null}
 
-                {upscaleNode?.metadata?.content ? <CanvasNodeUpscaleDialog dataUrl={upscaleNode.metadata.content} open={Boolean(upscaleNode)} onClose={() => setUpscaleNodeId(null)} onConfirm={(params) => void upscaleImageNode(upscaleNode!, params)} /> : null}
+                {upscaleNode?.metadata?.content ? (
+                    <CanvasNodeUpscaleDialog dataUrl={upscaleNode.metadata.content} open={Boolean(upscaleNode)} onClose={() => setUpscaleNodeId(null)} onConfirm={(params) => void upscaleImageNode(upscaleNode!, params)} />
+                ) : null}
 
-                <Modal title="AI 超分" open={Boolean(superResolveNode?.metadata?.content)} centered footer={null} onCancel={() => setSuperResolveNodeId(null)}>
-                    <div className="py-8 text-center text-base font-medium">暂未实现</div>
-                </Modal>
+                {superResolveNode?.metadata?.content ? (
+                    <CanvasNodeSuperResolveDialog dataUrl={superResolveNode.metadata.content} open={Boolean(superResolveNode)} onClose={() => setSuperResolveNodeId(null)} onConfirm={(params) => void superResolveImageNode(superResolveNode!, params)} />
+                ) : null}
 
                 {angleNode?.metadata?.content ? <CanvasNodeAngleDialog dataUrl={angleNode.metadata.content} open={Boolean(angleNode)} onClose={() => setAngleNodeId(null)} onConfirm={(params) => void generateAngleNode(angleNode!, params)} /> : null}
 
@@ -2789,13 +3490,7 @@ function InfiniteCanvasPage() {
                     width="auto"
                     styles={{ body: { padding: 0, display: "flex", justifyContent: "center", alignItems: "center", maxHeight: "80vh" } }}
                 >
-                    {previewNode?.metadata?.content ? (
-                        <img
-                            src={previewNode.metadata.content}
-                            alt={previewNode.title || "图片"}
-                            style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }}
-                        />
-                    ) : null}
+                    {previewNode?.metadata?.content ? <img src={previewNode.metadata.content} alt={previewNode.title || "图片"} style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : null}
                 </Modal>
 
                 <Modal
@@ -2816,7 +3511,10 @@ function InfiniteCanvasPage() {
                 </Modal>
 
                 <AssetPickerModal open={assetPickerOpen} onInsert={handleAssetInsert} onClose={() => setAssetPickerOpen(false)} />
-                {codexCompactAgent && !assistantMounted ? <CanvasLocalAgentPanel headless snapshot={agentSnapshot} canUndoOps={Boolean(agentUndoSnapshot)} onApplyOps={applyAgentOps} onUndoOps={undoAgentOps} autoConnect={codexAutoConnect} /> : null}
+                {/* Agent 在线或插件直连时，即使侧边栏收起也挂 headless 工具桥，保证 Codex MCP 可写画布 */}
+                {(codexCompactAgent || localAgentEnabled) && !assistantMounted ? (
+                    <CanvasLocalAgentPanel headless snapshot={agentSnapshot} canUndoOps={Boolean(agentUndoSnapshot)} onApplyOps={applyAgentOps} onUndoOps={undoAgentOps} autoConnect={codexAutoConnect || localAgentEnabled} />
+                ) : null}
             </section>
             {assistantMounted ? (
                 <CanvasAssistantPanel
@@ -2878,7 +3576,7 @@ function CanvasTopBar({
     onUndo: () => void;
     onRedo: () => void;
     agentOpen: boolean;
-    compactAgentStatus: { connected: boolean; enabled: boolean; activity: string };
+    compactAgentStatus?: { connected: boolean; agentOnline?: boolean; enabled: boolean; activity: string };
     onToggleAgent: () => void;
 }) {
     const colorTheme = useThemeStore((state) => state.theme);
@@ -2947,14 +3645,11 @@ function CanvasTopBar({
                             </button>
                         )}
                     </div>
-                    <CompactAgentStatus status={compactAgentStatus} onClick={onToggleAgent} />
+                    <CompactAgentStatus status={compactAgentStatus || { connected: false, agentOnline: false, enabled: false, activity: "" }} onClick={onToggleAgent} />
                 </div>
 
                 <div className="pointer-events-auto flex items-center gap-1.5">
-                    <UserStatusActions
-                        variant="canvas"
-                        onOpenShortcuts={() => setShortcutsOpen(true)}
-                    />
+                    <UserStatusActions variant="canvas" onOpenShortcuts={() => setShortcutsOpen(true)} />
                     <span className="h-6 w-px" style={{ background: theme.toolbar.border }} />
                     <Button
                         type="text"
@@ -2997,18 +3692,19 @@ function MenuLabel({ text, shortcut }: { text: string; shortcut: string }) {
     );
 }
 
-function CompactAgentStatus({ status, onClick }: { status: { connected: boolean; enabled: boolean; activity: string }; onClick: () => void }) {
+function CompactAgentStatus({ status, onClick }: { status: { connected: boolean; agentOnline?: boolean; enabled: boolean; activity: string }; onClick: () => void }) {
     const colorTheme = useThemeStore((state) => state.theme);
     const theme = canvasThemes[colorTheme];
-    const label = status.connected ? "Codex 已连接" : status.enabled ? `Codex ${status.activity || "连接中"}` : "Codex 未连接";
-    const dotColor = status.connected ? "#22c55e" : status.enabled ? "#f59e0b" : theme.node.muted;
+    const online = Boolean(status.agentOnline || status.enabled);
+    const label = status.connected ? "画布已连接" : online ? status.activity || "Agent 在线" : "Codex 未连接";
+    const dotColor = status.connected ? "#22c55e" : online ? "#f59e0b" : theme.node.muted;
     return (
         <button
             type="button"
             className="flex h-8 items-center gap-1.5 text-xs transition hover:opacity-75"
-            style={{ color: status.connected ? "#16a34a" : status.enabled ? "#d97706" : theme.node.muted }}
+            style={{ color: status.connected ? "#16a34a" : online ? "#d97706" : theme.node.muted }}
             onClick={onClick}
-            title="打开本地 Codex 面板"
+            title={status.connected ? "画布工具桥已就绪，可操作节点" : online ? "Agent 在线，等待工具桥" : "打开本地 Codex 面板"}
         >
             <span className="size-2 rounded-full" style={{ background: dotColor }} />
             <span className="max-w-[140px] truncate">{label}</span>
@@ -3062,14 +3758,75 @@ function audioMetadata(audio: UploadedFile): CanvasNodeMetadata {
     return { content: audio.url, storageKey: audio.storageKey, status: "success", bytes: audio.bytes, mimeType: audio.mimeType || "audio/mpeg", durationMs: audio.durationMs };
 }
 
-function buildImageGenerationMetadata(type: CanvasImageGenerationType, config: AiConfig, count: number, references: ReferenceImage[]): CanvasNodeMetadata {
+function inheritedGenerationMetadata(source?: CanvasNodeData): CanvasNodeMetadata {
+    return pickGenerationMetadata(source?.metadata);
+}
+
+function pickGenerationMetadata(metadata?: CanvasNodeMetadata): CanvasNodeMetadata {
+    if (!metadata) return {};
+    const picked: CanvasNodeMetadata = {};
+    if (metadata.prompt) picked.prompt = normalizeOutpaintPromptForStorage(metadata.prompt, metadata.operationProfile?.outpaintMode);
+    if (metadata.originalIdentityPrompt) picked.originalIdentityPrompt = metadata.originalIdentityPrompt;
+    if (metadata.originalPrompt) picked.originalPrompt = metadata.originalPrompt;
+    if (metadata.composerContent) picked.composerContent = metadata.composerContent;
+    if (metadata.model) picked.model = metadata.model;
+    if (metadata.promptModel) picked.promptModel = metadata.promptModel;
+    if (metadata.size) picked.size = metadata.size;
+    if (metadata.quality) picked.quality = metadata.quality;
+    if (metadata.count) picked.count = metadata.count;
+    if (metadata.comfyReferenceMode) picked.comfyReferenceMode = metadata.comfyReferenceMode;
+    if (Array.isArray(metadata.comfyLoras)) picked.comfyLoras = [...metadata.comfyLoras];
+    if (metadata.comfyFaceDetailer !== undefined) picked.comfyFaceDetailer = metadata.comfyFaceDetailer;
+    if (metadata.comfyDenoise !== undefined) picked.comfyDenoise = metadata.comfyDenoise;
+    if (metadata.manualNodeSettings) picked.manualNodeSettings = { ...metadata.manualNodeSettings, ...(Array.isArray(metadata.manualNodeSettings.loras) ? { loras: [...metadata.manualNodeSettings.loras] } : {}) };
+    if (metadata.sourceGenerationRecipe) picked.sourceGenerationRecipe = sourceGenerationRecipeFromMetadata(metadata);
+    if (metadata.operationProfile) picked.operationProfile = { ...metadata.operationProfile };
+    if (metadata.executionPlan)
+        picked.executionPlan = {
+            ...metadata.executionPlan,
+            values: Object.fromEntries(Object.entries(metadata.executionPlan.values).map(([key, value]) => [key, value && Array.isArray(value.value) ? { ...value, value: [...value.value] } : value ? { ...value } : value])),
+            protections: metadata.executionPlan.protections ? [...metadata.executionPlan.protections] : undefined,
+        };
+    return picked;
+}
+
+function buildImageGenerationMetadata(type: CanvasImageGenerationType, config: AiConfig, count: number, references: ReferenceImage[], operationProfile?: CanvasOperationProfile, executionPlan?: CanvasNodeMetadata["executionPlan"]): CanvasNodeMetadata {
+    const extra = config.comfyExtra;
+    const referenceUrls = references.map(referenceUrl).filter((url): url is string => Boolean(url));
+    const hasExtra = (key: keyof ComfyExtraConfig) => Boolean(extra && Object.prototype.hasOwnProperty.call(extra, key));
+    const resolvedExecutionPlan =
+        executionPlan ||
+        ({
+            operation: "manual",
+            managed: false,
+            createdAt: new Date().toISOString(),
+            values: {
+                model: { value: config.model, source: "manual_node" },
+                promptModel: { value: config.textModel, source: "manual_node" },
+                size: { value: config.size, source: "manual_node" },
+                quality: { value: config.quality, source: "manual_node" },
+                count: { value: count, source: "manual_node" },
+                ...(hasExtra("reference_mode") ? { referenceMode: { value: extra?.reference_mode || "none", source: "manual_node" as const } } : {}),
+                ...(hasExtra("lora_keys") ? { loras: { value: [...(extra?.lora_keys || [])], source: "manual_node" as const } } : {}),
+                ...(hasExtra("face_detailer") ? { faceDetailer: { value: extra?.face_detailer ?? false, source: "manual_node" as const } } : {}),
+                ...(hasExtra("denoise") ? { denoise: { value: extra?.denoise ?? null, source: "manual_node" as const } } : {}),
+            },
+        } satisfies NonNullable<CanvasNodeMetadata["executionPlan"]>);
     return {
         generationType: type,
         model: config.model,
+        promptModel: config.textModel,
         size: config.size,
         quality: config.quality,
         count,
-        references: references.map(referenceUrl).filter((url): url is string => Boolean(url)),
+        references: referenceUrls,
+        sourceGenerationRecipe: sourceGenerationRecipeFromConfig(type, config, count, referenceUrls),
+        ...(hasExtra("reference_mode") ? { comfyReferenceMode: extra?.reference_mode || "none" } : {}),
+        ...(hasExtra("lora_keys") ? { comfyLoras: [...(extra?.lora_keys || [])] } : {}),
+        ...(hasExtra("face_detailer") ? { comfyFaceDetailer: extra?.face_detailer } : {}),
+        ...(hasExtra("denoise") ? { comfyDenoise: extra?.denoise } : {}),
+        ...(operationProfile ? { operationProfile: { ...operationProfile } } : {}),
+        executionPlan: resolvedExecutionPlan,
     };
 }
 
@@ -3105,6 +3862,14 @@ async function resolveMetadataReferences(metadata: CanvasNodeMetadata) {
         }),
     );
     return references.every(Boolean) ? (references as ReferenceImage[]) : null;
+}
+
+async function resolveOperationMask(storageKey: string): Promise<ReferenceImage | undefined> {
+    const url = await resolveImageUrl(storageKey, "");
+    if (!url) return undefined;
+    const dataUrl = await imageToDataUrl({ storageKey, url });
+    if (!dataUrl) return undefined;
+    return { id: "operation-mask", name: "operation-mask.png", type: "image/png", dataUrl, storageKey };
 }
 
 async function hydrateCanvasImages(nodes: CanvasNodeData[]) {
@@ -3148,7 +3913,9 @@ function getGenerationCount(count: string) {
 
 function applyNodeConfigPatch(node: CanvasNodeData, patch: Partial<CanvasNodeData["metadata"]>) {
     const safePatch = patch || {};
-    const next = { ...node, metadata: { ...node.metadata, ...safePatch } };
+    const metadata = { ...node.metadata, ...safePatch };
+    metadata.manualNodeSettings = manualNodeSettingsFromMetadata(metadata);
+    const next = { ...node, metadata };
     const spec = node.type === CanvasNodeType.Video ? NODE_DEFAULT_SIZE[CanvasNodeType.Video] : NODE_DEFAULT_SIZE[CanvasNodeType.Image];
     const size = typeof safePatch.size === "string" && !node.metadata?.content ? nodeSizeFromRatio(safePatch.size, spec.width, spec.height) : null;
     return size && (node.type === CanvasNodeType.Image || node.type === CanvasNodeType.Video) ? { ...next, ...size, position: { x: node.position.x + node.width / 2 - size.width / 2, y: node.position.y + node.height / 2 - size.height / 2 } } : next;
@@ -3159,16 +3926,14 @@ function findGroupDropTarget(movedIds: Set<string>, nodes: CanvasNodeData[]) {
     const movingNodes = nodes.filter((node) => movedIds.has(node.id) && node.type !== CanvasNodeType.Group);
     if (!movingNodes.length) return null;
     return (
-        [...nodes]
-            .reverse()
-            .find((group) => {
-                if (group.type !== CanvasNodeType.Group || movedIds.has(group.id)) return false;
-                return movingNodes.some((node) => {
-                    const centerX = node.position.x + node.width / 2;
-                    const centerY = node.position.y + node.height / 2;
-                    return centerX >= group.position.x && centerX <= group.position.x + group.width && centerY >= group.position.y && centerY <= group.position.y + group.height;
-                });
-            }) || null
+        [...nodes].reverse().find((group) => {
+            if (group.type !== CanvasNodeType.Group || movedIds.has(group.id)) return false;
+            return movingNodes.some((node) => {
+                const centerX = node.position.x + node.width / 2;
+                const centerY = node.position.y + node.height / 2;
+                return centerX >= group.position.x && centerX <= group.position.x + group.width && centerY >= group.position.y && centerY <= group.position.y + group.height;
+            });
+        }) || null
     );
 }
 
@@ -3207,7 +3972,8 @@ function findContainingGroupId(node: CanvasNodeData, nodes: CanvasNodeData[]) {
     return (
         [...nodes]
             .reverse()
-            .find((group) => group.type === CanvasNodeType.Group && group.id !== node.id && centerX >= group.position.x && centerX <= group.position.x + group.width && centerY >= group.position.y && centerY <= group.position.y + group.height)?.id || undefined
+            .find((group) => group.type === CanvasNodeType.Group && group.id !== node.id && centerX >= group.position.x && centerX <= group.position.x + group.width && centerY >= group.position.y && centerY <= group.position.y + group.height)?.id ||
+        undefined
     );
 }
 
@@ -3239,11 +4005,53 @@ function getInputSummary(inputs: NodeGenerationInput[]) {
     };
 }
 
+function comfyExtraFromMetadata(metadata?: CanvasNodeMetadata): ComfyExtraConfig | undefined {
+    if (!metadata) return undefined;
+    const recipe = sourceGenerationRecipeFromMetadata(metadata);
+    const mode = metadata.comfyReferenceMode ?? recipe.referenceMode;
+    const loras = Array.isArray(metadata.comfyLoras) ? metadata.comfyLoras : recipe.loras;
+    const faceDetailer = metadata.comfyFaceDetailer ?? recipe.faceDetailer;
+    const denoise = metadata.comfyDenoise ?? recipe.denoise;
+    const isFullBody = metadata.operationProfile?.kind === "outpaint" && metadata.operationProfile.outpaintMode === "full_body";
+    const identitySeed = metadata.originalIdentityPrompt || metadata.originalPrompt || "";
+    if (!(mode || loras !== undefined || faceDetailer !== undefined || denoise !== undefined || isFullBody || identitySeed)) return undefined;
+    // denoise 只对 img2img/蒙版重绘生效；ipadapter/faceid/controlnet 模式一旦带数值 denoise，
+    // 网关会走 reference_as_latent（参考图→VAEEncode→重绘），会把近景构图钉死。
+    // 但 denoise:false / null 是“显式关闭 latent 重绘”，full_body/faceid 重试必须原样带回。
+    const denoiseApplies = !mode || mode === "none" || mode === "img2img";
+    const preserveExplicitNoDenoise = denoise === false || denoise === null;
+    return {
+        ...(mode && mode !== "none" ? { reference_mode: mode } : {}),
+        ...(loras !== undefined ? { lora_keys: [...loras] } : {}),
+        ...(faceDetailer !== undefined ? { face_detailer: faceDetailer } : {}),
+        ...((denoiseApplies || preserveExplicitNoDenoise) && denoise !== undefined ? { denoise } : {}),
+        ...(isFullBody
+            ? {
+                  reference_mode: "ipadapter",
+                  denoise: false,
+                  face_detailer: false,
+                  prompt_optimize: false,
+                  full_body_rebuild: true,
+                  character_lock: true,
+                  part_refine: 0,
+                  face_refine: 0,
+                  skirt_refine: 0,
+              }
+            : {}),
+        ...(identitySeed && (isFullBody || mode === "faceid" || mode === "faceid_style")
+            ? { identity_prompt: identitySeed, reference_prompt: identitySeed }
+            : {}),
+    };
+}
+
 function buildGenerationConfig(config: AiConfig, node: CanvasNodeData | undefined, mode: CanvasNodeGenerationMode): AiConfig {
     const defaultModel = mode === "image" ? config.imageModel : mode === "video" ? config.videoModel : mode === "audio" ? config.audioModel : config.textModel;
+    const comfyExtra = mode === "image" ? comfyExtraFromMetadata(node?.metadata) : undefined;
     return {
         ...config,
+        ...(comfyExtra ? { comfyExtra } : {}),
         model: node?.metadata?.model || defaultModel || (mode === "audio" ? defaultConfig.audioModel : config.model || defaultConfig.model),
+        textModel: node?.metadata?.promptModel || config.textModel || defaultConfig.textModel,
         quality: node?.metadata?.quality || config.quality || defaultConfig.quality,
         size: node?.metadata?.size || config.size || defaultConfig.size,
         videoSeconds: node?.metadata?.seconds || config.videoSeconds || defaultConfig.videoSeconds,
@@ -3258,12 +4066,301 @@ function buildGenerationConfig(config: AiConfig, node: CanvasNodeData | undefine
     };
 }
 
+async function optimizeLocalImagePrompt(config: AiConfig, prompt: string, references: ReferenceImage[], referencePrompt = "", signal?: AbortSignal) {
+    const input = prompt.trim();
+    if (!input || !isComfyModel(config.model) || !config.textModel) return input;
+    try {
+        return await requestOptimizedLocalImagePrompt(config, input, references, referencePrompt, signal);
+    } catch (error) {
+        if (error instanceof Error && (error.message === "请求已取消" || error.name === "AbortError")) throw error;
+        return input;
+    }
+}
+
+async function requestOptimizedLocalImagePrompt(config: AiConfig, input: string, references: ReferenceImage[], referencePrompt: string, signal?: AbortSignal) {
+    // 本地 Comfy 提示词优化只允许使用文本证据，不上传参考图像本体给云端文本模型。
+    // 角色身份来自 referencePrompt；避免 R18/私密参考图触发上游审查，也避免正常图生图被视觉模型改写。
+    const answer = await requestImageQuestion(
+        { ...config, model: config.textModel, systemPrompt: "" },
+        [
+            {
+                role: "system",
+                content:
+                    "你是本地 ComfyUI 生图提示词优化器。把用户需求改写为适合 SDXL/Illustrious/WAI/NoobAI 的英文图像 prompt。保留人物身份、发色、瞳色、服装。严禁根据参考图重写姿势：若用户要求 reverse cowgirl / sex position / change pose completely，必须完整保留这些动作词，并写 man lying under her、girl on top facing away，明确覆盖站姿；不要输出 standing / stand up。明确 penis belongs to the man under her、no futanari。用户若要求成人插入细节必须保留。只输出最终 prompt，不要解释、不要 Markdown、不要 JSON。",
+            },
+            {
+                role: "user",
+                content: [
+                    {
+                        type: "text",
+                        text: `用户需求：${input}\n参考图数量：${references.length}${referencePrompt ? `\n参考图的原始生成提示词：${referencePrompt}\n要求：保留角色外貌/发色/瞳色/服装；若用户要求新姿势或新镜头，优先满足新姿势与新镜头，不要沿用原图站姿构图。如果需求包含 keep character / change pose completely，请原样保留这些约束。` : ""}\n请输出一段可直接送入本地生图模型的英文 prompt。`,
+                    },
+                ],
+            },
+        ],
+        () => {},
+        { signal },
+    );
+    const cleaned = cleanOptimizedPrompt(answer);
+    return !cleaned || cleaned === "没有返回内容" ? input : cleaned;
+}
+
+/** 从参考图原始 prompt 提取身份锚点，合并进大改姿势 prompt（不带回站姿/构图） */
+function mergeReferenceIdentityIntoPosePrompt(posePrompt: string, referencePrompt = "") {
+    const base = posePrompt.trim();
+    if (!base) return base;
+    const ref = referencePrompt.trim();
+    const wantsOutfitChange = /\b(change (?:clothes|clothing|outfit)|different (?:dress|outfit|clothes)|lingerie|bikini|nude|naked|school uniform|wardrobe change)\b/i.test(base);
+
+    const dropRe = /\b(standing|stand up|upright|walking|hands behind back|facing viewer|looking at viewer|front view|from front|courtyard|garden|solo focus|solo)\b/i;
+    // v14: 广义身份词匹配，不写死某一角色；具体色/装只在参考 prompt 有证据时进入
+    const identityRe =
+        /\b(cute beautiful girl|beautiful girl|detailed face|same face|same hair|same outfit|same clothing design|keep character|teal tips|blue eyes|brown eyes|green eyes|red eyes|amber eyes|purple eyes|brown hair|black hair|blonde hair|silver hair|white hair|pink hair|long hair|very long hair|short hair|bangs|sidelocks|twintails|ponytail|white dress|black dress|red dress|blue dress|pink dress|cream white dress|white summer dress|white long-sleeve dress|school uniform|collar bow|frilled hem|flared skirt|ruffled skirt hem|button-up dress|dress|skirt|blouse|shirt|kimono|hoodie|jacket|hair|eyes|skin|makeup|lipstick|earrings|necklace|soft lighting|highly detailed)\b/i;
+
+    const existing = new Set(
+        base
+            .split(/[,，\n]/)
+            .map((item) => item.trim().toLowerCase())
+            .filter(Boolean),
+    );
+    const identityTerms: string[] = [];
+
+    const pushTerm = (raw: string) => {
+        const term = raw.trim();
+        if (!term) return;
+        if (dropRe.test(term)) return;
+        if (/\b(reverse cowgirl|cowgirl|doggy|missionary|sex|penetration|creampie|penis|pussy|vagina|balls deep|ahegao|cum )\b/i.test(term)) return;
+        const key = term.toLowerCase();
+        if (existing.has(key)) return;
+        existing.add(key);
+        identityTerms.push(term);
+    };
+
+    if (ref) {
+        for (const raw of ref
+            .split(/[,，\n]/)
+            .map((item) => item.trim())
+            .filter(Boolean)) {
+            if (!identityRe.test(raw)) continue;
+            // 换装：不从参考图回灌旧衣服
+            if (wantsOutfitChange && /\b(dress|skirt|outfit|uniform|kimono|blouse|shirt|hoodie|jacket|collar bow|hem|frill|lace)\b/i.test(raw)) {
+                continue;
+            }
+            pushTerm(raw);
+        }
+        // 子串证据补全：只在参考文本真的出现时补标准写法
+        if (/brown hair/i.test(ref) && /teal tips/i.test(ref)) pushTerm("long brown hair with teal tips");
+        else if (/teal tips/i.test(ref)) pushTerm("teal tips");
+        if (/(long hair|very long hair|hair past shoulders|flowing long hair)/i.test(ref) || /same hair/i.test(base)) {
+            if (/long hair|very long|hair past|flowing long|teal tips|brown hair/i.test(ref)) {
+                pushTerm("long hair");
+                pushTerm("very long hair");
+            }
+        }
+        if (/blue eyes/i.test(ref)) pushTerm("blue eyes");
+        if (/brown eyes/i.test(ref)) pushTerm("brown eyes");
+        if (/green eyes/i.test(ref)) pushTerm("green eyes");
+        if (!wantsOutfitChange) {
+            if (/white (summer )?dress|cream white dress|white long-sleeve dress/i.test(ref)) {
+                if (/white long-sleeve dress/i.test(ref)) pushTerm("white long-sleeve dress");
+                if (/cream white dress/i.test(ref)) pushTerm("cream white dress");
+                pushTerm("white dress");
+            }
+            if (/black dress/i.test(ref)) pushTerm("black dress");
+            if (/school uniform/i.test(ref)) pushTerm("school uniform");
+            if (/collar bow/i.test(ref)) pushTerm("collar bow");
+            if (/frilled hem|ruffled|flared skirt/i.test(ref)) {
+                if (/frilled hem/i.test(ref)) pushTerm("frilled hem");
+                if (/flared skirt/i.test(ref)) pushTerm("flared skirt");
+                if (/ruffled/i.test(ref)) pushTerm("ruffled skirt hem");
+            }
+        }
+        if (/cute beautiful girl|beautiful girl/i.test(ref)) pushTerm("cute beautiful girl");
+        if (/detailed face/i.test(ref)) pushTerm("detailed face");
+    }
+
+    // v14: 不再在参考 prompt 丢失时硬塞白裙棕发兜底
+    pushTerm("detailed face");
+    pushTerm("same face");
+    if (/same hair|keep character/i.test(base) || identityTerms.some((t) => /hair/i.test(t))) {
+        pushTerm("same hair");
+        // 仅 generic 发长，不写死颜色
+        if (identityTerms.some((t) => /long hair|teal tips|hair/i.test(t)) || /long hair|same hair/i.test(base + " " + ref)) {
+            pushTerm("long hair");
+            pushTerm("very long hair");
+        }
+    }
+    if (!wantsOutfitChange && (/same outfit|same dress|keep character/i.test(base) || identityTerms.some((t) => /dress|outfit|skirt|uniform/i.test(t)))) {
+        pushTerm("same outfit");
+        pushTerm("same clothing design");
+    }
+
+    if (!identityTerms.length) return base;
+    return `${identityTerms.join(", ")}, ${base}`;
+}
+
+function cleanOptimizedPrompt(value: string) {
+    return value
+        .trim()
+        .replace(/^```(?:\w+)?/i, "")
+        .replace(/```$/i, "")
+        .replace(/^prompt\s*[:：]\s*/i, "")
+        .trim();
+}
+
+function outpaintModePrompt(mode: CanvasOutpaintMode, direction: CanvasOutpaintDirection = "down") {
+    if (mode === "full_body") {
+        return "wide shot, full length portrait, standing full body, head to toe, entire figure inside frame, subject centered, distant view, zoomed out, upright standing, standing straight, natural standing pose, head upright, chin level, facing viewer, looking at viewer, eyes looking at viewer, face fully visible, head fully visible, face not covered by hair, both feet fully visible, complete figure, hands behind back, natural proportions, 1girl, solo, same character identity, same face, same hairstyle, same hair color, same clothing design";
+    }
+    if (direction === "outward") {
+        return "seamless outward continuation on all sides, preserve the original character and composition, keep subject position fixed, naturally expand background and edges around the source image, consistent lighting, fabric, anatomy, perspective and color";
+    }
+    if (direction === "up") {
+        // 延伸区在头顶上方,多数是纯背景;提 head/hair 会诱导模型在空白区再画头发/手/头顶物
+        return "seamless upward continuation, preserve the original character and composition, naturally continue only the background scene, walls, ceiling, sky and architecture above the source image, open empty space above the head, consistent lighting, perspective and color";
+    }
+    if (direction === "left") {
+        return "seamless leftward continuation, preserve the original character and composition, naturally continue body and background to the left of the source image, consistent lighting, fabric, anatomy, perspective and color";
+    }
+    if (direction === "right") {
+        return "seamless rightward continuation, preserve the original character and composition, naturally continue body and background to the right of the source image, consistent lighting, fabric, anatomy, perspective and color";
+    }
+    return "seamless downward continuation, preserve the original character and composition, naturally continue clothing, body and background below the source image, consistent lighting, fabric, anatomy, perspective and color";
+}
+
+function directionLabel(direction: CanvasOutpaintDirection | string | undefined) {
+    if (direction === "outward") return "一键外扩";
+    if (direction === "up") return "向上补全";
+    if (direction === "left") return "向左扩展";
+    if (direction === "right") return "向右扩展";
+    return "向下补全";
+}
+
+function ensureFullBodyFramingPrompt(prompt: string, fallback: string) {
+    const base = (prompt || "").trim() || fallback;
+    // 去掉会把全身吸成下半身/裙装特写的词；也去掉易诱导弯腰/对折的两端空间锚
+    const dropRe =
+        /\b(from the waist down|below the waist|lower body only|skirt focus|ass focus|close-up legs|legs only|shoes focus|fashion crop|cowboy shot|upper body only|flared skirt|ruffled skirt hem|layered ruffled hem|frilled hem|head near top of frame|feet near bottom of frame|looking down|looking down at|head down|bowed head|face down)\b/gi;
+    const cleaned = joinPromptTokens(
+        splitPromptTokens(base)
+            .map((token) => token.replace(dropRe, "").trim())
+            .filter(Boolean),
+    );
+    const lower = cleaned.toLowerCase();
+    // 构图镜头词必须靠前：先拼 must，再拼其余身份词
+    const must = [
+        "wide shot",
+        "full length portrait",
+        "standing full body",
+        "head to toe",
+        "entire figure inside frame",
+        "subject centered",
+        "distant view",
+        "zoomed out",
+        "upright standing",
+        "standing straight",
+        "natural standing pose",
+        "head upright",
+        "chin level",
+        "facing viewer",
+        "looking at viewer",
+        "eyes looking at viewer",
+        "head fully visible",
+        "face fully visible",
+        "face not covered by hair",
+        "both feet fully visible",
+        "hands behind back",
+    ];
+    const missing = must.filter((token) => !lower.includes(token.toLowerCase()));
+    // CLIP 不懂否定：no head cut off 会被读成 head cut off 构图吸引子，一律不放进 positive
+    const rest = splitPromptTokens(cleaned).filter((token) => !must.some((m) => token.toLowerCase() === m.toLowerCase()) && !/^no($|\s)/i.test(token));
+    return joinPromptTokens([...missing, ...rest]);
+}
+
+function ensureFullBodyStandingPose(prompt: string) {
+    // 去掉会诱导“弯腰/折叠/倒立式畸变”的词，再硬补站立骨架
+    const dropRe =
+        /\b(bent over|bending over|leaning forward|folded in half|jackknife|contorted|twisted spine|broken back|arched back extreme|looking down at floor|face down|all fours|on all fours|crouching extreme|hands on floor|touching toes|head between legs)\b/gi;
+    const cleaned = joinPromptTokens(
+        splitPromptTokens(prompt)
+            .map((token) => token.replace(dropRe, "").trim())
+            .filter(Boolean),
+    );
+    return ensureFullBodyFramingPrompt(cleaned, cleaned);
+}
+
+function buildEnglishOutpaintFallback(mode: CanvasOutpaintMode, userPrompt: string, identityTags: string[], direction: CanvasOutpaintDirection = "down") {
+    const translated: string[] = [];
+    const add = (value: string) => {
+        if (!translated.includes(value)) translated.push(value);
+    };
+    const backgroundOnly = mode === "extend" && (direction === "up" || direction === "left" || direction === "right");
+    if (/白色(?:的)?(?:连衣裙|裙子)|白裙/.test(userPrompt)) add("white dress");
+    if (/黑色(?:的)?(?:连衣裙|裙子)|黑裙/.test(userPrompt)) add("black dress");
+    // 纯背景方向默认不注入身体/构图骨架词，避免上方空白长出第二人或补头诱导
+    if (!backgroundOnly) {
+        if (/全身|从头到脚|完整身体|完整入镜/.test(userPrompt)) add("complete head-to-toe full body");
+        if (/头|面部|脸/.test(userPrompt)) {
+            add("head fully visible");
+            add("face fully visible");
+        }
+        if (/双腿|腿部/.test(userPrompt)) add("both legs fully visible");
+        if (/双脚|脚部|鞋子/.test(userPrompt)) add("both feet and shoes fully visible");
+        if (/不要.*下半身|不只.*下半身|不要裁头|不要裁掉/.test(userPrompt)) {
+            add("head fully visible");
+            add("complete figure from head to toe");
+        }
+        add("subject centered");
+        add("entire figure inside frame");
+        if (/站立|站着/.test(userPrompt)) add("standing naturally");
+    } else if (direction === "up" && /补头|头顶被裁|裁头|头发被裁|头顶缺失/.test(userPrompt)) {
+        // 仅用户明确要补被裁头顶时，才允许头部结构词
+        add("complete the missing head top and hairline");
+        add("natural scalp and hair continuity");
+    }
+    if (/庭院|院子/.test(userPrompt)) add("courtyard background");
+    if (/保持|不变|同一个角色|角色形象/.test(userPrompt)) add("preserve the same character identity");
+    if ((!backgroundOnly && /发型|头发|发色/.test(userPrompt)) || (direction === "up" && /补头|头顶被裁|裁头|头发被裁|头顶缺失/.test(userPrompt))) {
+        if (/发型|头发|发色/.test(userPrompt)) add("preserve the same hairstyle and hair color");
+    }
+    if (/服装|衣服|裙装/.test(userPrompt)) add("preserve the same clothing design");
+    const englishUserTokens = splitPromptTokens(userPrompt).filter((token) => !/[㐀-鿿]/u.test(token));
+    const safeIdentityTags = identityTags.filter((token) => !/[㐀-鿿]/u.test(token));
+    return joinPromptTokens([...safeIdentityTags, ...splitPromptTokens(outpaintModePrompt(mode, direction)), ...translated, ...englishUserTokens]);
+}
+
+function normalizeEnglishOutpaintPrompt(value: string, fallback: string) {
+    const cleaned = cleanOptimizedPrompt(value);
+    return cleaned && !/[\u3400-\u9fff]/u.test(cleaned) ? cleaned : fallback;
+}
+
+export function normalizeOutpaintPromptForStorage(value: string, mode: CanvasOutpaintMode = "extend") {
+    const cleaned = cleanOptimizedPrompt(value);
+    if (!cleaned) return cleaned;
+    return /[\u3400-\u9fff]/u.test(cleaned) ? buildEnglishOutpaintFallback(mode, cleaned, splitPromptTokens(cleaned)) : cleaned;
+}
+
 function resetInterruptedGeneration(nodes: CanvasNodeData[]) {
-    return nodes.map((node) => (node.metadata?.status === "loading" ? { ...node, metadata: { ...node.metadata, status: "error" as const, errorDetails: "页面刷新后生成已中断，请重新生成。" } } : node));
+    return nodes.map((node) => (node.metadata?.status === "loading" ? { ...node, metadata: { ...node.metadata, status: "error" as const, errorDetails: "生成过程被中断（页面刷新/重载），请点重试继续。" } } : node));
 }
 
 function isGenerationCanceled(error: unknown) {
     return error instanceof Error && (error.message === "请求已取消" || error.name === "AbortError");
+}
+
+function findInheritedGenerationMetadata(nodeId: string, nodes: CanvasNodeData[], connections: CanvasConnection[]): CanvasNodeMetadata {
+    const queue = [nodeId];
+    const visited = new Set<string>();
+    while (queue.length) {
+        const id = queue.shift()!;
+        if (visited.has(id)) continue;
+        visited.add(id);
+        const node = nodes.find((item) => item.id === id);
+        const picked = pickGenerationMetadata(node?.metadata);
+        if (picked.model) return picked;
+        connections.filter((connection) => connection.toNodeId === id).forEach((connection) => queue.push(connection.fromNodeId));
+    }
+    return {};
 }
 
 function findRetrySourceNode(nodeId: string, nodes: CanvasNodeData[], connections: CanvasConnection[]) {

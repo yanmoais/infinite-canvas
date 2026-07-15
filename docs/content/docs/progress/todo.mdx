@@ -8,3 +8,6 @@ description: 当前项目后续值得处理的事项
 本文档用来记录当前项目后续比较值得处理的事项。
 
 - 本地 Agent 接入后续：按[本地 Agent 接入规划](/docs/progress/local-agent-integration-plan)把 Claude Code CLI Adapter 升级为 Claude Agent SDK Adapter，并完善工具队列体验。
+- 角色部件工坊评测集重筛：Outpaint 双模式稳定出图、角色形象固定后，重新筛选评测集并重启 P0A 标注与能力矩阵（原 34 张定稿已作废，详见 `docs/character-atelier-dev-checklist.md`）。
+- 角色保真后续：为非 Outpaint 的换姿/换装增加角色保真 OperationProfile，并实现脸区二阶段低 denoise 精修和像素保护。
+- 托管操作后续：为 Outpaint / Inpaint 增加默认关闭的高级模型/LoRA 覆盖、漂移风险提示，并接入 Character Atelier 的 CompositionPlan / EditPlan。

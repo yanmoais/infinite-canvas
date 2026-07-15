@@ -71,6 +71,14 @@ type ImageApiResponse = {
     error?: { message?: string };
     code?: number;
     msg?: string;
+    nannan_note?: string;
+    nannan_reference_mode?: string;
+};
+
+export type ImageGenerationResult = {
+    images: Array<{ id: string; dataUrl: string }>;
+    nannanNote?: string;
+    nannanReferenceMode?: string;
 };
 type GeminiPart = {
     text?: string;
@@ -245,6 +253,15 @@ function parseImagePayload(payload: ImageApiResponse) {
 
     return images;
 }
+
+function parseImageResponse(payload: ImageApiResponse): ImageGenerationResult {
+    return {
+        images: parseImagePayload(payload),
+        nannanNote: typeof payload.nannan_note === "string" && payload.nannan_note.trim() ? payload.nannan_note.trim() : undefined,
+        nannanReferenceMode: typeof payload.nannan_reference_mode === "string" && payload.nannan_reference_mode.trim() ? payload.nannan_reference_mode.trim() : undefined,
+    };
+}
+
 
 function readAxiosError(error: unknown, fallback: string) {
     if (axios.isCancel(error)) return "请求已取消";
@@ -671,14 +688,18 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
                 ...(requestSize ? { size: requestSize } : {}),
                 response_format: "b64_json",
                 output_format: IMAGE_OUTPUT_FORMAT,
+                ...(requestConfig.comfyExtra ? { extra: requestConfig.comfyExtra } : {}),
             },
             {
                 headers: aiHeaders(requestConfig, "application/json"),
                 signal: options?.signal,
             },
         );
-        const images = parseImagePayload(response.data);
-        return images;
+        const parsed = parseImageResponse(response.data);
+        if (parsed.nannanNote && typeof window !== "undefined") {
+            try { window.dispatchEvent(new CustomEvent("nannan-image-note", { detail: parsed })); } catch {}
+        }
+        return parsed.images;
     } catch (error) {
         throw new Error(readAxiosError(error, "请求失败"));
     }
@@ -710,14 +731,20 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
     if (requestSize) {
         formData.set("size", requestSize);
     }
+    if (requestConfig.comfyExtra) {
+        formData.set("extra", JSON.stringify(requestConfig.comfyExtra));
+    }
     const files = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
     files.forEach((file) => formData.append("image", file));
     if (mask) formData.set("mask", dataUrlToFile(mask));
 
     try {
         const response = await axios.post<ImageApiResponse>(aiApiUrl(requestConfig, "/images/edits"), formData, { headers: aiHeaders(requestConfig), signal: options?.signal });
-        const images = parseImagePayload(response.data);
-        return images;
+        const parsed = parseImageResponse(response.data);
+        if (parsed.nannanNote && typeof window !== "undefined") {
+            try { window.dispatchEvent(new CustomEvent("nannan-image-note", { detail: parsed })); } catch {}
+        }
+        return parsed.images;
     } catch (error) {
         throw new Error(readAxiosError(error, "请求失败"));
     }

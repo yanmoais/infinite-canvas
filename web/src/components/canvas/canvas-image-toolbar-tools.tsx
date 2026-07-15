@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
-import { Brush, Camera, Copy, FileText, Grid2x2, Lock, LockOpen, Maximize2, Scissors, Sparkles, Upload, ZoomIn } from "lucide-react";
+import { ArrowDownToLine, Brush, Move, Camera, Copy, FileText, Grid2x2, Lock, LockOpen, Maximize2, RotateCcw, Scissors, Sparkles, Upload, ZoomIn } from "lucide-react";
 
 import type { CanvasNodeData } from "@/types/canvas";
 
-export type ImageNodeActionToolId = "copyPrompt" | "reversePrompt" | "replace" | "resize" | "maskEdit" | "crop" | "split" | "upscale" | "superResolve" | "angle" | "view";
+export type ImageNodeActionToolId = "copyPrompt" | "reusePrompt" | "reversePrompt" | "replace" | "resize" | "maskEdit" | "outpaint" | "crop" | "split" | "upscale" | "superResolve" | "angle" | "view";
 export type ImageQuickToolId = "info" | "delete" | "saveAsset" | "download" | "edit" | ImageNodeActionToolId;
 
 export type ImageToolHandlers = {
     onUpload: (node: CanvasNodeData) => void;
     onToggleFreeResize: (node: CanvasNodeData) => void;
     onMaskEdit: (node: CanvasNodeData) => void;
+    onOutpaint: (node: CanvasNodeData) => void;
     onCrop: (node: CanvasNodeData) => void;
     onSplit: (node: CanvasNodeData) => void;
     onUpscale: (node: CanvasNodeData) => void;
@@ -17,6 +18,7 @@ export type ImageToolHandlers = {
     onAngle: (node: CanvasNodeData) => void;
     onViewImage: (node: CanvasNodeData) => void;
     onCopyPrompt: (node: CanvasNodeData) => void;
+    onReusePrompt: (node: CanvasNodeData) => void;
     onReversePrompt: (node: CanvasNodeData) => void;
 };
 
@@ -36,7 +38,7 @@ export type ImageQuickToolsConfig = {
     showLabels: boolean;
 };
 
-export const IMAGE_QUICK_TOOLS_STORAGE_KEY = "canvas-image-quick-tools-v6";
+export const IMAGE_QUICK_TOOLS_STORAGE_KEY = "canvas-image-quick-tools-v8";
 
 const defaultBaseToolIds: ImageQuickToolId[] = ["info", "delete", "saveAsset", "download", "edit"];
 
@@ -45,25 +47,34 @@ export const imageToolDefinitions: ImageToolDefinition[] = [
         id: "copyPrompt",
         defaultVisible: true,
         panelLabel: "复制提示词",
-        label: "复制提示词",
+        label: "复制",
         title: "复制生成该图片的提示词",
         icon: () => <Copy className="size-4" />,
         run: (node, handlers) => handlers.onCopyPrompt(node),
     },
     {
-        id: "reversePrompt",
+        id: "reusePrompt",
         defaultVisible: true,
+        panelLabel: "一键复用",
+        label: "复用",
+        title: "把该图片的提示词回填到输入框，切换模型直接复用",
+        icon: () => <RotateCcw className="size-4" />,
+        run: (node, handlers) => handlers.onReusePrompt(node),
+    },
+    {
+        id: "reversePrompt",
+        defaultVisible: false,
         panelLabel: "反推提示词",
-        label: "反推提示词",
+        label: "反推",
         title: "创建反推提示词的文本和配置节点",
         icon: () => <FileText className="size-4" />,
         run: (node, handlers) => handlers.onReversePrompt(node),
     },
     {
         id: "replace",
-        defaultVisible: true,
+        defaultVisible: false,
         panelLabel: "替换图片",
-        label: "替换图片",
+        label: "替换",
         title: "替换图片",
         icon: () => <Upload className="size-4" />,
         run: (node, handlers) => handlers.onUpload(node),
@@ -82,10 +93,19 @@ export const imageToolDefinitions: ImageToolDefinition[] = [
         id: "maskEdit",
         defaultVisible: true,
         panelLabel: "局部编辑",
-        label: "局部编辑",
+        label: "局部",
         title: "添加蒙版遮罩后局部修改",
         icon: () => <Brush className="size-4" />,
         run: (node, handlers) => handlers.onMaskEdit(node),
+    },
+    {
+        id: "outpaint",
+        defaultVisible: true,
+        panelLabel: "画面扩图",
+        label: "扩图",
+        title: "补全全身或向四周扩展画面",
+        icon: () => <Move className="size-4" />,
+        run: (node, handlers) => handlers.onOutpaint(node),
     },
     {
         id: "crop",
@@ -98,7 +118,7 @@ export const imageToolDefinitions: ImageToolDefinition[] = [
     },
     {
         id: "split",
-        defaultVisible: true,
+        defaultVisible: false,
         panelLabel: "切图",
         label: "切图",
         title: "按行列切分图片",
@@ -107,7 +127,7 @@ export const imageToolDefinitions: ImageToolDefinition[] = [
     },
     {
         id: "upscale",
-        defaultVisible: true,
+        defaultVisible: false,
         panelLabel: "放大",
         label: "放大",
         title: "放大图片分辨率",
@@ -136,7 +156,7 @@ export const imageToolDefinitions: ImageToolDefinition[] = [
         id: "view",
         defaultVisible: true,
         panelLabel: "查看大图",
-        label: "查看大图",
+        label: "大图",
         title: "查看图片详情",
         icon: () => <Maximize2 className="size-4" />,
         run: (node, handlers) => handlers.onViewImage(node),
@@ -163,15 +183,24 @@ export function normalizeImageQuickToolIds(value: unknown[]) {
 }
 
 export function readImageQuickToolsConfig(value: unknown): ImageQuickToolsConfig {
-    if (Array.isArray(value)) return { ids: normalizeImageQuickToolIds(value), showLabels: true };
-    if (!value || typeof value !== "object") return { ids: defaultImageQuickToolIds, showLabels: true };
+    if (Array.isArray(value)) return { ids: normalizeImageQuickToolIds(value), showLabels: false };
+    if (!value || typeof value !== "object") return { ids: defaultImageQuickToolIds, showLabels: false };
     const data = value as Partial<ImageQuickToolsConfig>;
     return {
         ids: Array.isArray(data.ids) ? normalizeImageQuickToolIds(data.ids) : defaultImageQuickToolIds,
-        showLabels: data.showLabels !== false,
+        showLabels: data.showLabels === true,
     };
 }
 
 function resolveToolText(value: string | ((node: CanvasNodeData) => string), node: CanvasNodeData) {
     return typeof value === "function" ? value(node) : value;
+}
+
+
+/** 主栏最多放这么多快捷项，其余进“更多”菜单，避免盖住小节点 */
+export const IMAGE_TOOLBAR_PRIMARY_LIMIT = 8;
+
+export function splitImageToolbarTools<T extends { id: string }>(tools: T[], limit = IMAGE_TOOLBAR_PRIMARY_LIMIT) {
+    if (tools.length <= limit) return { primary: tools, overflow: [] as T[] };
+    return { primary: tools.slice(0, limit), overflow: tools.slice(limit) };
 }

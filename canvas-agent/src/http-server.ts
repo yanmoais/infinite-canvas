@@ -2,7 +2,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 
 import { DEFAULT_PORT, ensureCanvasWorkspace, loadConfig, saveConfig, updateCanvasWorkspace, type CanvasAgentConfig } from "./config.js";
 import { CanvasSession } from "./canvas-session.js";
-import { archiveCodexThread, listCodexThreads, readCodexThread, resumeCodexThread, runClaudeTurn, runCodexTurn, startCodexThread, summarizeCodexThread, verifyCodexThreadWorkspace, withAgentPrompt } from "./agents.js";
+import { archiveCodexThread, listCodexThreads, readCodexThread, resumeCodexThread, runClaudeTurn, runCodexTurn, setCanvasToolExecutor, startCodexThread, summarizeCodexThread, verifyCodexThreadWorkspace, withAgentPrompt } from "./agents.js";
 import type { AgentAttachment } from "./types.js";
 
 export function startHttpServer() {
@@ -13,6 +13,7 @@ export function startHttpServer() {
 
     const session = new CanvasSession();
     const emit = (type: string, payload: unknown) => session.emitAll(type, payload);
+    setCanvasToolExecutor((name, input) => session.callTool(name, input));
     const app = express();
     app.disable("x-powered-by");
     app.use(express.json({ limit: "30mb" }));
@@ -23,7 +24,12 @@ export function startHttpServer() {
         next();
     });
     app.get("/health", (_req, res) => res.json(session.health()));
-    app.get("/config", (_req, res) => res.json({ ok: true, url: config.url, hasToken: true }));
+    app.get("/config", (req, res) => {
+        const origin = req.headers.origin;
+        // 无 Origin（本机 CLI）或已绑定 Origin 才返回 token，避免把 token 泄露给陌生网页
+        const canRevealToken = !origin || (config.origins || []).includes(origin);
+        res.json({ ok: true, url: config.url, hasToken: true, ...(canRevealToken ? { token: config.token } : {}) });
+    });
     app.use((req, res, next) => {
         if (validToken(req, requestUrl(req, config), config.token)) return next();
         res.status(401).json({ ok: false, error: "invalid token" });
@@ -75,17 +81,18 @@ export function startHttpServer() {
     }));
     app.post("/agent/codex/turn", route(async (req, res) => {
         const attachments = Array.isArray(req.body?.attachments) ? (req.body.attachments as AgentAttachment[]) : [];
+        const model = String(req.body?.model || "").trim() || undefined;
         const workspace = ensureCanvasWorkspace(config, String(req.body?.canvasId || ""));
         let threadId = String(req.body?.threadId || workspace.activeThreadId || "");
         if (!threadId) {
-            const thread = await startCodexThread(emit, workspace.workspacePath);
+            const thread = await startCodexThread(emit, workspace.workspacePath, model);
             threadId = String((thread as Record<string, unknown>).id || "");
             updateCanvasWorkspace(config, workspace.canvasId, { activeThreadId: threadId });
         } else if (threadId !== workspace.activeThreadId) {
             await verifyCodexThreadWorkspace(emit, threadId, workspace.workspacePath);
             updateCanvasWorkspace(config, workspace.canvasId, { activeThreadId: threadId });
         }
-        void runCodexTurn(withAgentPrompt(String(req.body?.prompt || "")), emit, attachments, { threadId, cwd: workspace.workspacePath });
+        void runCodexTurn(withAgentPrompt(String(req.body?.prompt || "")), emit, attachments, { threadId, cwd: workspace.workspacePath, model });
         res.json({ ok: true, threadId });
     }));
     app.post("/agent/claude/turn", (req, res) => {
@@ -117,18 +124,29 @@ function requestUrl(req: Request, config: CanvasAgentConfig) {
 
 function setCors(req: Request, res: Response, url: URL, config: CanvasAgentConfig) {
     const origin = req.headers.origin;
-    res.setHeader("Access-Control-Allow-Origin", origin || "*");
     res.setHeader("Access-Control-Allow-Headers", "content-type,x-canvas-agent-token");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
     res.setHeader("Access-Control-Allow-Private-Network", "true");
-    if (!origin || req.method === "OPTIONS" || url.pathname === "/health" || url.pathname === "/config") return true;
+    res.setHeader("Vary", "Origin");
+    // 本机 CLI / MCP 没有 Origin，直接放行
+    if (!origin || req.method === "OPTIONS" || url.pathname === "/health" || url.pathname === "/config") {
+        res.setHeader("Access-Control-Allow-Origin", origin || "*");
+        return true;
+    }
     config.origins ||= [];
-    if (validToken(req, url, config.token) && !config.origins.includes(origin)) {
+    if (config.origins.includes(origin)) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        return true;
+    }
+    // 首绑：仅第一个带正确 token 的 Origin 写入白名单，之后其它 Origin 拒绝
+    if (validToken(req, url, config.token) && config.origins.length === 0) {
         config.origins.push(origin);
         saveConfig(config);
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        return true;
     }
-    res.setHeader("Vary", "Origin");
-    return config.origins.includes(origin);
+    res.setHeader("Access-Control-Allow-Origin", "null");
+    return false;
 }
 
 function validToken(req: Request, url: URL, token: string) {

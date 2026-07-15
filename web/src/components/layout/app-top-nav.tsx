@@ -95,12 +95,22 @@ export function AppTopNav() {
 
 function CodexStatusButton() {
     const connected = useCanvasAgentStore((state) => state.connected);
+    const agentOnline = useCanvasAgentStore((state) => state.agentOnline);
     const enabled = useCanvasAgentStore((state) => state.enabled);
     const activity = useCanvasAgentStore((state) => state.activity);
     const connectError = useCanvasAgentStore((state) => state.connectError);
     const openConfigDialog = useConfigStore((state) => state.openConfigDialog);
-    const color = connectError ? "#dc2626" : connected ? "#16a34a" : enabled ? "#d97706" : "currentColor";
-    const title = connectError || (connected ? activity || "Codex 已连接" : enabled ? "Codex 连接中" : "Codex 未连接");
+    // 绿：画布工具桥可写；黄：Agent 在线但未挂工具桥；灰：未连接
+    const color = connectError ? "#dc2626" : connected ? "#16a34a" : agentOnline || enabled ? "#d97706" : "currentColor";
+    const title =
+        connectError ||
+        (connected
+            ? activity || "画布已连接，Codex 可操作"
+            : agentOnline
+              ? "Agent 在线，进入画布后可操作"
+              : enabled
+                ? "正在探测本地 Agent…"
+                : "Codex / 本地 Agent 未连接");
     return (
         <Tooltip title={title}>
             <Button type="text" shape="circle" className="relative !h-8 !w-8 !min-w-8" onClick={() => openConfigDialog(false, "codex")} aria-label="Codex 连接状态">

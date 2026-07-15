@@ -26,13 +26,21 @@ Connect token: xxxxxx
 
 在画布右上角点击 `Agent`，填入地址和 token 后连接。
 
+配置会持久化到 `~/.infinite-canvas/canvas-agent.json`。本机 CLI 访问 `http://127.0.0.1:17371/config` 可拿到 `url` 和 `token`；浏览器跨 Origin 请求只有在该 Origin 已首绑后才会返回 token。
+
 Codex app 插件会读取启动输出里的 Local URL 和 Connect token，并直接打开画布网页地址；Canvas Agent 不负责生成画布打开 URL。
 
-Canvas Agent 默认只监听 `127.0.0.1`。网页第一次带正确 token 连接后，Canvas Agent 会记录该网页 Origin；之后其他 Origin 不能复用这个本地 Agent，除非用户清理 `~/.infinite-canvas/canvas-agent.json` 里的 `origins`。
+Canvas Agent 默认只监听 `127.0.0.1`。网页第一次带正确 token 连接后，Canvas Agent 会把该网页 Origin **首绑**到白名单；之后其它 Origin 即使用正确 token 也不能复用，除非用户清理 `~/.infinite-canvas/canvas-agent.json` 里的 `origins`。
 
 ## 发布
 
 `canvas-agent` 使用自己的 `package.json` 版本号，不跟仓库根目录 `VERSION` 绑定。推送到 `main` 后，GitHub Actions 会检查 npm 上是否已经存在当前包版本；不存在时才发布 `@basketikun/canvas-agent`。
+
+本地改完 `canvas-agent` 后若要给插件 / `npx` 用户用，需要升版本并发布 npm，否则 `npx -y @basketikun/canvas-agent` 仍会拉到旧包。开发调试请优先：
+
+```bash
+codex mcp add infinite-canvas -- node /path/to/infinite-canvas/canvas-agent/dist/index.js mcp
+```
 
 发布前需要在 GitHub 仓库 Secrets 中配置 `NPM_TOKEN`。
 
@@ -58,7 +66,15 @@ codex plugin add infinite-canvas@infinite-canvas-local
 npx -y @basketikun/canvas-agent mcp
 ```
 
+`mcp` 子命令会：
+
+1. 探测本机 HTTP Agent（默认 `127.0.0.1:17371`）是否健康；
+2. 若未运行，尝试自动拉起一个后台 HTTP Agent；
+3. 再以 stdio 方式暴露 MCP 工具（工具请求会转发到 HTTP Agent 的 `/api/tools`）。
+
 使用时可以直接在 Codex 里说“打开 Infinite Canvas”，插件会优先启动本地画布和本地 Agent，读取 Local URL 和 Connect token，然后直接打开画布网页地址新建并连接画布。如果自动连接失败，再检查本地画布服务和 Canvas Agent 是否都已启动。
+
+**画布必须已在浏览器打开并完成工具桥连接**，MCP 才能读写节点。配置页「Agent 在线」只表示 HTTP Agent 可达；进入具体画布后状态变为「画布已连接」才可操作。
 
 Canvas Agent 启动后，给 Codex 添加 MCP：
 
@@ -85,12 +101,34 @@ default_tools_approval_mode = "approve"
 
 可用工具：
 
+**读取**
+
 - `canvas_get_state`
 - `canvas_get_selection`
 - `canvas_export_snapshot`
+
+**写入 / 编排**
+
 - `canvas_apply_ops`
+- `canvas_create_node`
 - `canvas_create_text_node`
+- `canvas_create_text_nodes`
+- `canvas_create_config_node`
 - `canvas_create_image_prompt_flow`
+- `canvas_create_generation_flow`
+- `canvas_generate_text`
+- `canvas_generate_image`
+- `canvas_generate_video`
+- `canvas_generate_audio`
+- `canvas_update_node`
+- `canvas_update_node_text`
+- `canvas_move_nodes`
+- `canvas_resize_node`
+- `canvas_delete_nodes`
+- `canvas_connect_nodes`
+- `canvas_select_nodes`
+- `canvas_set_viewport`
+- `canvas_run_generation`
 
 `canvas_apply_ops` 示例：
 
@@ -110,7 +148,7 @@ default_tools_approval_mode = "approve"
 
 ## 侧边栏 Codex
 
-本地面板会把提示词发送给 Canvas Agent。Canvas Agent 使用官方 `@openai/codex` CLI 的 `codex app-server --stdio` 启动并复用同一个 Codex thread，启动时会注入 `infinite-canvas` MCP 配置并自动放行 MCP 审批，真正执行画布修改前仍由网页侧边栏二次确认。
+本地面板会把提示词发送给 Canvas Agent。Canvas Agent 使用官方 `@openai/codex` CLI 的 `codex app-server --stdio` 启动并复用同一个 Codex thread，启动时会注入 `infinite-canvas` MCP 配置并自动放行 MCP 审批，真正执行画布修改前仍可由网页侧边栏二次确认（默认关闭，可在配置页打开；确认等待约 25 秒超时）。
 
 侧边栏会展示 Codex 返回的 `thread.started`、`turn.started`、`item.*`、`turn.completed` 等结构化事件；收到 app-server 的 `item/agentMessage/delta` 时，Canvas Agent 会转成 `item.updated`，网页会用同一条消息做真实流式更新，并把工具细节收进运行日志。
 
@@ -132,4 +170,4 @@ claude mcp add --scope user --transport stdio infinite-canvas -- npx -y @basketi
 claude mcp add --scope user --transport stdio infinite-canvas -- node /path/to/infinite-canvas/canvas-agent/dist/index.js mcp
 ```
 
-Canvas Agent 调用 Claude Code 时会默认带上 `--allowedTools mcp__infinite-canvas__*`，画布写操作仍由网页侧边栏确认。
+Canvas Agent 调用 Claude Code 时会默认带上 `--allowedTools mcp__infinite-canvas__*`，画布写操作仍可由网页侧边栏确认。

@@ -117,7 +117,9 @@ codex plugin add infinite-canvas@infinite-canvas-local
 npx -y @basketikun/canvas-agent mcp
 ```
 
-如果需要手动排查，先启动画布：
+`mcp` 模式会先探测本机 HTTP Agent（默认 `127.0.0.1:17371`）；未运行时会尝试自动拉起后台 HTTP Agent，再以 stdio 暴露 MCP 工具。工具调用仍要求浏览器里已打开画布并完成工具桥连接（顶栏绿色「画布已连接」）。
+
+如果需要手动排查，先启动画布（Vite，不是 Next.js）：
 
 ```bash
 cd web
@@ -125,16 +127,23 @@ bun install
 bun run dev
 ```
 
-然后启动本地 Agent。端口不是 `3000` 时，把 `CANVAS_URL` 换成真实本地画布地址：
+再单独启动本地 HTTP Agent：
 
 ```bash
-CANVAS_URL=http://localhost:3000 npx -y @basketikun/canvas-agent
+npx -y @basketikun/canvas-agent
 ```
 
-从 Agent 输出或 `http://127.0.0.1:17371/config` 读取本地地址和 token 后，打开：
+从 Agent 启动输出或 `~/.infinite-canvas/canvas-agent.json` 读取 Local URL 和 Connect token。本机 CLI 访问 `http://127.0.0.1:17371/config`（无 Origin）也会返回 token；浏览器跨 Origin 只有在该 Origin 已首绑后才返回 token。然后打开：
 
 ```text
 <画布网页地址>/canvas?mode=new&agentUrl=<Local URL>&agentToken=<Connect token>
 ```
 
 `mode=new` 会让网页自动创建具体画布并连接本地 Agent，不需要手动点击“新建画布”。
+
+开发时若本地 `canvas-agent` 代码新于 npm，请用本仓库 `dist` 注册 MCP，避免 `npx` 拉到旧包：
+
+```bash
+cd canvas-agent && npm run build
+codex mcp add infinite-canvas -- node "$(pwd)/dist/index.js" mcp
+```

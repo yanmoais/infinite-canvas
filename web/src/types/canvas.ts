@@ -21,17 +21,80 @@ export enum CanvasNodeType {
 export type CanvasNodeStatus = "idle" | "success" | "loading" | "error";
 export type CanvasGenerationMode = "text" | "image" | "video" | "audio";
 export type CanvasImageGenerationType = "generation" | "edit";
+export type CanvasOperationKind = "manual" | "inpaint" | "outpaint" | "character_atelier" | "exact_replay";
+export type CanvasOutpaintMode = "extend" | "full_body";
+export type CanvasOutpaintDirection = "up" | "down" | "left" | "right" | "outward";
+export type CanvasGenerationValueSource = "manual_node" | "source_recipe" | "operation_profile" | "preset_default" | "exact_replay";
+
+export type CanvasGenerationSettings = {
+    model?: string;
+    promptModel?: string;
+    size?: string;
+    quality?: string;
+    count?: number;
+    referenceMode?: string;
+    loras?: string[];
+    faceDetailer?: boolean;
+    denoise?: number | null | false;
+};
+
+export type CanvasSourceGenerationRecipe = CanvasGenerationSettings & {
+    generationType?: CanvasImageGenerationType;
+    references?: string[];
+};
+
+export type CanvasOperationProfile = {
+    kind: CanvasOperationKind;
+    managed: boolean;
+    sourceNodeId?: string;
+    direction?: CanvasOutpaintDirection;
+    outpaintMode?: CanvasOutpaintMode;
+    originalPixelLock?: boolean;
+    inheritSourceRecipe?: boolean;
+    faceProtection?: boolean;
+    denoise?: number;
+    seamOverlapPixels?: number;
+    extensionPixels?: number;
+    sourceScale?: number;
+    sourceOffsetX?: number;
+    sourceOffsetY?: number;
+    sourceDrawWidth?: number;
+    sourceDrawHeight?: number;
+    sourceWidth?: number;
+    sourceHeight?: number;
+    targetWidth?: number;
+    targetHeight?: number;
+    baseStorageKey?: string;
+    maskStorageKey?: string;
+};
+
+export type CanvasExecutionPlanValue = {
+    value: string | number | boolean | string[] | null;
+    source: CanvasGenerationValueSource;
+};
+
+export type CanvasExecutionPlan = {
+    operation: CanvasOperationKind;
+    managed: boolean;
+    createdAt: string;
+    values: Partial<Record<keyof CanvasGenerationSettings, CanvasExecutionPlanValue>>;
+    protections?: string[];
+};
 
 export type CanvasNodeMetadata = {
     content?: string;
     composerContent?: string;
     prompt?: string;
+    originalPrompt?: string;
+    originalIdentityPrompt?: string;
+    promptDraft?: string;
     status?: CanvasNodeStatus;
     errorDetails?: string;
     fontSize?: number;
     generationMode?: CanvasGenerationMode;
     generationType?: CanvasImageGenerationType;
     model?: string;
+    promptModel?: string;
     size?: string;
     quality?: string;
     count?: number;
@@ -44,6 +107,14 @@ export type CanvasNodeMetadata = {
     audioSpeed?: string;
     audioInstructions?: string;
     references?: string[];
+    comfyReferenceMode?: string;
+    comfyLoras?: string[];
+    comfyFaceDetailer?: boolean;
+    comfyDenoise?: number | null | false;
+    manualNodeSettings?: CanvasGenerationSettings;
+    sourceGenerationRecipe?: CanvasSourceGenerationRecipe;
+    operationProfile?: CanvasOperationProfile;
+    executionPlan?: CanvasExecutionPlan;
     naturalWidth?: number;
     naturalHeight?: number;
     freeResize?: boolean;

@@ -159,7 +159,7 @@ export function ImageToolSettingsModal({
                 <div className="relative flex min-h-[300px] w-full justify-center pt-20 pb-9">
                     <div
                         ref={previewToolbarRef}
-                        className="hide-scrollbar absolute left-2 right-2 top-3 z-10 flex h-12 items-center overflow-x-auto rounded-[18px] border px-1 text-[13px]"
+                        className="hide-scrollbar absolute left-1/2 top-3 z-10 flex h-9 max-w-[min(420px,calc(100%-16px))] -translate-x-1/2 items-center overflow-x-auto rounded-2xl border px-1 text-[11px]"
                         style={{ background: token.colorBgElevated, borderColor: token.colorBorderSecondary, boxShadow: token.boxShadowSecondary, color: token.colorText }}
                         onScroll={syncPreviewScroll}
                     >
@@ -220,10 +220,10 @@ export function ImageToolSettingsModal({
 function PreviewToolbarItem({ tool, showLabels }: { tool: PreviewTool; showLabels: boolean }) {
     return (
         <Tooltip title={tool.title}>
-            <span className="flex h-12 shrink-0 items-center px-1.5" style={{ color: tool.danger ? "#ef4444" : undefined }}>
-                <span className={`flex h-9 items-center rounded-lg px-2 ${showLabels ? "gap-2" : "justify-center"}`}>
-                    {tool.icon}
-                    {showLabels ? <span className="whitespace-nowrap">{tool.label}</span> : null}
+            <span className="flex h-9 shrink-0 items-center px-0.5" style={{ color: tool.danger ? "#ef4444" : undefined }}>
+                <span className={`flex h-7 items-center rounded-lg ${showLabels ? "gap-1 px-2" : "justify-center px-1.5"}`}>
+                    <span className="grid place-items-center [&>svg]:size-3.5">{tool.icon}</span>
+                    {showLabels ? <span className="whitespace-nowrap text-[11px] font-medium">{tool.label}</span> : null}
                 </span>
             </span>
         </Tooltip>

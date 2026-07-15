@@ -3,8 +3,17 @@ import { App } from "antd";
 import { APP_VERSION } from "@/constant/env";
 import { parseChangelog, type ReleaseInfo } from "@/lib/release";
 
-const latestVersionUrl = "https://raw.githubusercontent.com/basketikun/infinite-canvas/main/VERSION";
-const latestChangelogUrl = "https://raw.githubusercontent.com/basketikun/infinite-canvas/main/CHANGELOG.md";
+// raw.githubusercontent.com 在浏览器里常因 CORS/网络失败；优先走带 CORS 的镜像
+const VERSION_URLS = [
+    "https://cdn.jsdelivr.net/gh/basketikun/infinite-canvas@main/VERSION",
+    "https://raw.githubusercontent.com/basketikun/infinite-canvas/main/VERSION",
+    "https://cdn.jsdelivr.net/gh/basketikun/infinite-canvas@master/VERSION",
+];
+const CHANGELOG_URLS = [
+    "https://cdn.jsdelivr.net/gh/basketikun/infinite-canvas@main/CHANGELOG.md",
+    "https://raw.githubusercontent.com/basketikun/infinite-canvas/main/CHANGELOG.md",
+    "https://cdn.jsdelivr.net/gh/basketikun/infinite-canvas@master/CHANGELOG.md",
+];
 
 function readLocalReleases(): ReleaseInfo[] {
     return __APP_RELEASES__ || [];
@@ -22,6 +31,28 @@ function isNewerVersion(latestVersion: string, currentVersion: string) {
     return latest.some((value, index) => value > current[index] && latest.slice(0, index).every((part, prevIndex) => part === current[prevIndex]));
 }
 
+async function fetchTextFromUrls(urls: string[]) {
+    let lastError: unknown;
+    for (const url of urls) {
+        try {
+            const response = await fetch(url, { cache: "no-store" });
+            if (!response.ok) {
+                lastError = new Error(`${url} -> HTTP ${response.status}`);
+                continue;
+            }
+            const text = (await response.text()).trim();
+            if (!text) {
+                lastError = new Error(`${url} 返回空内容`);
+                continue;
+            }
+            return text;
+        } catch (error) {
+            lastError = error;
+        }
+    }
+    throw lastError instanceof Error ? lastError : new Error("无法获取远程版本信息");
+}
+
 export function useVersionCheck() {
     const currentVersion = APP_VERSION;
     const { message } = App.useApp();
@@ -34,10 +65,8 @@ export function useVersionCheck() {
 
     const checkLatestVersion = useCallback(async () => {
         try {
-            const response = await fetch(latestVersionUrl);
-            if (!response.ok) return false;
-            const version = await response.text();
-            setLatestVersion(version.trim() || currentVersion);
+            const version = await fetchTextFromUrls(VERSION_URLS);
+            setLatestVersion(version || currentVersion);
             return true;
         } catch {
             return false;
@@ -48,18 +77,16 @@ export function useVersionCheck() {
         async (showMessage = false) => {
             setChecking(true);
             try {
-                const [versionResponse, changelogResponse] = await Promise.all([fetch(latestVersionUrl), fetch(latestChangelogUrl)]);
-                if (!versionResponse.ok) throw new Error("版本读取失败");
-                if (!changelogResponse.ok) throw new Error("更新日志读取失败");
-                const [version, changelog] = await Promise.all([versionResponse.text(), changelogResponse.text()]);
-                setLatestVersion(version.trim() || currentVersion);
-                if (changelog.trim()) setReleases(parseChangelog(changelog));
+                const [version, changelog] = await Promise.all([fetchTextFromUrls(VERSION_URLS), fetchTextFromUrls(CHANGELOG_URLS)]);
+                setLatestVersion(version || currentVersion);
+                if (changelog) setReleases(parseChangelog(changelog));
                 if (showMessage) message.success("已获取最新版本信息");
                 return true;
             } catch {
+                // 远程失败时至少展示本地打包进来的 changelog，避免弹窗空白
                 setLatestVersion(currentVersion);
                 setReleases(localReleases);
-                if (showMessage) message.error("获取最新版本信息失败");
+                if (showMessage) message.error("获取最新版本信息失败（网络或镜像不可用），已显示本地版本记录");
                 return false;
             } finally {
                 setChecking(false);

@@ -14,6 +14,31 @@ export type ModelChannel = {
     models: string[];
 };
 
+export type ComfyExtraConfig = {
+    reference_mode?: string;
+    lora_keys?: string[];
+    face_detailer?: boolean;
+    // null/false = 显式关闭 denoise / 阻止 preset 默认 latent 重绘；undefined = 未设置
+    denoise?: number | null | false;
+    // 大改姿势：关 Grok 编译、提示网关弱 IPAdapter
+    prompt_optimize?: boolean | "auto" | "true" | "false";
+    pose_change?: boolean;
+    /** 换姿时固定角色：FaceID + 身份包 densify（不用完整角色身体参考） */
+    character_lock?: boolean;
+    /** 全身重构：FaceID 锁脸 + EmptyLatent 重构图，并触发网关构图保护 */
+    full_body_rebuild?: boolean;
+    // v14 网关动态身份 densify / 局部重绘扩展字段
+    identity_prompt?: string;
+    reference_prompt?: string;
+    face_refine?: number;
+    skirt_refine?: number;
+    hair_refine?: number;
+    part_refine?: number;
+    parts?: string;
+    /** 原图续接接缝融合宽度（px），用于网关柔化蒙版边缘，消除硬接缝 */
+    seam_feather?: number;
+};
+
 export type AiConfig = {
     channelMode: "remote" | "local";
     baseUrl: string;
@@ -34,6 +59,7 @@ export type AiConfig = {
     videoGenerateAudio: string;
     videoWatermark: string;
     systemPrompt: string;
+    comfyExtra?: ComfyExtraConfig;
     models: string[];
     imageModels: string[];
     videoModels: string[];
@@ -124,11 +150,13 @@ type ConfigStore = {
 
 function isVideoModelName(model: string) {
     const value = modelOptionName(model).toLowerCase();
+    if (value.startsWith("comfy/")) return false;
     return value.includes("seedance") || value.includes("video") || value.includes("sora") || value.includes("veo") || value.includes("kling") || value.includes("wan") || value.includes("hailuo");
 }
 
 function isImageModelName(model: string) {
     const value = modelOptionName(model).toLowerCase();
+    if (value.startsWith("comfy/")) return true;
     return !isVideoModelName(model) && !isAudioModelName(model) && (value.includes("seedream") || value.includes("gpt-image") || value.includes("image") || value.includes("dall-e") || value.includes("dalle") || value.includes("imagen") || value.includes("flux") || value.includes("sdxl") || value.includes("stable-diffusion") || value.includes("midjourney"));
 }
 
@@ -227,7 +255,7 @@ export const useConfigStore = create<ConfigStore>()(
                         videoGenerateAudio: config.videoGenerateAudio || "true",
                         videoWatermark: config.videoWatermark || "false",
                         canvasImageCount: config.canvasImageCount || "3",
-                        imageModels: Array.isArray(persistedConfig.imageModels) ? normalizeModelList(config.imageModels, channels) : filterModelsByCapability(models, "image"),
+                        imageModels: withComfyImageModels(Array.isArray(persistedConfig.imageModels) ? normalizeModelList(config.imageModels, channels) : filterModelsByCapability(models, "image"), models),
                         videoModels: Array.isArray(persistedConfig.videoModels) ? normalizeModelList(config.videoModels, channels) : filterModelsByCapability(models, "video"),
                         textModels: Array.isArray(persistedConfig.textModels) ? normalizeModelList(config.textModels, channels) : filterModelsByCapability(models, "text"),
                         audioModels: Array.isArray(persistedConfig.audioModels) ? normalizeModelList(config.audioModels, channels) : filterModelsByCapability(models, "audio"),
@@ -237,6 +265,11 @@ export const useConfigStore = create<ConfigStore>()(
         },
     ),
 );
+
+function withComfyImageModels(current: string[], allModels: string[]) {
+    const comfyModels = allModels.filter((model) => modelOptionName(model).toLowerCase().startsWith("comfy/"));
+    return Array.from(new Set([...current, ...comfyModels]));
+}
 
 function normalizeModelList(models: string[], channels: ModelChannel[]) {
     const allModelOptions = channels.flatMap((channel) => channel.models.map((model) => encodeChannelModel(channel.id, model)));

@@ -158,7 +158,7 @@ export class CanvasSession {
         return await new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
                 this.pending.delete(requestId);
-                reject(new Error("画布操作超时"));
+                reject(new Error("画布操作超时（30s）。请确认浏览器画布已连接工具桥，且未卡在「工具确认」；可在画布 Agent 面板关闭「工具确认」后重试"));
             }, 30000);
             this.pending.set(requestId, { resolve: (value) => (clearTimeout(timer), resolve(value)), reject: (error) => (clearTimeout(timer), reject(error)) });
         });

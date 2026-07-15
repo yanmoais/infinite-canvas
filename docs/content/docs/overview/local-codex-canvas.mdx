@@ -36,12 +36,12 @@ Codex / 浏览器侧边栏
 
 常见工具包括：
 
-- `canvas_get_state`：读取当前画布摘要。
-- `canvas_get_selection`：读取当前选区。
+- `canvas_get_state` / `canvas_get_selection` / `canvas_export_snapshot`：读取画布。
 - `canvas_apply_ops`：批量执行画布操作。
-- `canvas_create_text_node`：创建文本节点。
-- `canvas_generate_image` / `canvas_generate_text`：创建生成流程并触发生成。
-- `canvas_update_node` / `canvas_connect_nodes`：更新节点或连接节点。
+- `canvas_create_text_node` / `canvas_create_text_nodes` / `canvas_create_node`：创建节点。
+- `canvas_generate_image` / `canvas_generate_text` / `canvas_generate_video` / `canvas_generate_audio`：创建生成流程并触发生成。
+- `canvas_create_generation_flow` / `canvas_create_config_node` / `canvas_run_generation`：编排与触发。
+- `canvas_update_node` / `canvas_move_nodes` / `canvas_connect_nodes` / `canvas_delete_nodes`：更新、移动、连线、删除。
 
 这条链路适合在 Codex 对话里直接让 Codex 操作当前打开的画布。
 
@@ -137,17 +137,27 @@ Codex 调 canvas_create_text_node
 
 ## 工具确认和撤销
 
-为了避免 Codex 直接改动画布，浏览器侧对 `canvas_apply_ops` 默认有二次确认机制。收到写操作后，右侧面板会先展示待执行工具调用，用户确认后才真正应用到画布。
+浏览器侧对 `canvas_apply_ops` **可选**二次确认（配置页开关，默认关闭）。开启后，右侧面板会先展示待执行工具调用，用户确认后才真正应用到画布；超过约 25 秒未确认会自动拒绝，避免 MCP 一直等到 30 秒超时。
+
+插件 URL 直连与 headless 工具桥不会走二次确认，保证终端 / 插件 Codex 写操作不被卡住。
 
 执行后，前端会保存最近一次操作前的画布快照，用于撤销上一轮 Agent 工具操作。
 
-如果关闭工具确认，本地 Codex 可以直接执行画布工具调用，但仍然是通过同一套 `Canvas Agent -> SSE -> 浏览器执行` 的链路。
+无论是否确认，写操作仍然走同一套 `Canvas Agent -> SSE -> 浏览器执行` 链路。
+
+## 连接状态语义
+
+- **Agent 在线**：配置页 / 顶栏 status 探测成功，只说明 HTTP Agent 可达。
+- **画布已连接**：浏览器已打开具体画布，并挂上工具桥 SSE（可收 `tool_call`、可同步状态）。Codex MCP 只有在这一状态下才能读写节点。
+- 进入画布且本地 Agent 已启用时，即使侧边栏收起，网页也会挂 headless 工具桥。
+- 写操作默认不二次确认，便于终端 Codex 直接改画布；可在配置页开启「工具确认」（约 25 秒超时）。插件 URL / headless 连接不会走二次确认。
 
 ## 安全边界
 
 - `Canvas Agent` 默认只监听 `127.0.0.1`。
 - 网页连接必须携带本机生成的 `Connect token`。
-- 第一次带正确 token 连接后，`Canvas Agent` 会记录网页 Origin，避免其他来源复用当前本机 Agent。
+- 第一次带正确 token 连接后，`Canvas Agent` 会把该网页 Origin **首绑**到白名单；之后其它 Origin 即使用正确 token 也不能复用，除非清理 `~/.infinite-canvas/canvas-agent.json` 里的 `origins`。
+- `/config`：本机 CLI（无 Origin）可返回 token；浏览器仅在 Origin 已首绑时返回 token。
 - Codex 不直接访问浏览器 DOM，也不直接持有画布内部状态。
 - 线上网页不保存本机 Codex 登录态、API Key 或本地文件权限。
 - 画布写操作最终由浏览器前端执行，因此可以在前端做确认、撤销和权限控制。

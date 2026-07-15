@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useRef, type CSSProperties } from "react";
 import { Image as ImageIcon, LoaderCircle, MessageSquare, Music2, Play, Settings2, Square, Video } from "lucide-react";
 import { Button, Segmented } from "antd";
 
@@ -7,6 +7,10 @@ import { defaultConfig, modelMatchesCapability, useConfigStore, useEffectiveConf
 import { canvasThemes } from "@/lib/canvas-theme";
 import { useThemeStore } from "@/stores/use-theme-store";
 import { CanvasImageSettingsPopover } from "./canvas-image-settings-popover";
+import { CanvasComfySettingsPopover } from "./canvas-comfy-settings-popover";
+import { CanvasModelBrowser } from "./canvas-model-browser";
+import { CanvasPromptLibrary } from "./canvas-prompt-library";
+import { defaultLorasForModel, isComfyModel } from "@/services/api/comfy";
 import { CanvasAudioSettingsPopover, type CanvasAudioSettingKey } from "./canvas-audio-settings-popover";
 import { CanvasVideoSettingsPopover } from "./canvas-video-settings-popover";
 import type { CanvasGenerationMode, CanvasNodeData, CanvasNodeMetadata } from "@/types/canvas";
@@ -16,7 +20,7 @@ type CanvasConfigNodePanelProps = {
     isRunning: boolean;
     inputSummary: { textCount: number; imageCount: number; videoCount: number; audioCount: number };
     onConfigChange: (nodeId: string, patch: Partial<CanvasNodeMetadata>) => void;
-    onGenerate: (nodeId: string) => void;
+    onGenerate: (nodeId: string, promptOverride?: string, source?: "direct" | "composer") => void;
     onStop: (nodeId: string) => void;
     onComposerToggle: () => void;
 };
@@ -31,6 +35,17 @@ export function CanvasConfigNodePanel({ node, isRunning, inputSummary, onConfigC
     const hasAnyInput = Boolean(inputSummary.textCount || inputSummary.imageCount || inputSummary.videoCount || inputSummary.audioCount);
     const hasComposerContent = Boolean((node.metadata?.composerContent ?? node.metadata?.prompt ?? "").trim());
     const canGenerate = hasComposerContent || (mode === "audio" ? inputSummary.textCount > 0 : hasAnyInput);
+    const pendingModelRef = useRef("");
+    const updateModel = (model: string) => {
+        onConfigChange(node.id, { model });
+        pendingModelRef.current = model;
+        if (mode !== "image" || !isComfyModel(model)) return;
+        defaultLorasForModel(config, model)
+            .then((comfyLoras) => {
+                if (comfyLoras !== undefined && pendingModelRef.current === model) onConfigChange(node.id, { comfyLoras });
+            })
+            .catch(() => undefined);
+    };
 
     return (
         <div className="flex h-full w-full cursor-move flex-col px-3 pb-3 pt-7 text-sm" style={{ color: theme.node.text }} onWheel={(event) => event.stopPropagation()}>
@@ -39,7 +54,7 @@ export function CanvasConfigNodePanel({ node, isRunning, inputSummary, onConfigC
                 <div className="cursor-default" onMouseDown={(event) => event.stopPropagation()}>
                     <Segmented
                         size="small"
-                        className="canvas-config-mode !rounded-md !p-0.5"
+                        className="canvas-config-mode !rounded-lg !p-0.5"
                         value={mode}
                         onChange={(value) => onConfigChange(node.id, { generationMode: value as CanvasGenerationMode })}
                         options={[
@@ -89,14 +104,34 @@ export function CanvasConfigNodePanel({ node, isRunning, inputSummary, onConfigC
                 <InputChip label="参考图" value={`${inputSummary.imageCount} 张`} style={chipStyle} />
                 <InputChip label="参考视频" value={`${inputSummary.videoCount} 个`} style={chipStyle} />
                 <InputChip label="参考音频" value={`${inputSummary.audioCount} 个`} style={chipStyle} />
-                <button type="button" className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md border px-2 text-[11px]" style={chipStyle} onMouseDown={(event) => event.stopPropagation()} onClick={onComposerToggle}>
+                <button type="button" className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-lg border px-2 text-[11px]" style={chipStyle} onMouseDown={(event) => event.stopPropagation()} onClick={onComposerToggle}>
                     <Settings2 className="size-3.5" />
                     组装提示词
                 </button>
+                {mode === "image" ? (
+                    <span className="inline-flex h-7 items-center" onMouseDown={(event) => event.stopPropagation()}>
+                        <CanvasPromptLibrary
+                            config={config}
+                            value={node.metadata?.composerContent ?? node.metadata?.prompt ?? ""}
+                            onSelect={(prompt) => onConfigChange(node.id, { composerContent: prompt })}
+                            onGenerate={(text) => {
+                                if (isRunning || !text.trim()) return;
+                                onConfigChange(node.id, { composerContent: text });
+                                onGenerate(node.id, text.trim(), "composer");
+                            }}
+                        />
+                    </span>
+                ) : null}
             </div>
 
-            <div className={`mb-2 grid min-w-0 cursor-default items-center gap-2 ${mode === "image" || mode === "video" || mode === "audio" ? "grid-cols-[minmax(0,1fr)_148px]" : "grid-cols-1"}`} onMouseDown={(event) => event.stopPropagation()}>
-                <ModelPicker className="canvas-compact-control h-10" config={config} value={config.model} onChange={(model) => onConfigChange(node.id, { model })} capability={mode} onMissingConfig={() => openConfigDialog(true)} fullWidth />
+            {mode === "image" ? (
+                <div className="mb-2 min-w-0 cursor-default" onMouseDown={(event) => event.stopPropagation()}>
+                    <ModelPicker className="canvas-compact-control h-10" config={config} value={config.textModel} onChange={(promptModel) => onConfigChange(node.id, { promptModel })} capability="text" placeholder="提示词模型" onMissingConfig={() => openConfigDialog(true)} fullWidth />
+                </div>
+            ) : null}
+            <div className={`mb-2 grid min-w-0 cursor-default items-center gap-2 ${mode === "image" ? "grid-cols-[minmax(0,1fr)_auto_148px]" : mode === "video" || mode === "audio" ? "grid-cols-[minmax(0,1fr)_148px]" : "grid-cols-1"}`} onMouseDown={(event) => event.stopPropagation()}>
+                <ModelPicker className="canvas-compact-control h-10" config={config} value={config.model} onChange={updateModel} capability={mode} placeholder={mode === "image" ? "生图模型" : "选择模型"} onMissingConfig={() => openConfigDialog(true)} fullWidth />
+                {mode === "image" ? <CanvasModelBrowser config={config} model={config.model} onSelect={updateModel} /> : null}
                 {mode === "video" ? (
                     <CanvasVideoSettingsPopover config={config} placement="topRight" buttonClassName="canvas-compact-control !h-10 !w-full !justify-start !rounded-lg !px-2" onConfigChange={(key, value) => onConfigChange(node.id, videoConfigPatch(key, value))} />
                 ) : mode === "image" ? (
@@ -106,13 +141,30 @@ export function CanvasConfigNodePanel({ node, isRunning, inputSummary, onConfigC
                 ) : null}
             </div>
 
+            {mode === "image" && isComfyModel(config.model) ? (
+                <div className="mb-2 cursor-default" onMouseDown={(event) => event.stopPropagation()}>
+                    <CanvasComfySettingsPopover
+                        config={config}
+                        model={config.model}
+                        buttonClassName="canvas-compact-control !h-10 !w-full !justify-start !rounded-lg !px-2"
+                        settings={{
+                            comfyReferenceMode: node.metadata?.comfyReferenceMode,
+                            comfyLoras: node.metadata?.comfyLoras,
+                            comfyFaceDetailer: node.metadata?.comfyFaceDetailer,
+                            comfyDenoise: node.metadata?.comfyDenoise,
+                        }}
+                        onSettingsChange={(patch) => onConfigChange(node.id, patch)}
+                    />
+                </div>
+            ) : null}
+
             <Button
                 type="primary"
                 className="mt-auto !h-9 !w-full !cursor-pointer !rounded-lg"
                 danger={isRunning}
                 disabled={!isRunning && !canGenerate}
                 onMouseDown={(event) => event.stopPropagation()}
-                onClick={() => (isRunning ? onStop(node.id) : onGenerate(node.id))}
+                onClick={() => (isRunning ? onStop(node.id) : onGenerate(node.id, undefined, "direct"))}
             >
                 <span className="inline-flex items-center gap-1.5">
                     {isRunning ? (
@@ -135,7 +187,7 @@ export function CanvasConfigNodePanel({ node, isRunning, inputSummary, onConfigC
 
 function InputChip({ label, value, style }: { label: string; value: string; style: CSSProperties }) {
     return (
-        <div className="inline-flex h-7 items-center gap-1 rounded-md border px-2 text-[11px]" style={style}>
+        <div className="inline-flex h-7 items-center gap-1 rounded-lg border px-2 text-[11px]" style={style}>
             <span>{label}</span>
             <span className="font-medium">{value}</span>
         </div>
@@ -154,6 +206,7 @@ function buildNodeConfig(globalConfig: AiConfig, node: CanvasNodeData, mode: Can
     return {
         ...globalConfig,
         model,
+        textModel: node.metadata?.promptModel || globalConfig.textModel || defaultConfig.textModel,
         quality: node.metadata?.quality || globalConfig.quality || defaultConfig.quality,
         size: node.metadata?.size || globalConfig.size || defaultConfig.size,
         videoSeconds: node.metadata?.seconds || globalConfig.videoSeconds || defaultConfig.videoSeconds,

@@ -9,3 +9,7 @@ data/
 .DS_Store
 .idea
 web/dist
+# local 二开 debug / backup artifacts
+tmp-fullbody-debug/
+**/*.bak.*
+*.bak

@@ -11,17 +11,23 @@ import type { AgentAttachment, AgentEmit } from "./types.js";
 type Json = Record<string, unknown>;
 type AgentEvent = Json & { type: string; usage?: unknown };
 type PendingRequest = { resolve: (value: unknown) => void; reject: (error: Error) => void };
-type CodexRunOptions = { threadId?: string; cwd?: string };
+type CodexRunOptions = { threadId?: string; cwd?: string; model?: string };
 type AgentHistoryMessage = { id: string; role: "user" | "assistant" | "tool" | "error"; title?: string; text: string; detail?: unknown; streamId?: string };
 
 let codexQueue: Promise<unknown> = Promise.resolve();
 let codexApp: CodexAppClient | null = null;
 let codexThreadId = "";
+type CanvasToolExecutor = (name: string, input: unknown) => Promise<unknown>;
+let canvasToolExecutor: CanvasToolExecutor | null = null;
 const canvasAgentMcp = canvasAgentMcpCommand();
 const require = createRequire(import.meta.url);
 
 export function withAgentPrompt(prompt: string) {
     return prompt.trim() ? `${AGENT_PROMPT}\n\n用户请求：${prompt}` : "";
+}
+
+export function setCanvasToolExecutor(executor: CanvasToolExecutor) {
+    canvasToolExecutor = executor;
 }
 
 export async function runCodexTurn(prompt: string, emit: AgentEmit, attachments: AgentAttachment[] = [], options: CodexRunOptions = {}) {
@@ -37,13 +43,13 @@ async function runCodexTurnNow(prompt: string, emit: AgentEmit, attachments: Age
         codexApp ||= await CodexAppClient.start(emit);
         let threadId = await ensureCodexThread(codexApp, options, emit);
         try {
-            await codexApp.startTurn(threadId, prompt, files);
+            await codexApp.startTurn(threadId, prompt, files, options.model);
         } catch (error) {
             if (!isRecoverableThreadError(error)) throw error;
             emit("agent_log", { text: `Codex thread unavailable, starting a new thread: ${errorMessage(error)}` });
             codexThreadId = "";
-            threadId = await ensureCodexThread(codexApp, { cwd: options.cwd }, emit);
-            await codexApp.startTurn(threadId, prompt, files);
+            threadId = await ensureCodexThread(codexApp, { cwd: options.cwd, model: options.model }, emit);
+            await codexApp.startTurn(threadId, prompt, files, options.model);
         }
     } catch (error) {
         emit("agent_error", { message: errorMessage(error) });
@@ -52,9 +58,9 @@ async function runCodexTurnNow(prompt: string, emit: AgentEmit, attachments: Age
     }
 }
 
-export async function startCodexThread(emit: AgentEmit, cwd?: string) {
+export async function startCodexThread(emit: AgentEmit, cwd?: string, model?: string) {
     codexApp ||= await CodexAppClient.start(emit);
-    const thread = await codexApp.startThread(cwd);
+    const thread = await codexApp.startThread(cwd, model);
     codexThreadId = String(field(thread, "id") || "");
     return thread;
 }
@@ -110,7 +116,7 @@ async function ensureCodexThread(app: CodexAppClient, options: CodexRunOptions, 
         try {
             const result = await app.readThread(options.threadId, false);
             assertThreadWorkspace(field(result, "thread") || {}, options.cwd);
-            const thread = await app.resumeThread(options.threadId, options.cwd);
+            const thread = await app.resumeThread(options.threadId, options.cwd, options.model);
             assertThreadWorkspace(thread, options.cwd);
             codexThreadId = String(field(thread, "id") || options.threadId);
             return codexThreadId;
@@ -120,7 +126,7 @@ async function ensureCodexThread(app: CodexAppClient, options: CodexRunOptions, 
         }
     }
     if (!codexThreadId) {
-        const thread = await app.startThread(options.cwd);
+        const thread = await app.startThread(options.cwd, options.model);
         codexThreadId = String(field(thread, "id") || "");
     }
     return codexThreadId;
@@ -143,7 +149,11 @@ class CodexAppClient {
     private constructor(private child: ChildProcess, private emit: AgentEmit) {}
 
     static async start(emit: AgentEmit) {
-        const child = spawn(process.execPath, [codexBin(), "app-server", "--stdio"], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+        const child = spawn(process.execPath, [codexBin(), "app-server", "--stdio", "--disable", "tool_search_always_defer_mcp_tools", "--enable", "non_prefixed_mcp_tool_names"], {
+            stdio: ["pipe", "pipe", "pipe"],
+            windowsHide: true,
+            env: canvasAgentCodexEnv(),
+        });
         const client = new CodexAppClient(child, emit);
         child.stdout?.on("data", (chunk) => client.read(chunk.toString()));
         child.stderr?.on("data", (chunk) => emit("agent_log", { text: chunk.toString() }));
@@ -159,20 +169,42 @@ class CodexAppClient {
         return client;
     }
 
-    async startThread(cwd?: string) {
-        const result = await this.request("thread/start", { approvalPolicy: "never", sandbox: "workspace-write", config: codexConfig(), ...(cwd ? { cwd } : {}), threadSource: "user" });
+    async startThread(cwd?: string, model?: string) {
+        const resolvedModel = resolveCanvasAgentModel(model);
+        const result = await this.request("thread/start", { model: resolvedModel, approvalPolicy: "never", sandbox: "workspace-write", config: codexConfig(), ...(cwd ? { cwd } : {}), threadSource: "user" });
         const thread = field(result, "thread") as Json | undefined;
         const id = String(field(thread, "id") || "");
         if (!id) throw new Error("Codex app-server 没有返回 thread id");
+        await this.waitForCanvasMcpReady(id);
         return thread || {};
     }
 
-    async resumeThread(threadId: string, cwd?: string) {
-        const result = await this.request("thread/resume", { threadId, approvalPolicy: "never", sandbox: "workspace-write", config: codexConfig(), ...(cwd ? { cwd } : {}) });
+    async resumeThread(threadId: string, cwd?: string, model?: string) {
+        const resolvedModel = resolveCanvasAgentModel(model);
+        const result = await this.request("thread/resume", { threadId, model: resolvedModel, approvalPolicy: "never", sandbox: "workspace-write", config: codexConfig(), ...(cwd ? { cwd } : {}) });
         const thread = field(result, "thread") as Json | undefined;
         const id = String(field(thread, "id") || "");
         if (!id) throw new Error("Codex app-server 没有返回 thread id");
+        await this.waitForCanvasMcpReady(id);
         return thread || {};
+    }
+
+    private async waitForCanvasMcpReady(threadId: string, timeoutMs = 10000) {
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+            try {
+                const result = await this.request("mcpServerStatus/list", { detail: "toolsAndAuthOnly", limit: 50, threadId });
+                const servers = (field(result, "data") as Json[] | undefined) || [];
+                const target = servers.find((item) => field(item, "name") === "infinite-canvas");
+                const tools = target ? (field(target, "tools") as Record<string, unknown> | undefined) : undefined;
+                if (tools && Object.keys(tools).length > 0) return true;
+            } catch {
+                // ignore and retry until timeout
+            }
+            await new Promise((resolve) => setTimeout(resolve, 400));
+        }
+        this.emit("agent_log", { text: "警告：等待 infinite-canvas MCP 工具就绪超时，可能本轮无法调用画布工具" });
+        return false;
     }
 
     listThreads(params: Json) {
@@ -187,8 +219,14 @@ class CodexAppClient {
         return this.request("thread/archive", { threadId });
     }
 
-    async startTurn(threadId: string, prompt: string, images: string[]) {
-        const result = await this.request("turn/start", { threadId, input: codexInput(prompt, images), approvalPolicy: "never" });
+    async startTurn(threadId: string, prompt: string, images: string[], model?: string) {
+        const ready = await this.waitForCanvasMcpReady(threadId, 8000);
+        if (!ready) this.emit("agent_log", { text: "警告：本轮开始前 infinite-canvas MCP 仍未就绪" });
+        const resolvedModel = resolveCanvasAgentModel(model);
+        if (model && resolvedModel !== model) {
+            this.emit("agent_log", { text: `模型 ${model} 暂不支持画布 MCP 工具调用，已自动改用 ${resolvedModel}` });
+        }
+        const result = await this.request("turn/start", { threadId, input: codexInput(prompt, images), approvalPolicy: "never", model: resolvedModel });
         const turnId = String(field(field(result, "turn"), "id") || "");
         if (!turnId) throw new Error("Codex app-server 没有返回 turn id");
         const completed = this.completedTurns.get(turnId);
@@ -231,7 +269,7 @@ class CodexAppClient {
         const id = Number(message.id);
         if (message.error && this.pending.has(id)) return this.reject(id, String(field(message.error, "message") || "Codex request failed"));
         if (this.pending.has(id)) return this.resolve(id, message.result);
-        if (typeof message.method === "string" && "id" in message) return this.answerServerRequest(message);
+        if (typeof message.method === "string" && "id" in message) return void this.answerServerRequest(message);
         if (typeof message.method === "string") this.handleNotification(message.method, (message.params || {}) as Json);
     }
 
@@ -266,9 +304,32 @@ class CodexAppClient {
         this.emit("agent_event", { agent: "codex", type: "item.updated", item: { id, type: "agent_message", text } });
     }
 
-    private answerServerRequest(message: Json) {
+    private async answerServerRequest(message: Json) {
         const method = String(message.method);
-        const result = method === "mcpServer/elicitation/request" ? { action: "accept", content: {}, _meta: null } : { decision: "decline" };
+        if (method === "item/tool/call" && canvasToolExecutor) {
+            const params = (message.params || {}) as Json;
+            const toolName = stripToolNamespace(String(field(params, "tool") || ""));
+            try {
+                const output = await canvasToolExecutor(toolName, field(params, "arguments"));
+                const result = { contentItems: [{ type: "inputText", text: safeJsonText(output) }], success: true };
+                this.write({ id: message.id, result });
+                this.emit("agent_event", { agent: "codex", type: "server.request", method, params: message.params, result });
+            } catch (error) {
+                const result = { contentItems: [{ type: "inputText", text: errorMessage(error) }], success: false };
+                this.write({ id: message.id, result });
+                this.emit("agent_event", { agent: "codex", type: "server.request", method, params: message.params, result });
+            }
+            return;
+        }
+        // 对画布会话：未知服务端请求尽量 accept/continue，避免无关审批把 turn 卡住
+        let result: Json;
+        if (method === "mcpServer/elicitation/request") {
+            result = { action: "accept", content: {}, _meta: null };
+        } else if (method.endsWith("/request") || method.includes("approval") || method.includes("elicitation")) {
+            result = { decision: "accept", action: "accept", accepted: true };
+        } else {
+            result = { decision: "decline" };
+        }
         this.write({ id: message.id, result });
         this.emit("agent_event", { agent: "codex", type: "server.request", method, params: message.params, result });
     }
@@ -290,6 +351,18 @@ class CodexAppClient {
     }
 }
 
+function stripToolNamespace(tool: string) {
+    return tool.replace(/^mcp__infinite-canvas__/, "").replace(/^infinite-canvas__/, "");
+}
+
+function safeJsonText(value: unknown) {
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return String(value);
+    }
+}
+
 function canvasAgentMcpCommand() {
     const current = process.argv.find((arg) => /index\.(t|j)s$/.test(arg)) || "";
     const entry = path.resolve(current || fileURLToPath(new URL("./index.js", import.meta.url)));
@@ -297,8 +370,40 @@ function canvasAgentMcpCommand() {
     return entry.endsWith(".ts") ? { command: process.execPath, args: [tsx, entry, "mcp"] } : { command: process.execPath, args: [entry, "mcp"] };
 }
 
+
+function resolveCanvasAgentModel(model?: string) {
+    const value = String(model || "").trim();
+    // CPA xAI path now restores MCP namespaces for Grok tool calls.
+    // Keep model as requested; no forced remap.
+    return value || "gpt-5.5";
+}
+
 function codexConfig() {
-    return { mcp_servers: { "infinite-canvas": { command: canvasAgentMcp.command, args: canvasAgentMcp.args, default_tools_approval_mode: "approve", startup_timeout_sec: 20, tool_timeout_sec: 90 } } };
+    return {
+        // 画布 Agent 会话只关心 infinite-canvas MCP；避免模型被全局插件/skills 拐去 shell 探测
+        developer_instructions: [
+            "This is an Infinite Canvas local agent thread.",
+            "Operate the canvas only via infinite-canvas MCP tools named canvas_*.",
+            "Do not run shell/python/file-read/tool_search to discover tools.",
+            "Do not open skills or SKILL.md files.",
+            "If canvas tools are unavailable, stop and report that briefly.",
+        ].join(" "),
+        mcp_servers: {
+            "infinite-canvas": {
+                command: canvasAgentMcp.command,
+                args: canvasAgentMcp.args,
+                default_tools_approval_mode: "approve",
+                startup_timeout_sec: 20,
+                tool_timeout_sec: 90,
+            },
+        },
+        // best-effort: disable noisy non-canvas surfaces when the runtime accepts these keys
+        features: {
+            js_repl: false,
+            web_search: false,
+            memories: false,
+        },
+    };
 }
 
 function codexInput(prompt: string, images: string[]) {
@@ -470,6 +575,19 @@ function imageExt(type = "") {
     if (type.includes("png")) return "png";
     if (type.includes("webp")) return "webp";
     return "jpg";
+}
+
+
+function canvasAgentCodexHome() {
+    return path.join(os.homedir(), ".infinite-canvas", "codex-home");
+}
+
+function canvasAgentCodexEnv(): NodeJS.ProcessEnv {
+    // 隔离画布 Agent 的 Codex 配置，避免继承全局插件/skills 导致模型去 shell 找工具
+    return {
+        ...process.env,
+        CODEX_HOME: canvasAgentCodexHome(),
+    };
 }
 
 function codexBin() {

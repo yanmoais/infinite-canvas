@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useSearchParams } from "react-router-dom";
-import { App, Button, Input, Segmented, Tooltip } from "antd";
+import { App, Button, Input, Segmented, Select, Tooltip } from "antd";
 import copyToClipboard from "copy-to-clipboard";
 import { Copy, FolderOpen, History, KeyRound, Link2, LoaderCircle, PlugZap, Plus, RefreshCw, RotateCcw, Terminal, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
@@ -10,16 +10,22 @@ import { useThemeStore } from "@/stores/use-theme-store";
 import { useUserStore } from "@/stores/use-user-store";
 import { useCanvasAgentStore, type AgentAttachment, type AgentChatItem, type AgentEventLog, type AgentPanelTab, type AgentPendingToolCall, type AgentThreadSummary } from "@/stores/canvas/use-canvas-agent-store";
 import { summarizeCanvasAgentOps, type CanvasAgentOp, type CanvasAgentSnapshot } from "@/lib/canvas/canvas-agent-ops";
+import { useConfigStore, type ModelChannel } from "@/stores/use-config-store";
+import { fetchChannelModels } from "@/services/api/image";
 import { AgentChatComposer, AgentChatMessage, AgentPanelTabs, AgentPendingToolCard, AgentWorkingMessage, type CanvasAgentChatAttachment } from "./canvas-agent-chat-ui";
 
 const PANEL_MOTION_SECONDS = 0.5;
 const MAX_ATTACHMENTS = 6;
 const MAX_ATTACHMENT_PAYLOAD_BYTES = 28 * 1024 * 1024;
+const PENDING_TOOL_TIMEOUT_MS = 25000;
 const DEFAULT_AGENT_URL = "http://127.0.0.1:17371";
+const AGENT_MODEL_GATEWAY_BASE_URL = "https://api.nannanai.online:2087/v1";
+const PRIORITY_AGENT_MODELS = ["gpt-5.5", "claude-opus-4-6", "grok-4.3", "grok-4.5"];
+const CANVAS_TOOL_UNSAFE_MODELS = ["grok-4.5", "grok-4.3", "grok-4.20-0309-reasoning", "grok-4.20-0309-non-reasoning", "grok-4.20-multi-agent-0309"];
 const AGENT_CONNECT_STEPS = [
-    { title: "安装 Codex 插件", text: "在 Codex app 安装 Infinite Canvas 插件后，首次使用插件会自动启动本地 Agent。" },
-    { title: "打开画布连接", text: "回到这里点击连接，网页会自动读取本机 Agent 配置。" },
-    { title: "手动启动备用", text: "如果自动发现失败，再运行下面命令。", command: "npx -y @basketikun/canvas-agent" },
+    { title: "安装 Codex 插件", text: "在 Codex app 安装 Infinite Canvas 插件后，可说「打开 Infinite Canvas」自动连接。" },
+    { title: "启动本地 Agent", text: "先运行下面命令，再把 Connect token 填到配置页（token 也在 ~/.infinite-canvas/canvas-agent.json）。", command: "npx -y @basketikun/canvas-agent" },
+    { title: "进入画布", text: "Agent 在线后进入具体画布，网页会自动挂上工具桥，Codex 才能读写节点。" },
 ];
 
 type AgentEventPayload = {
@@ -42,10 +48,13 @@ type AgentConfigResponse = { ok?: boolean; url?: string; token?: string; hasToke
 export function CanvasLocalAgentPanel({ snapshot, canUndoOps, collapsed, embedded, headless, autoConnect, onApplyOps, onUndoOps }: { snapshot: CanvasAgentSnapshot; canUndoOps: boolean; collapsed?: boolean; embedded?: boolean; headless?: boolean; autoConnect?: boolean; onApplyOps: (ops: CanvasAgentOp[]) => unknown; onUndoOps: () => CanvasAgentSnapshot | null }) {
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
     const user = useUserStore((state) => state.user);
+    const aiConfig = useConfigStore((state) => state.config);
     const { message, modal } = App.useApp();
     const [searchParams] = useSearchParams();
-    const { width, url, token, connected, enabled, prompt, attachments, sending, waiting, messages, eventLogs, threads, activeThreadId, workspacePath, loadingThreads, activeTab, confirmTools, activity, connectError, pendingTool, setAgentState, addMessage: pushMessage, addEventLog: pushEventLog, clearEventLogs } = useCanvasAgentStore();
+    const { width, url, token, connected, enabled, prompt, agentModel, attachments, sending, waiting, messages, eventLogs, threads, activeThreadId, workspacePath, loadingThreads, activeTab, confirmTools, activity, connectError, pendingTool, setAgentState, disconnectAgent, addMessage: pushMessage, addEventLog: pushEventLog, clearEventLogs } = useCanvasAgentStore();
     const [resizing, setResizing] = useState(false);
+    const [agentModels, setAgentModels] = useState<string[]>(PRIORITY_AGENT_MODELS);
+    const [agentModelsLoading, setAgentModelsLoading] = useState(false);
     const listRef = useRef<HTMLDivElement>(null);
     const snapshotRef = useRef(snapshot);
     const confirmToolsRef = useRef(confirmTools);
@@ -104,53 +113,93 @@ export function CanvasLocalAgentPanel({ snapshot, canUndoOps, collapsed, embedde
         localStorage.setItem("canvas-agent-url", endpoint);
         localStorage.setItem("canvas-agent-token", token);
         const clientId = clientIdRef.current;
-        const source = new EventSource(`${endpoint}/events?token=${encodeURIComponent(token)}&clientId=${encodeURIComponent(clientId)}`);
-        source.addEventListener("hello", () => {
-            errorLoggedRef.current = false;
-            connectedRef.current = true;
-            setAgentState({ connected: true, activity: "已连接", connectError: "", messages: useCanvasAgentStore.getState().messages.filter((item) => !isConnectionErrorMessage(item)) });
-            if (!headless) message.success("本地 Agent 已连接");
-            void postState(endpoint, token, clientId, snapshotRef.current);
-        });
-        source.addEventListener("tool_call", (event) => {
-            const data = parseEventData<AgentPendingToolCall>(event);
-            if (data) void handleToolCall(endpoint, token, data);
-        });
-        source.addEventListener("agent_event", (event) => {
-            const data = parseEventData<AgentEventPayload>(event);
-            if (data) handleAgentEvent(data);
-        });
-        source.addEventListener("agent_log", (event) => {
-            const text = parseEventData<{ text?: unknown }>(event)?.text;
-            addEventLog("日志", text, text);
-        });
-        source.addEventListener("agent_error", (event) => {
-            const message = parseEventData<{ message?: unknown }>(event)?.message;
-            setAgentState({ activity: "出错", waiting: false });
-            addMessage({ role: "error", title: "错误", text: normalizeText(message) });
-            addEventLog("错误", message, message);
-        });
-        source.addEventListener("agent_done", () => {
-            setAgentState({ activity: "完成", waiting: false, sending: false });
-            void loadThreads();
-        });
-        source.onerror = () => {
-            const wasConnected = connectedRef.current;
-            const text = wasConnected ? "本地 Agent 连接失败或已断开" : "连接失败，请检查地址和 token";
-            if (!errorLoggedRef.current || wasConnected) {
-                addEventLog(wasConnected ? "连接断开" : "连接失败", { endpoint, error: text });
-                if (!headless) message.error(text);
-            }
-            errorLoggedRef.current = true;
-            connectedRef.current = false;
-            clearAgentSession({ activity: wasConnected ? "连接断开" : "连接失败", connected: false, connectError: text });
-            if (!wasConnected) {
-                source.close();
-                setAgentState({ enabled: false });
+        let closed = false;
+        let source: EventSource | null = null;
+        let retryTimer: ReturnType<typeof setTimeout> | null = null;
+        let retryCount = 0;
+
+        const clearRetry = () => {
+            if (retryTimer) {
+                clearTimeout(retryTimer);
+                retryTimer = null;
             }
         };
+
+        const bindSource = (next: EventSource) => {
+            next.addEventListener("hello", () => {
+                const reconnected = retryCount > 0;
+                errorLoggedRef.current = false;
+                connectedRef.current = true;
+                retryCount = 0;
+                setAgentState({ connected: true, activity: "画布已连接", connectError: "", agentOnline: true });
+                if (!headless) message.success(reconnected ? "画布工具桥已重新连接" : "画布工具桥已连接，Codex 可操作当前画布");
+                void postState(endpoint, token, clientId, snapshotRef.current);
+            });
+            next.addEventListener("tool_call", (event) => {
+                const data = parseEventData<AgentPendingToolCall>(event);
+                if (data) void handleToolCall(endpoint, token, data);
+            });
+            next.addEventListener("agent_event", (event) => {
+                const data = parseEventData<AgentEventPayload>(event);
+                if (data) handleAgentEvent(data);
+            });
+            next.addEventListener("agent_log", (event) => {
+                const text = parseEventData<{ text?: unknown }>(event)?.text;
+                addEventLog("日志", text, text);
+            });
+            next.addEventListener("agent_error", (event) => {
+                const messageText = parseEventData<{ message?: unknown }>(event)?.message;
+                setAgentState({ activity: "出错", waiting: false });
+                addMessage({ role: "error", title: "错误", text: normalizeText(messageText) });
+                addEventLog("错误", messageText, messageText);
+            });
+            next.addEventListener("agent_done", () => {
+                setAgentState({ activity: "完成", waiting: false, sending: false });
+                void loadThreads();
+            });
+            next.onerror = () => {
+                if (closed) return;
+                const wasConnected = connectedRef.current;
+                const text = wasConnected ? "本地 Agent 连接失败或已断开，正在自动重连…" : "连接失败，正在重试…";
+                if (!errorLoggedRef.current || wasConnected) {
+                    addEventLog(wasConnected ? "连接断开" : "连接失败", { endpoint, error: text, retryCount });
+                    if (!headless && wasConnected) message.warning(text);
+                }
+                errorLoggedRef.current = true;
+                connectedRef.current = false;
+                // 不要 clearAgentSession / 不要关掉 enabled：Agent 重启后应自动恢复
+                setAgentState({ connected: false, activity: wasConnected ? "连接断开，重连中" : "连接失败，重试中", connectError: text, waiting: false, sending: false });
+                try { next.close(); } catch {}
+                source = null;
+                const delay = Math.min(8000, 800 * Math.max(1, 2 ** Math.min(retryCount, 3)));
+                retryCount += 1;
+                clearRetry();
+                retryTimer = setTimeout(() => {
+                    if (closed || !useCanvasAgentStore.getState().enabled) return;
+                    connect();
+                }, delay);
+            };
+        };
+
+        const connect = () => {
+            if (closed) return;
+            try {
+                source = new EventSource(`${endpoint}/events?token=${encodeURIComponent(token)}&clientId=${encodeURIComponent(clientId)}`);
+                bindSource(source);
+            } catch (error) {
+                addEventLog("连接失败", error);
+                clearRetry();
+                retryTimer = setTimeout(() => {
+                    if (!closed) connect();
+                }, 1500);
+            }
+        };
+
+        connect();
         return () => {
-            source.close();
+            closed = true;
+            clearRetry();
+            if (source) source.close();
             connectedRef.current = false;
         };
     }, [enabled, endpoint, loadThreads, message, setAgentState, token]);
@@ -158,6 +207,34 @@ export function CanvasLocalAgentPanel({ snapshot, canUndoOps, collapsed, embedde
     useEffect(() => {
         if (connected) void loadThreads();
     }, [connected, loadThreads]);
+
+    useEffect(() => {
+        const channel = findGatewayChannel(aiConfig.channels);
+        let cancelled = false;
+        setAgentModelsLoading(true);
+        fetchAgentModels(channel)
+            .then((models) => {
+                if (cancelled) return;
+                setAgentModels(models);
+                const current = useCanvasAgentStore.getState().agentModel;
+                if (!current || !models.includes(current) || CANVAS_TOOL_UNSAFE_MODELS.includes(current)) {
+                    const next = models.find((item) => !CANVAS_TOOL_UNSAFE_MODELS.includes(item)) || models[0] || "gpt-5.5";
+                    localStorage.setItem("canvas-agent-model", next);
+                    setAgentState({ agentModel: next });
+                }
+            })
+            .catch((error) => {
+                if (cancelled) return;
+                setAgentModels(PRIORITY_AGENT_MODELS);
+                addEventLog("读取模型列表失败", error);
+            })
+            .finally(() => {
+                if (!cancelled) setAgentModelsLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [aiConfig.channels, setAgentState]);
 
     useEffect(() => {
         clearAgentSession({ activity: connected ? "切换画布" : activity });
@@ -183,7 +260,8 @@ export function CanvasLocalAgentPanel({ snapshot, canUndoOps, collapsed, embedde
         addMessage({ role: "user", text: text || "发送了图片", attachments: files });
         addEventLog("用户发送", { text, attachments: files.map(({ name, type, size }) => ({ name, type, size })) });
         try {
-            const res = await fetch(`${endpoint}/agent/codex/turn?token=${encodeURIComponent(token)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt: requestPrompt, canvasId: snapshotRef.current.projectId, threadId: useCanvasAgentStore.getState().activeThreadId || undefined, attachments: files.map(({ name, type, dataUrl }) => ({ name, type, dataUrl })) }) });
+            const current = useCanvasAgentStore.getState();
+            const res = await fetch(`${endpoint}/agent/codex/turn?token=${encodeURIComponent(token)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt: requestPrompt, canvasId: snapshotRef.current.projectId, threadId: current.activeThreadId || undefined, model: current.agentModel || undefined, attachments: files.map(({ name, type, dataUrl }) => ({ name, type, dataUrl })) }) });
             if (!res.ok) throw new Error("本地 Agent 拒绝了请求");
             const data = (await res.json()) as { threadId?: string };
             if (data.threadId) setAgentState({ activeThreadId: data.threadId });
@@ -238,7 +316,8 @@ export function CanvasLocalAgentPanel({ snapshot, canUndoOps, collapsed, embedde
     };
 
     const handleToolCall = async (endpoint: string, token: string, payload: AgentPendingToolCall) => {
-        if (confirmToolsRef.current && payload.name === "canvas_apply_ops") {
+        // headless 桥接只服务外部 Codex/MCP，不弹确认；否则写操作会卡到超时
+        if (!headless && confirmToolsRef.current && payload.name === "canvas_apply_ops") {
             if (pendingToolRef.current) {
                 await postToolResult(endpoint, token, clientIdRef.current, { requestId: payload.requestId, error: "仍有待确认的画布工具调用" });
                 return;
@@ -270,11 +349,12 @@ export function CanvasLocalAgentPanel({ snapshot, canUndoOps, collapsed, embedde
         }
     };
 
-    const rejectPendingTool = async () => {
-        if (!pendingTool) return;
-        await postToolResult(endpoint, token, clientIdRef.current, { requestId: pendingTool.requestId, error: "用户取消了画布工具调用" });
-        setAgentState({ activity: "已取消", waiting: false });
-        addMessage({ role: "tool", title: "拒绝执行", text: toolName(pendingTool.name), detail: { requestId: pendingTool.requestId, name: pendingTool.name, input: pendingTool.input } });
+    const rejectPendingTool = async (reason = "用户取消了画布工具调用") => {
+        const tool = pendingToolRef.current || pendingTool;
+        if (!tool) return;
+        await postToolResult(endpoint, token, clientIdRef.current, { requestId: tool.requestId, error: reason });
+        setAgentState({ activity: reason.includes("超时") ? "确认超时" : "已取消", waiting: false });
+        addMessage({ role: "tool", title: reason.includes("超时") ? "确认超时" : "拒绝执行", text: toolName(tool.name), detail: { requestId: tool.requestId, name: tool.name, input: tool.input, reason } });
         pendingToolRef.current = null;
         setAgentState({ pendingTool: null });
     };
@@ -287,6 +367,16 @@ export function CanvasLocalAgentPanel({ snapshot, canUndoOps, collapsed, embedde
         await runToolCall(endpoint, token, tool);
     };
 
+    useEffect(() => {
+        if (!pendingTool) return;
+        const requestId = pendingTool.requestId;
+        const timer = setTimeout(() => {
+            if (pendingToolRef.current?.requestId !== requestId) return;
+            void rejectPendingTool("工具确认超时（25s）。请在 Agent 面板关闭「工具确认」，或及时点确认");
+        }, PENDING_TOOL_TIMEOUT_MS);
+        return () => clearTimeout(timer);
+    }, [pendingTool]);
+
     const undoLastTool = () => {
         const restored = onUndoOps();
         if (!restored) return;
@@ -296,8 +386,9 @@ export function CanvasLocalAgentPanel({ snapshot, canUndoOps, collapsed, embedde
     };
 
     const toggleAgentConnection = async () => {
-        if (enabled) {
-            clearAgentSession({ enabled: false, connected: false, activity: "离线", connectError: "" });
+        if (enabled || connected || useCanvasAgentStore.getState().agentOnline) {
+            clearAgentSession({ enabled: false, connected: false, agentOnline: false, activity: "离线", connectError: "" });
+            disconnectAgent({ activity: "离线", connectError: "" });
             return;
         }
         const urlToken = searchParams.get("agentToken") || "";
@@ -312,7 +403,9 @@ export function CanvasLocalAgentPanel({ snapshot, canUndoOps, collapsed, embedde
             return;
         }
         if (!nextToken) {
-            const text = "没有发现本地 Agent，请先在 Codex 使用插件或手动启动 Canvas Agent";
+            const text = discovered?.hasToken
+                ? "检测到本机 Agent 已启动，但当前 Origin 尚未绑定，请从 Agent 启动输出或 ~/.infinite-canvas/canvas-agent.json 填入 Connect token"
+                : "没有发现本地 Agent，请先运行 npx -y @basketikun/canvas-agent，或使用 Codex 插件打开画布";
             setAgentState({ connectError: text });
             if (!headless) message.warning(text);
             return;
@@ -331,8 +424,9 @@ export function CanvasLocalAgentPanel({ snapshot, canUndoOps, collapsed, embedde
     };
 
     useEffect(() => {
-        if (urlAgentAutoConnect && confirmTools) setAgentState({ confirmTools: false });
-    }, [confirmTools, setAgentState, urlAgentAutoConnect]);
+        // 插件直连 / headless 工具桥默认不二次确认，避免 Codex MCP 写操作卡死
+        if ((urlAgentAutoConnect || headless) && confirmTools) setAgentState({ confirmTools: false });
+    }, [confirmTools, headless, setAgentState, urlAgentAutoConnect]);
 
     useEffect(() => {
         if (!autoConnect || autoConnectRef.current || enabled || connected) return;
@@ -559,7 +653,24 @@ export function CanvasLocalAgentPanel({ snapshot, canUndoOps, collapsed, embedde
                         onSubmit={sendPrompt}
                         onAddFiles={addAttachments}
                         onRemoveAttachment={removeAttachment}
-                        left={attachments.length ? <span className="text-[11px]" style={{ color: theme.node.muted }}>{formatBytes(attachmentPayloadBytes(attachments))} / 30MB</span> : null}
+                        left={
+                            <>
+                                <AgentModelPicker
+                                    value={agentModel}
+                                    models={agentModels}
+                                    loading={agentModelsLoading}
+                                    theme={theme}
+                                    onChange={(model) => {
+                                        localStorage.setItem("canvas-agent-model", model);
+                                        setAgentState({ agentModel: model });
+                                        if (CANVAS_TOOL_UNSAFE_MODELS.some((item) => model === item || model.startsWith("grok"))) {
+                                            message.warning("Grok 目前无法稳定调用画布 MCP 工具，本地 Agent 会自动回退到 gpt-5.5");
+                                        }
+                                    }}
+                                />
+                                {attachments.length ? <span className="text-[11px]" style={{ color: theme.node.muted }}>{formatBytes(attachmentPayloadBytes(attachments))} / 30MB</span> : null}
+                            </>
+                        }
                     />
                 </>
             )}
@@ -589,6 +700,52 @@ export function CanvasLocalAgentPanel({ snapshot, canUndoOps, collapsed, embedde
             </motion.aside>
         </motion.div>
     );
+}
+
+function AgentModelPicker({ value, models, loading, theme, onChange }: { value: string; models: string[]; loading: boolean; theme: (typeof canvasThemes)[keyof typeof canvasThemes]; onChange: (value: string) => void }) {
+    const options = orderAgentModels(models);
+    return (
+        <Tooltip title="Codex Agent 模型">
+            <Select
+                size="small"
+                value={value || options[0] || "gpt-5.5"}
+                loading={loading}
+                options={options.map((model) => ({ value: model, label: model }))}
+                popupMatchSelectWidth={false}
+                className="min-w-[142px] max-w-[190px]"
+                style={{ color: theme.node.text }}
+                onChange={onChange}
+            />
+        </Tooltip>
+    );
+}
+
+function findGatewayChannel(channels: ModelChannel[]) {
+    return channels.find((channel) => sameBaseUrl(channel.baseUrl, AGENT_MODEL_GATEWAY_BASE_URL)) || channels.find((channel) => channel.baseUrl.includes("api.nannanai.online:2087"));
+}
+
+async function fetchAgentModels(channel?: ModelChannel) {
+    const models = channel?.apiKey ? await fetchChannelModels({ ...channel, baseUrl: AGENT_MODEL_GATEWAY_BASE_URL }) : [];
+    return orderAgentModels([...PRIORITY_AGENT_MODELS, ...models]);
+}
+
+function orderAgentModels(models: string[]) {
+    const unique = Array.from(new Set(models.map((model) => model.trim()).filter(Boolean)));
+    const priority = new Map(PRIORITY_AGENT_MODELS.map((model, index) => [model, index]));
+    return unique.sort((a, b) => {
+        const ap = priority.get(a);
+        const bp = priority.get(b);
+        if (ap !== undefined || bp !== undefined) return (ap ?? Number.MAX_SAFE_INTEGER) - (bp ?? Number.MAX_SAFE_INTEGER);
+        return a.localeCompare(b);
+    });
+}
+
+function sameBaseUrl(a: string, b: string) {
+    return normalizeBaseUrl(a) === normalizeBaseUrl(b);
+}
+
+function normalizeBaseUrl(value: string) {
+    return value.trim().replace(/\/+$/, "").toLowerCase();
 }
 
 function AgentLogView({ logs, theme, context, onClear, onCopied, onCopyBlocked }: { logs: AgentEventLog[]; theme: (typeof canvasThemes)[keyof typeof canvasThemes]; context: AgentLogContext; onClear: () => void; onCopied: (text: string) => void; onCopyBlocked: (text: string) => void }) {
