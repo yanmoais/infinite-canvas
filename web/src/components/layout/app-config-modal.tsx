@@ -1,5 +1,5 @@
-import { App, Button, Form, Input, Modal, Progress, Select, Switch, Tabs } from "antd";
-import { CircleAlert, Cloud, KeyRound, Link2, Plus, RefreshCw, ShieldCheck, Trash2, Wifi } from "lucide-react";
+import { App, Button, Form, Input, Modal, Progress, Select, Tabs } from "antd";
+import { CircleAlert, Cloud, Plus, RefreshCw, Trash2, Wifi } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ModelPicker } from "@/components/model-picker";
@@ -7,7 +7,6 @@ import { fetchChannelModels } from "@/services/api/image";
 import { syncAppDataToWebdav, type AppSyncDomainKey, type AppSyncProgressEvent } from "@/services/app-sync";
 import { testWebdavConnection, WEBDAV_MANIFEST_FILE_NAME } from "@/services/webdav-sync";
 import { audioFormatOptions, audioVoiceOptions, normalizeAudioSpeedValue } from "@/lib/audio-generation";
-import { useCanvasAgentStore } from "@/stores/canvas/use-canvas-agent-store";
 import { modelOptionName, createModelChannel, defaultBaseUrlForApiFormat, filterModelsByCapability, modelOptionLabel, modelOptionsFromChannels, normalizeModelOptionValue, useConfigStore, type AiConfig, type ApiCallFormat, type ConfigTabKey, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
 
 type ModelGroup = {
@@ -45,11 +44,6 @@ const webdavDomainLabels: Record<AppSyncDomainKey, string> = {
     "image-workbench": "生图工作台",
     "video-workbench": "视频创作台",
 };
-const codexSetupSteps = [
-    { title: "安装 Codex 插件", text: "先在 Codex App 安装 Infinite Canvas 插件，插件会注册 MCP 并尝试启动本地 Canvas Agent。" },
-    { title: "连接本地 Agent", text: "在本页填入 Local URL 和 Connect token 后点击连接。" },
-    { title: "手动启动备用", text: "如果插件没有自动启动本地服务，在终端运行下面命令。", command: "npx -y @basketikun/canvas-agent" },
-];
 
 function createWebdavDomainProgress(): Record<AppSyncDomainKey, WebdavDomainProgress> {
     return webdavDomainKeys.reduce(
@@ -76,17 +70,6 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
     const shouldPromptContinue = useConfigStore((state) => state.shouldPromptContinue);
     const setConfigDialogOpen = useConfigStore((state) => state.setConfigDialogOpen);
     const clearPromptContinue = useConfigStore((state) => state.clearPromptContinue);
-    const agentUrl = useCanvasAgentStore((state) => state.url);
-    const agentToken = useCanvasAgentStore((state) => state.token);
-    const agentConnected = useCanvasAgentStore((state) => state.connected);
-    const agentOnline = useCanvasAgentStore((state) => state.agentOnline);
-    const agentEnabled = useCanvasAgentStore((state) => state.enabled);
-    const agentActivity = useCanvasAgentStore((state) => state.activity);
-    const agentConnectError = useCanvasAgentStore((state) => state.connectError);
-    const agentConfirmTools = useCanvasAgentStore((state) => state.confirmTools);
-    const setAgentState = useCanvasAgentStore((state) => state.setAgentState);
-    const connectAgent = useCanvasAgentStore((state) => state.connectAgent);
-    const disconnectAgent = useCanvasAgentStore((state) => state.disconnectAgent);
     const modelOptions = config.models.map((model) => ({ label: modelOptionLabel(config, model), value: model }));
     const webdavReady = Boolean(webdav.url.trim());
     useEffect(() => setActiveTab(initialTab), [initialTab]);
@@ -221,14 +204,6 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
             setSyncingWebdav(false);
         }
     };
-
-    const updateAgentConfig = (patch: { url?: string; token?: string }) => {
-        setAgentState({ ...patch, connectError: "" });
-        if (patch.url !== undefined) localStorage.setItem("canvas-agent-url", patch.url.trim().replace(/\/$/, ""));
-        if (patch.token !== undefined) localStorage.setItem("canvas-agent-token", patch.token);
-    };
-
-    const toggleAgentConnection = () => (agentEnabled || agentOnline || agentConnected ? disconnectAgent({ connectError: "" }) : connectAgent());
 
     return (
         <>
@@ -419,75 +394,6 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                                         {webdavSyncStatus ? <span className="text-xs text-stone-500">{webdavSyncStatus}</span> : null}
                                     </div>
                                     {syncingWebdav || webdavSyncStatus ? <WebdavProgressGrid progress={webdavDomainProgress} /> : null}
-                                </section>
-                            </Form>
-                        ),
-                    },
-                    {
-                        key: "codex",
-                        label: "Codex",
-                        children: (
-                            <Form layout="vertical" requiredMark={false}>
-                                <section className="rounded-lg border border-stone-200 p-3 dark:border-stone-800">
-                                    <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-                                        <div>
-                                            <div className="flex items-center gap-2 text-sm font-semibold">
-                                                <Link2 className="size-4" />
-                                                连接本地 Codex
-                                            </div>
-                                            <div className="mt-1 text-xs text-stone-500">用于画布 Agent 连接本机 Codex 插件启动的 Canvas Agent。</div>
-                                        </div>
-                                        <div className={agentConnectError ? "text-xs text-red-600" : "text-xs text-stone-500"}>
-                                            {agentConnectError
-                                                ? "连接失败"
-                                                : agentConnected
-                                                  ? agentActivity || "画布已连接"
-                                                  : agentOnline
-                                                    ? "Agent 在线（进入画布后可操作）"
-                                                    : agentEnabled
-                                                      ? "连接中"
-                                                      : "未连接"}
-                                        </div>
-                                    </div>
-                                    <div className="mb-4 grid gap-2 md:grid-cols-3">
-                                        {codexSetupSteps.map((step, index) => (
-                                            <div key={step.title} className="rounded-md border border-stone-200 p-3 dark:border-stone-800">
-                                                <div className="text-xs font-semibold text-stone-500">步骤 {index + 1}</div>
-                                                <div className="mt-1 text-sm font-medium">{step.title}</div>
-                                                <div className="mt-1 text-xs leading-5 text-stone-500">{step.text}</div>
-                                                {step.command ? <code className="mt-2 block overflow-x-auto rounded bg-stone-100 px-2 py-1.5 text-[11px] text-stone-700 dark:bg-stone-900 dark:text-stone-200">{step.command}</code> : null}
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="grid gap-4 md:grid-cols-2">
-                                        <Form.Item label="Local URL" className="mb-4">
-                                            <Input prefix={<Link2 className="mr-1 size-4 text-stone-400" />} value={agentUrl} placeholder="http://127.0.0.1:17371" onChange={(event) => updateAgentConfig({ url: event.target.value })} />
-                                        </Form.Item>
-                                        <Form.Item label="Connect token" className="mb-4">
-                                            <Input.Password prefix={<KeyRound className="mr-1 size-4 text-stone-400" />} value={agentToken} placeholder="启动输出 / canvas-agent.json / 已绑定 Origin 时可自动发现" onChange={(event) => updateAgentConfig({ token: event.target.value })} />
-                                        </Form.Item>
-                                    </div>
-                                    {agentConnectError ? <div className="mb-3 rounded-md border border-red-200 px-3 py-2 text-xs text-red-600 dark:border-red-900/60">{agentConnectError}</div> : null}
-                                    {!agentConnectError && agentOnline && !agentConnected ? (
-                                        <div className="mb-3 rounded-md border border-amber-200 px-3 py-2 text-xs text-amber-700 dark:border-amber-900/60 dark:text-amber-300">
-                                            Agent 已在线。请打开具体画布页面，网页会自动挂上工具桥；只有工具桥就绪后，Codex MCP 才能读写节点。
-                                        </div>
-                                    ) : null}
-                                    <div className="mb-3 flex justify-end">
-                                        <Button type={agentEnabled || agentOnline || agentConnected ? "default" : "primary"} icon={<Wifi className="size-4" />} onClick={toggleAgentConnection}>
-                                            {agentConnected || agentOnline || agentEnabled ? "断开" : "连接"}
-                                        </Button>
-                                    </div>
-                                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-stone-200 px-3 py-2 dark:border-stone-800">
-                                        <div className="flex min-w-0 items-center gap-2">
-                                            <ShieldCheck className="size-4 text-stone-500" />
-                                            <div>
-                                                <div className="text-sm font-medium">执行画布操作前确认</div>
-                                                <div className="mt-0.5 text-xs text-stone-500">默认关闭，便于 Codex MCP 直接改画布。开启后写操作需在侧边栏确认（25 秒超时）。插件 / headless 连接不受此项影响。</div>
-                                            </div>
-                                        </div>
-                                        <Switch checked={agentConfirmTools} onChange={(confirmTools) => setAgentState({ confirmTools })} />
-                                    </div>
                                 </section>
                             </Form>
                         ),

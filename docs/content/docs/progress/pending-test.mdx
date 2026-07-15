@@ -3,10 +3,27 @@ title: 待测试
 description: 当前版本已实现但仍需人工验证的变更项
 ---
 
+## 本地同步官方 v0.7.1（yanmoais fork）
+
+- 远端调整为 `origin=yanmoais/infinite-canvas`、`upstream=basketikun/infinite-canvas`。
+- 已合并官方 v0.7.0/v0.7.1：全站 Agent 面板、站点级工具、streamdown、nanoid、空白区双击建节点等。
+- 保留二开：Comfy 渠道、画面扩图/全身重构、超分、smart compose、提示词库、角色工坊文档，以及 Origin 首绑与 headless 工具桥。
+- 配置页不再提供 Codex Tab，连接统一在全站 Agent 面板完成。
+
+
 # 待测试
 
+- 画布节点创建：鼠标左键双击画布空白区域会在点击位置打开节点选择菜单，可创建文本、图片、视频、音频、生成配置和组节点；双击已有节点或连线不应触发菜单。
+- 本地 Agent 连接说明：新增提醒说明只有安装 Codex 插件或手动添加 MCP 后才会增加 Codex token 消耗，直接运行 `npx -y @basketikun/canvas-agent` 不会安装 MCP；需验证文案位置清晰。
+- 本地 Agent 连接说明：画布面板和配置页 Codex Tab 改为区分“Codex 插件启动画布”和“直接运行 Agent 后网页连接”两种方式，需验证文案和布局清晰。
+- 全站 Agent：Agent 面板从画布页抽离为全站常驻面板，挂在全局布局右侧，开/关只挤压左侧内容不遮挡；顶栏和画布工具条各有一个开关按钮，需验证在首页、生图、视频、素材、提示词库、画布等页面都能打开面板并保持 SSE 连接不断开。
+- 全站 Agent：新增 `site_navigate` 工具，Agent 可直接跳转 `/`、`/canvas`、`/canvas/:id`、`/image`、`/video`、`/prompts`、`/assets`、`/config`；导航直接执行不走工具确认，需验证跳转正确且面板不消失。
+- 全站 Agent：画布工具（canvas_apply_ops 等）仅在当前处于画布页时可用，不在画布页调用会返回“当前不在画布页，请先用 site_navigate 打开画布”，需验证 Agent 会先导航到画布再执行画布操作。
+- 全站 Agent：Codex 会话改为单一站点级连续线程（不再按 canvasId 分），跨页面/跨画布保持同一条对话上下文，历史记录即这条线程；本地 Agent workspace 从按画布分改为固定 `site` workspace（`~/.infinite-canvas/codex-workspaces/site`），已装 `@basketikun/canvas-agent` 的用户需更新到新版本才生效。
+- 全站 Agent：移除仅前端调用 OpenAI responses 接口的在线画布助手死代码（含 `requestToolResponse`），Agent 统一走 MCP + 本地 Codex 链路。
 - 画布节点名称：每个节点保留 `title` 名称字段，默认名称显示在节点上方，双击名称可直接编辑，节点信息弹窗和 JSON 可查看该字段。
 - 画布节点工具条：节点顶部工具条改为点击选中节点后显示，单纯鼠标移入 / 移出节点不应再频繁弹出。
+- 画布组节点：组内子节点优先响应点击和拖拽；当鼠标位于组内节点上时，应移动 / 编辑该节点，而不是移动整个组。
 - 画布组节点：工具栏新增“组”节点，普通节点拖入组区域会高亮目标组，松手后自动吸附进组；拖出组区域会解除归属，拖动组节点会一起移动组内子节点。
 - Codex MCP 写画布：默认关闭工具确认后，在已打开画布且顶栏为绿色时，终端 `canvas_create_text_node` 应在数秒内成功；开启工具确认后，25 秒不点确认应自动拒绝且 MCP 不再空等到 30s。
 - 连接语义：配置页只点连接时顶栏应为黄色「Agent 在线」；进入具体画布后应变绿「画布已连接」，收起侧边栏后 headless 工具桥仍可写画布。
@@ -16,7 +33,7 @@ description: 当前版本已实现但仍需人工验证的变更项
 - open-canvas skill：按 skill 启动应使用 Vite（`bun run dev` / `vite`），不再出现 `next dev`。
 - GitHub Pages：新增版本 tag 触发的前端静态站点自动发布 workflow，需在仓库 Pages 设置中选择 GitHub Actions 并验证路由刷新回退。
 - 画布图片切图：行数 / 列数会生成可直接拖拽的等分切图线，并支持新增横向 / 纵向线、删除单条线、重置切图线和切片数量预览。
-- Codex App 插件文档：新增插件安装教程，区分 AI 自动安装、手动安装和本仓库开发调试安装；同步优化插件 README 与技能说明。
+- Codex App 插件：精简插件 README 安装步骤，更新插件网站和作者信息，并将 `open-canvas` 调整为默认打开在线画布、仅按需启动本地前端；需重新安装后确认详情页和两种打开流程正确。
 - 本地 Codex 连接画布文档：新增 Canvas Agent、MCP、SSE 与浏览器画布交互原理说明，需确认文档导航和描述是否清晰。
 - 顶部导航：缩小桌面顶部导航栏高度，导航项下划线和内容垂直对齐需确认。
 - 配置与用户偏好：新增独立顶部导航页面，并在页面和弹窗中复用同一套配置面板；新增 Codex Tab，展示插件安装和本地 Agent 启动步骤，可配置本地 Agent 地址、Connect token 和工具执行确认开关。

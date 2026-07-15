@@ -36,6 +36,11 @@ export async function runCodexTurn(prompt: string, emit: AgentEmit, attachments:
     await codexQueue;
 }
 
+export function interruptCodexTurn() {
+    if (!codexApp) return false;
+    return codexApp.interruptCurrentTurn();
+}
+
 async function runCodexTurnNow(prompt: string, emit: AgentEmit, attachments: AgentAttachment[], options: CodexRunOptions) {
     let files: string[] = [];
     try {
@@ -236,6 +241,16 @@ class CodexAppClient {
             return;
         }
         await new Promise((resolve, reject) => this.activeTurns.set(turnId, { resolve, reject }));
+    }
+
+    interruptCurrentTurn() {
+        if (this.activeTurns.size === 0) return false;
+        try {
+            this.child.kill("SIGINT");
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     private request(method: string, params: unknown) {
