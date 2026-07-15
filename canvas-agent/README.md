@@ -87,7 +87,6 @@ npx -y @basketikun/canvas-agent mcp
 3. 再以 stdio 方式暴露 MCP 工具（工具请求会转发到 HTTP Agent 的 `/api/tools`）。
 
 使用时可以直接在 Codex 里说“打开 Infinite Canvas”，插件会优先启动本地画布和本地 Agent，读取 Local URL 和 Connect token，然后直接打开画布网页地址新建并连接画布。如果自动连接失败，再检查本地画布服务和 Canvas Agent 是否都已启动。
-使用时可以直接在 Codex 里说“打开 Infinite Canvas”，插件会启动本地 Agent，读取 Local URL 和 Connect token，然后在右侧打开 `https://canvas.best/` 并自动新建、连接画布；只有明确要求使用本地项目时才会启动本地前端。
 
 **画布必须已在浏览器打开并完成工具桥连接**，MCP 才能读写节点。配置页「Agent 在线」只表示 HTTP Agent 可达；进入具体画布后状态变为「画布已连接」才可操作。
 
