@@ -1,25 +1,22 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent as ReactChangeEvent, DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { BookOpen, Bot, Group, Home, ImageIcon, Images, List, Menu, Music2, Plus, Redo2, Settings2, Trash2, Undo2, Upload, Video, X } from "lucide-react";
 import { saveAs } from "file-saver";
 
 import { requestEdit, requestGeneration, requestImageQuestion } from "@/services/api/image";
 import { requestAudioGeneration, storeGeneratedAudio } from "@/services/api/audio";
 import { requestVideoGeneration, storeGeneratedVideo } from "@/services/api/video";
-import { DOCS_URL } from "@/constant/env";
 import { defaultConfig, type AiConfig, type ComfyExtraConfig, useConfigStore, useEffectiveConfig } from "@/stores/use-config-store";
 import { imageToDataUrl, resolveImageUrl, uploadImage, type UploadedImage } from "@/services/image-storage";
 import { resolveMediaUrl, uploadMediaFile, type UploadedFile } from "@/services/file-storage";
 import { nanoid } from "nanoid";
 import { getDataUrlByteSize, readImageMeta } from "@/lib/image-utils";
 import { canvasThemes, type CanvasBackgroundMode } from "@/lib/canvas-theme";
-import { UserStatusActions } from "@/components/layout/user-status-actions";
 import { useAssetStore } from "@/stores/use-asset-store";
 import { useThemeStore } from "@/stores/use-theme-store";
 import { cropDataUrl, splitDataUrl, upscaleDataUrl } from "@/lib/canvas/canvas-image-data";
 import { fitNodeSize, nodeSizeFromRatio } from "@/lib/canvas/canvas-node-size";
-import { App, Button, Dropdown, Modal } from "antd";
+import { App, Button, Modal } from "antd";
 import { NODE_DEFAULT_SIZE, getNodeSpec } from "@/constant/canvas";
 import { ActiveConnectionPath, ConnectionPath } from "@/components/canvas/canvas-connections";
 import { CanvasConfigComposer } from "@/components/canvas/canvas-config-composer";
@@ -34,8 +31,9 @@ import { CanvasNodeUpscaleDialog, type CanvasImageUpscaleParams } from "@/compon
 import { CanvasNodeSuperResolveDialog, type CanvasImageSuperResolveParams } from "@/components/canvas/canvas-node-super-resolve-dialog";
 import { buildNodeGenerationContext, buildNodeGenerationInputs, buildNodeResponseMessages, hydrateNodeGenerationContext, type NodeGenerationInput } from "@/components/canvas/canvas-node-generation";
 import { applySmartPromptForGeneration, extractIdentityPack, isTrueReferencePoseChange, joinPromptTokens, splitPromptTokens } from "@/lib/canvas/smart-compose-prompt";
-import { calculateDownwardOutpaintGeometry, prepareDownwardOutpaint, type DownwardOutpaintGeometry, type DownwardOutpaintPrepared } from "@/lib/canvas/canvas-outpaint-data";
+import { calculateDownwardOutpaintGeometry, isDefaultOutpaintPrompt, prepareDownwardOutpaint, type DownwardOutpaintGeometry, type DownwardOutpaintPrepared } from "@/lib/canvas/canvas-outpaint-data";
 import { buildManagedImageExecution, manualNodeSettingsFromMetadata, sourceGenerationRecipeFromConfig, sourceGenerationRecipeFromMetadata } from "@/lib/canvas/generation-plan";
+import { buildComfyExecutionPlan, cloneComfyExecutionPlan, createImageContentVersion, replayComfyExecutionPlan, revalidateReplayedComfyExecutionPlan } from "@/lib/canvas/generation-runtime-plan";
 import { CanvasNodeHoverToolbar, CanvasNodeInfoModal } from "@/components/canvas/canvas-node-hover-toolbar";
 import { InfiniteCanvas } from "@/components/canvas/infinite-canvas";
 import { Minimap } from "@/components/canvas/canvas-mini-map";
@@ -43,23 +41,34 @@ import { CanvasNode } from "@/components/canvas/canvas-node";
 import { CanvasNodePromptPanel, type CanvasNodeGenerationMode } from "@/components/canvas/canvas-node-prompt-panel";
 import { CanvasToolbar } from "@/components/canvas/canvas-toolbar";
 import { AssetPickerModal, type InsertAssetPayload } from "@/components/canvas/asset-picker-modal";
+import { CanvasSidePanel } from "@/components/canvas/canvas-side-panel";
 import { CanvasZoomControls } from "@/components/canvas/canvas-zoom-controls";
 import { CanvasLocalAgentPanel } from "@/components/canvas/canvas-local-agent-panel";
-import { findComfyGatewayBase, isComfyModel, requestSuperResolve } from "@/services/api/comfy";
+import { fetchComfyCapabilities, findComfyGatewayBase, isComfyModel, preflightComfyModel, requestSuperResolve } from "@/services/api/comfy";
 import { useAgentStore } from "@/stores/use-agent-store";
 import { useCanvasStore } from "@/stores/canvas/use-canvas-store";
-import { applyCanvasAgentOps, type CanvasAgentOp, type CanvasAgentSnapshot } from "@/lib/canvas/canvas-agent-ops";
-import { buildCanvasResourceReferences, buildNodeMentionReferences } from "@/lib/canvas/canvas-resource-references";
+import { useAgentBridge } from "@/pages/canvas/hooks/use-agent-bridge";
+import { usePluginHost } from "@/pages/canvas/hooks/use-plugin-host";
+import { buildNodeMentionReferences, type CanvasResourceReference } from "@/lib/canvas/canvas-resource-references";
+import { exportCanvasProjects } from "@/lib/canvas/canvas-export";
+import { createCanvasNode } from "@/lib/canvas/canvas-node-factory";
+import { getNodeDefinition, isBuiltinNodeType as isBuiltinType, useNodeRegistryVersion } from "@/lib/canvas/node-registry";
+import { registerBuiltinNodes } from "@/components/canvas/nodes/builtin-nodes";
+import { CanvasPluginManagerModal } from "@/components/canvas/canvas-plugin-manager-modal";
+import { CanvasRefreshShell } from "@/components/canvas/canvas-refresh-shell";
+import { CanvasTopBar } from "@/components/canvas/canvas-top-bar";
+import { ConnectionCreateMenu, NodeCreateMenu, type PendingConnectionCreate } from "@/components/canvas/canvas-create-menus";
 import {
     CanvasNodeType,
     type CanvasAssistantImage,
     type CanvasAssistantSession,
     type CanvasConnection,
-    type CanvasImageGenerationType,
     type CanvasNodeData,
     type CanvasNodeMetadata,
+    type CanvasImageGenerationType,
     type CanvasOperationProfile,
     type CanvasOutpaintMode,
+    type CanvasNodeTypeId,
     type ConnectionHandle,
     type ContextMenuState,
     type Position,
@@ -69,15 +78,14 @@ import {
 } from "@/types/canvas";
 import type { ReferenceImage } from "@/types/image";
 import type { ReferenceAudio } from "@/types/media";
+import type { CapabilityPreflightDecision } from "@/types/generation";
+
+// 内置节点注册到统一注册表(模块加载时执行一次)
+registerBuiltinNodes();
 
 type CanvasClipboard = {
     nodes: CanvasNodeData[];
     connections: CanvasConnection[];
-};
-
-type PendingConnectionCreate = {
-    connection: ConnectionHandle;
-    position: Position;
 };
 
 type ConnectionDropTarget = {
@@ -101,6 +109,8 @@ type CanvasGenerationRequest = {
 
 const VIDEO_NODE_MAX_WIDTH = 420;
 const VIDEO_NODE_MAX_HEIGHT = 420;
+// 稳定的空引用数组:避免每次渲染 `... || []` 产生新数组引用而击穿 CanvasNode 的 React.memo
+const EMPTY_REFERENCES: CanvasResourceReference[] = [];
 const CONNECTION_HANDLE_HIT_RADIUS = 40;
 const CONNECTION_NODE_HIT_PADDING = 32;
 const NODE_STATUS_IDLE = "idle" as const;
@@ -114,24 +124,6 @@ const IMAGE_PROMPT_REVERSE_PRESET = `请根据参考图片反推一段适合用�
 2. 覆盖主体、构图、风格、光线、色彩、材质、镜头和氛围。
 3. 尽量写成可直接用于生图模型的完整提示词。`;
 
-function createCanvasNode(type: CanvasNodeType, position: Position, metadata?: CanvasNodeMetadata): CanvasNodeData {
-    const spec = getNodeSpec(type);
-    const id = `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-
-    return {
-        id,
-        type,
-        title: spec.title,
-        position: {
-            x: position.x - spec.width / 2,
-            y: position.y - spec.height / 2,
-        },
-        width: spec.width,
-        height: spec.height,
-        metadata: { ...spec.metadata, ...metadata },
-    };
-}
-
 export default function CanvasPage() {
     const [mounted, setMounted] = useState(false);
 
@@ -144,132 +136,10 @@ export default function CanvasPage() {
     return <InfiniteCanvasPage />;
 }
 
-function CanvasRefreshShell() {
-    return (
-        <main className="relative h-full min-h-0 overflow-hidden bg-background text-foreground">
-            <div
-                className="absolute inset-0 opacity-60"
-                style={{
-                    backgroundImage: "radial-gradient(circle, var(--border) 1px, transparent 1px)",
-                    backgroundSize: "28px 28px",
-                }}
-            />
-
-            <div className="absolute bottom-5 left-1/2 z-50 flex h-14 -translate-x-1/2 items-center gap-1 rounded-xl border px-2 shadow-lg backdrop-blur" style={{ background: "var(--background)", borderColor: "var(--border)" }} aria-hidden="true">
-                {Array.from({ length: 7 }).map((_, index) => (
-                    <div key={index} className="size-8 rounded-md bg-current opacity-10" />
-                ))}
-            </div>
-
-            <div className="absolute bottom-24 left-6 z-50 h-40 w-[240px] rounded-lg border shadow-2xl backdrop-blur-sm" style={{ background: "var(--background)", borderColor: "var(--border)" }} aria-hidden="true">
-                <div className="absolute left-7 top-7 h-5 w-12 rounded-sm bg-current opacity-10" />
-                <div className="absolute left-28 top-16 h-6 w-16 rounded-sm bg-current opacity-10" />
-                <div className="absolute bottom-7 left-16 h-8 w-20 rounded-sm bg-current opacity-10" />
-                <div className="absolute inset-5 rounded border border-current opacity-15" />
-            </div>
-
-            <div className="absolute bottom-5 left-5 z-50 flex h-14 w-[260px] items-center gap-2 rounded-xl border px-2 shadow-lg backdrop-blur" style={{ background: "var(--background)", borderColor: "var(--border)" }} aria-hidden="true">
-                <div className="size-8 rounded-md bg-current opacity-10" />
-                <div className="size-8 rounded-md bg-current opacity-10" />
-                <div className="h-1 flex-1 rounded-full bg-current opacity-10" />
-                <div className="h-4 w-10 rounded bg-current opacity-10" />
-                <div className="size-8 rounded-md bg-current opacity-10" />
-            </div>
-        </main>
-    );
-}
-
-function ConnectionCreateMenu({
-    pending,
-    onCreate,
-    onClose,
-}: {
-    pending: PendingConnectionCreate;
-    onCreate: (type: CanvasNodeType.Image | CanvasNodeType.Text | CanvasNodeType.Config | CanvasNodeType.Video | CanvasNodeType.Audio) => void;
-    onClose: () => void;
-}) {
-    const theme = canvasThemes[useThemeStore((state) => state.theme)];
-    return (
-        <div
-            className="absolute z-[120] w-[300px] rounded-[18px] border p-3 shadow-2xl backdrop-blur"
-            data-connection-create-menu
-            style={{ left: pending.position.x, top: pending.position.y, background: theme.node.panel, borderColor: theme.node.stroke, color: theme.node.text }}
-            onMouseDown={(event) => event.stopPropagation()}
-            onPointerDown={(event) => event.stopPropagation()}
-        >
-            <div className="mb-2 flex items-center justify-between px-1">
-                <span className="text-sm font-medium" style={{ color: theme.node.muted }}>
-                    引用该节点生成
-                </span>
-                <button type="button" className="grid size-7 place-items-center rounded-lg text-base opacity-55 transition hover:bg-white/10 hover:opacity-100" onClick={onClose} aria-label="关闭">
-                    ×
-                </button>
-            </div>
-            <div className="grid gap-1">
-                <ConnectionCreateOption theme={theme} icon={<List className="size-5" />} title="文本生成" description="脚本、广告词、品牌文案" onClick={() => onCreate(CanvasNodeType.Text)} />
-                <ConnectionCreateOption theme={theme} icon={<ImageIcon className="size-5" />} title="图片生成" onClick={() => onCreate(CanvasNodeType.Image)} />
-                <ConnectionCreateOption theme={theme} icon={<Video className="size-5" />} title="视频生成" onClick={() => onCreate(CanvasNodeType.Video)} />
-                <ConnectionCreateOption theme={theme} icon={<Music2 className="size-5" />} title="音频参考" onClick={() => onCreate(CanvasNodeType.Audio)} />
-                <ConnectionCreateOption theme={theme} icon={<Settings2 className="size-5" />} title="配置节点" description="模型、尺寸、数量和输入顺序" onClick={() => onCreate(CanvasNodeType.Config)} />
-            </div>
-        </div>
-    );
-}
-
-function ConnectionCreateOption({ theme, icon, title, description, onClick }: { theme: (typeof canvasThemes)[keyof typeof canvasThemes]; icon: React.ReactNode; title: string; description?: string; onClick?: () => void }) {
-    return (
-        <button
-            type="button"
-            className="flex h-16 w-full cursor-pointer items-center gap-3 rounded-2xl px-3 text-left transition"
-            style={{ color: theme.node.text }}
-            onClick={onClick}
-            onMouseEnter={(event) => (event.currentTarget.style.background = theme.node.fill)}
-            onMouseLeave={(event) => (event.currentTarget.style.background = "transparent")}
-        >
-            <span className="grid size-11 shrink-0 place-items-center rounded-xl" style={{ background: theme.node.fill, color: theme.node.muted }}>
-                {icon}
-            </span>
-            <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2 text-base font-semibold leading-5">{title}</span>
-                {description ? (
-                    <span className="mt-1 block truncate text-sm" style={{ color: theme.node.muted }}>
-                        {description}
-                    </span>
-                ) : null}
-            </span>
-        </button>
-    );
-}
-
-function NodeCreateMenu({ position, onCreate, onClose }: { position: Position; onCreate: (type: CanvasNodeType) => void; onClose: () => void }) {
-    const theme = canvasThemes[useThemeStore((state) => state.theme)];
-    return (
-        <div
-            className="absolute z-[120] w-[300px] rounded-[18px] border p-3 shadow-2xl backdrop-blur"
-            data-canvas-no-zoom
-            style={{ left: position.x, top: position.y, background: theme.node.panel, borderColor: theme.node.stroke, color: theme.node.text }}
-            onPointerDown={(event) => event.stopPropagation()}
-        >
-            <div className="mb-2 flex items-center justify-between px-1">
-                <span className="text-sm font-medium" style={{ color: theme.node.muted }}>选择节点</span>
-                <button type="button" className="grid size-7 place-items-center rounded-lg opacity-55 transition hover:opacity-100" onClick={onClose} aria-label="关闭">
-                    <X className="size-4" />
-                </button>
-            </div>
-            <div className="grid gap-1">
-                <ConnectionCreateOption theme={theme} icon={<List className="size-5" />} title="文本" onClick={() => onCreate(CanvasNodeType.Text)} />
-                <ConnectionCreateOption theme={theme} icon={<ImageIcon className="size-5" />} title="图片" onClick={() => onCreate(CanvasNodeType.Image)} />
-                <ConnectionCreateOption theme={theme} icon={<Video className="size-5" />} title="视频" onClick={() => onCreate(CanvasNodeType.Video)} />
-                <ConnectionCreateOption theme={theme} icon={<Music2 className="size-5" />} title="音频" onClick={() => onCreate(CanvasNodeType.Audio)} />
-                <ConnectionCreateOption theme={theme} icon={<Settings2 className="size-5" />} title="生成配置" onClick={() => onCreate(CanvasNodeType.Config)} />
-                <ConnectionCreateOption theme={theme} icon={<Group className="size-5" />} title="组" onClick={() => onCreate(CanvasNodeType.Group)} />
-            </div>
-        </div>
-    );
-}
-
 function InfiniteCanvasPage() {
     const { message, modal } = App.useApp();
+    // 订阅节点注册表版本，插件动态注册/卸载后驱动画布重渲染
+    const nodeRegistryVersion = useNodeRegistryVersion((state) => state.version);
     useEffect(() => {
         const onNote = (event: Event) => {
             const detail = (event as CustomEvent<{ nannanNote?: string; nannanReferenceMode?: string }>).detail;
@@ -293,7 +163,6 @@ function InfiniteCanvasPage() {
     const agentPanelMounted = useAgentStore((state) => state.panelMounted);
     const toggleAgentPanel = useAgentStore((state) => state.togglePanel);
     const openAgentPanel = useAgentStore((state) => state.openPanel);
-    const setAgentCanvasContext = useAgentStore((state) => state.setCanvasContext);
     const codexAutoConnect = ["new", "recent", "choose"].includes(searchParams.get("mode") || "");
     const codexCompactAgent = codexAutoConnect && searchParams.has("agentUrl");
     const containerRef = useRef<HTMLDivElement>(null);
@@ -366,6 +235,7 @@ function InfiniteCanvasPage() {
     const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
     const [editRequestNonce, setEditRequestNonce] = useState(0);
     const [infoNodeId, setInfoNodeId] = useState<string | null>(null);
+    const [pluginManagerOpen, setPluginManagerOpen] = useState(false);
     const [cropNodeId, setCropNodeId] = useState<string | null>(null);
     const [maskEditNodeId, setMaskEditNodeId] = useState<string | null>(null);
     const [outpaintNodeId, setOutpaintNodeId] = useState<string | null>(null);
@@ -374,7 +244,6 @@ function InfiniteCanvasPage() {
     const [superResolveNodeId, setSuperResolveNodeId] = useState<string | null>(null);
     const [angleNodeId, setAngleNodeId] = useState<string | null>(null);
     const [previewNodeId, setPreviewNodeId] = useState<string | null>(null);
-    const [agentUndoSnapshot, setAgentUndoSnapshot] = useState<CanvasAgentSnapshot | null>(null);
     const [titleEditing, setTitleEditing] = useState(false);
     const [titleDraft, setTitleDraft] = useState("");
     const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
@@ -387,6 +256,7 @@ function InfiniteCanvasPage() {
     const connectionsRef = useRef(connections);
     const selectedNodeIdsRef = useRef(selectedNodeIds);
     const viewportRef = useRef(viewport);
+    const focusAnimRef = useRef<number | null>(null);
     const generateNodeRef = useRef<((nodeId: string, mode: CanvasNodeGenerationMode, prompt: string) => Promise<void>) | null>(null);
     const connectingParamsRef = useRef(connectingParams);
     const connectionTargetNodeIdRef = useRef(connectionTargetNodeId);
@@ -733,7 +603,10 @@ function InfiniteCanvasPage() {
     }, [collapsingBatchIds, nodes, size.height, size.width, viewport.k, viewport.x, viewport.y]);
 
     const nodeById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
-    const toolbarNode = toolbarNodeId ? nodeById.get(toolbarNodeId) || null : null;
+    // 工具条跟随「单选节点」:点击/新建/框选/键盘选中任一节点都会显示,不再仅靠精确点中触发。
+    // 多选时不显示;拖拽中由下方 isNodeDragging 守卫隐藏。
+    const singleSelectedNodeId = selectedNodeIds.size === 1 ? Array.from(selectedNodeIds)[0] : null;
+    const toolbarNode = (toolbarNodeId ? nodeById.get(toolbarNodeId) || null : null) || (singleSelectedNodeId ? nodeById.get(singleSelectedNodeId) || null : null);
     const infoNode = infoNodeId ? nodeById.get(infoNodeId) || null : null;
     const cropNode = cropNodeId ? nodeById.get(cropNodeId) || null : null;
     const maskEditNode = maskEditNodeId ? nodeById.get(maskEditNodeId) || null : null;
@@ -798,73 +671,45 @@ function InfiniteCanvasPage() {
         });
         return map;
     }, [connections, nodes]);
-    const resourceContextNodeId = dialogNodeId || activeNodeId;
-    const canvasResourceReferences = useMemo(() => buildCanvasResourceReferences(nodes, connections, resourceContextNodeId), [connections, nodes, resourceContextNodeId]);
-    const resourceReferenceByNodeId = useMemo(() => new Map(canvasResourceReferences.map((reference) => [reference.nodeId, reference])), [canvasResourceReferences]);
     const mentionReferencesByNodeId = useMemo(() => {
         const map = new Map<string, ReturnType<typeof buildNodeMentionReferences>>();
         nodes.forEach((node) => map.set(node.id, buildNodeMentionReferences(node, nodes, connections)));
         return map;
     }, [connections, nodes]);
-    const agentSnapshot = useMemo<CanvasAgentSnapshot>(
-        () => ({ projectId, title: currentProject?.title || "未命名画布", nodes, connections, selectedNodeIds: Array.from(selectedNodeIds), viewport }),
-        [connections, currentProject?.title, nodes, projectId, selectedNodeIds, viewport],
-    );
-    const applyAgentOps = useCallback(
-        (ops?: CanvasAgentOp[]) => {
-            const safeOps = Array.isArray(ops) ? ops.filter((op) => op?.type) : [];
-            const before = { projectId, title: currentProject?.title || "未命名画布", nodes: nodesRef.current, connections: connectionsRef.current, selectedNodeIds: Array.from(selectedNodeIdsRef.current), viewport: viewportRef.current };
-            const generationOps = safeOps.filter((op): op is Extract<CanvasAgentOp, { type: "run_generation" }> => op.type === "run_generation" && Boolean(op.nodeId));
-            const next = applyCanvasAgentOps(
-                before,
-                safeOps.filter((op) => op.type !== "run_generation"),
-            );
-            nodesRef.current = next.nodes;
-            connectionsRef.current = next.connections;
-            selectedNodeIdsRef.current = new Set(next.selectedNodeIds);
-            viewportRef.current = next.viewport;
-            setAgentUndoSnapshot(before);
-            setNodes(next.nodes);
-            setConnections(next.connections);
-            setSelectedNodeIds(new Set(next.selectedNodeIds));
-            setSelectedConnectionId(null);
-            setViewport(next.viewport);
-            setContextMenu(null);
-            if (generationOps.length) {
-                queueMicrotask(() =>
-                    generationOps.forEach((op) => {
-                        const target = nodesRef.current.find((node) => node.id === op.nodeId);
-                        const prompt = op.prompt?.trim() ? op.prompt : (target?.metadata?.composerContent ?? target?.metadata?.prompt ?? "");
-                        void generateNodeRef.current?.(op.nodeId, op.mode || target?.metadata?.generationMode || "image", prompt);
-                    }),
-                );
-            }
-            return { ...next, projectId, title: currentProject?.title || "未命名画布" };
-        },
-        [currentProject?.title, projectId],
-    );
-    const undoAgentOps = useCallback(() => {
-        if (!agentUndoSnapshot) return null;
-        nodesRef.current = agentUndoSnapshot.nodes;
-        connectionsRef.current = agentUndoSnapshot.connections;
-        selectedNodeIdsRef.current = new Set(agentUndoSnapshot.selectedNodeIds);
-        viewportRef.current = agentUndoSnapshot.viewport;
-        setNodes(agentUndoSnapshot.nodes);
-        setConnections(agentUndoSnapshot.connections);
-        setSelectedNodeIds(new Set(agentUndoSnapshot.selectedNodeIds));
-        setSelectedConnectionId(null);
-        setViewport(agentUndoSnapshot.viewport);
-        setContextMenu(null);
-        setAgentUndoSnapshot(null);
-        return { ...agentUndoSnapshot, projectId, title: currentProject?.title || "未命名画布" };
-    }, [agentUndoSnapshot, currentProject?.title, projectId]);
+    const { applyAgentOps } = useAgentBridge({
+        projectId,
+        title: currentProject?.title,
+        nodes,
+        connections,
+        selectedNodeIds,
+        viewport,
+        nodesRef,
+        connectionsRef,
+        selectedNodeIdsRef,
+        viewportRef,
+        generateNodeRef,
+        setNodes,
+        setConnections,
+        setSelectedNodeIds,
+        setSelectedConnectionId,
+        setViewport,
+        setContextMenu,
+    });
 
-    useEffect(() => {
-        setAgentCanvasContext({ snapshot: agentSnapshot, applyOps: applyAgentOps, undoOps: undoAgentOps, canUndo: Boolean(agentUndoSnapshot) });
-        return () => setAgentCanvasContext(null);
-    }, [agentSnapshot, applyAgentOps, agentUndoSnapshot, setAgentCanvasContext, undoAgentOps]);
+    const { pluginHost, renderPluginPanel, buildNodeToolbarItems } = usePluginHost({
+        effectiveConfig,
+        isAiConfigReady,
+        openConfigDialog,
+        theme,
+        nodesRef,
+        connectionsRef,
+        viewportRef,
+        setNodes,
+        setDialogNodeId,
+        applyAgentOps,
+    });
     const createNode = useCallback(
-        (type: CanvasNodeType, position?: Position) => {
+        (type: CanvasNodeTypeId, position?: Position) => {
             const targetPosition = position || getCanvasCenter();
             const configMetadata =
                 type === CanvasNodeType.Config
@@ -880,7 +725,18 @@ function InfiniteCanvasPage() {
             setNodes((prev) => [...prev, newNode]);
             setSelectedNodeIds(new Set([newNode.id]));
             setSelectedConnectionId(null);
-            if (type !== CanvasNodeType.Text && type !== CanvasNodeType.Audio && type !== CanvasNodeType.Group) setDialogNodeId(newNode.id);
+            const definition = getNodeDefinition(type);
+            // 纯展示型插件节点(hidePanel)不弹面板;插件自定义 Panel 需显式 autoOpenPanel 才在新建时打开;
+            // 声明了 useBuiltinPanel 的插件节点复用内置生成面板,新建即打开(与图片节点一致);
+            // 内置的图片/视频/配置类节点保持原有「新建即打开生图面板」行为。
+            const wantsPanel = definition?.hidePanel
+                ? false
+                : definition?.Panel
+                  ? Boolean(definition.autoOpenPanel)
+                  : definition?.useBuiltinPanel
+                    ? true
+                    : isBuiltinType(type) && type !== CanvasNodeType.Text && type !== CanvasNodeType.Audio && type !== CanvasNodeType.Group;
+            if (wantsPanel) setDialogNodeId(newNode.id);
         },
         [effectiveConfig.canvasImageCount, effectiveConfig.count, effectiveConfig.imageModel, effectiveConfig.model, effectiveConfig.size, effectiveConfig.textModel, getCanvasCenter],
     );
@@ -1069,6 +925,37 @@ function InfiniteCanvasPage() {
         setContextMenu(null);
     }, [size.height, size.width]);
 
+    const focusNode = useCallback(
+        (nodeId: string) => {
+            const node = nodesRef.current.find((item) => item.id === nodeId);
+            if (!node) return;
+            const worldX = node.position.x + node.width / 2;
+            const worldY = node.position.y + node.height / 2;
+            const k = Math.min(Math.max(Math.min((size.width * 0.6) / node.width, (size.height * 0.6) / node.height), 0.05), 1.5);
+            const target = { x: size.width / 2 - worldX * k, y: size.height / 2 - worldY * k, k };
+            setSelectedNodeIds(new Set([nodeId]));
+            setSelectedConnectionId(null);
+            setContextMenu(null);
+
+            if (focusAnimRef.current) cancelAnimationFrame(focusAnimRef.current);
+            const start = { ...viewportRef.current };
+            const duration = 450;
+            const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+            let startTime: number | null = null;
+            const step = (now: number) => {
+                if (startTime === null) startTime = now;
+                const progress = Math.min((now - startTime) / duration, 1);
+                const t = easeOutCubic(progress);
+                setViewport({ x: start.x + (target.x - start.x) * t, y: start.y + (target.y - start.y) * t, k: start.k + (target.k - start.k) * t });
+                focusAnimRef.current = progress < 1 ? requestAnimationFrame(step) : null;
+            };
+            focusAnimRef.current = requestAnimationFrame(step);
+        },
+        [size.height, size.width],
+    );
+
+    useEffect(() => () => void (focusAnimRef.current && cancelAnimationFrame(focusAnimRef.current)), []);
+
     const setZoomScale = useCallback(
         (scale: number) => {
             const nextScale = Math.min(Math.max(scale, 0.05), 5);
@@ -1131,6 +1018,21 @@ function InfiniteCanvasPage() {
         navigate("/canvas");
     }, [cleanupAssetImages, deleteProjects, navigate, projectId]);
 
+    const exportCurrentProject = useCallback(async () => {
+        const project = useCanvasStore.getState().projects.find((item) => item.id === projectId);
+        if (!project) return message.error("未找到当前画布");
+        const hide = message.loading("正在导出当前画布…", 0);
+        try {
+            await exportCanvasProjects([project], project.title || "无限画布");
+            message.success("已导出当前画布");
+        } catch (error) {
+            console.error(error);
+            message.error("导出失败，请重试");
+        } finally {
+            hide();
+        }
+    }, [message, projectId]);
+
     const handleCanvasMouseDown = useCallback(
         (event: ReactPointerEvent<HTMLDivElement>) => {
             setContextMenu(null);
@@ -1165,30 +1067,45 @@ function InfiniteCanvasPage() {
         [cancelPendingConnectionCreate, screenToCanvas],
     );
 
-    const handleNodeMouseDown = useCallback((event: ReactMouseEvent, nodeId: string) => {
-        event.stopPropagation();
-        setContextMenu(null);
-        setHoveredNodeId(null);
-        setToolbarNodeId(null);
-        setSelectedConnectionId(null);
-
-        const currentSelected = selectedNodeIdsRef.current;
-        const currentNodes = nodesRef.current;
-        const nextSelected = new Set(currentSelected);
-
+    // 仅处理「选中」的纯逻辑,供 body 冒泡拖拽入口与外层 capture 入口共用。
+    // 返回本次点击后的单选目标 id(多选/取消时为 null),用于同步工具条。
+    const selectNodeByEvent = useCallback((event: Pick<ReactMouseEvent, "shiftKey" | "metaKey" | "ctrlKey">, nodeId: string) => {
+        const nextSelected = new Set(selectedNodeIdsRef.current);
         if (event.shiftKey || event.metaKey || event.ctrlKey) {
-            if (nextSelected.has(nodeId)) {
-                nextSelected.delete(nodeId);
-            } else {
-                nextSelected.add(nodeId);
-            }
+            if (nextSelected.has(nodeId)) nextSelected.delete(nodeId);
+            else nextSelected.add(nodeId);
         } else if (!nextSelected.has(nodeId)) {
             nextSelected.clear();
             nextSelected.add(nodeId);
         }
-
         setSelectedNodeIds(nextSelected);
-        setToolbarNodeId(nextSelected.size === 1 && nextSelected.has(nodeId) ? nodeId : null);
+        const soloId = nextSelected.size === 1 && nextSelected.has(nodeId) ? nodeId : null;
+        setToolbarNodeId(soloId);
+        return { nextSelected, soloId };
+    }, []);
+
+    // capture 阶段选中:点击节点内部任意元素(含吞掉 mousedown 的 textarea/iframe)都能选中并弹出工具条。
+    // 只做选中,不启动拖拽 —— 拖拽仍由 body 的 onMouseDown(冒泡)负责,故编辑器内选词不会拖动节点。
+    // capture 必先于同一次事件的 body 冒泡触发,故把算好的选中集暂存,供紧随其后的拖拽入口复用,避免二次选中(shift 反选被抵消)。
+    const pendingSelectionRef = useRef<Set<string> | null>(null);
+    const handleNodeSelectCapture = useCallback(
+        (event: ReactMouseEvent, nodeId: string) => {
+            if (event.button !== 0) return;
+            setContextMenu(null);
+            setHoveredNodeId(null);
+            setSelectedConnectionId(null);
+            const { nextSelected } = selectNodeByEvent(event, nodeId);
+            pendingSelectionRef.current = nextSelected;
+        },
+        [selectNodeByEvent],
+    );
+
+    const handleNodeMouseDown = useCallback((event: ReactMouseEvent, nodeId: string) => {
+        event.stopPropagation();
+        // 选中已由 capture 阶段完成;这里只负责建立拖拽。若因故没走 capture,则兜底再选一次。
+        const currentNodes = nodesRef.current;
+        const nextSelected = pendingSelectionRef.current ?? selectNodeByEvent(event, nodeId).nextSelected;
+        pendingSelectionRef.current = null;
         const dragIds = new Set(nextSelected);
         currentNodes.forEach((node) => {
             if (!nextSelected.has(node.id)) return;
@@ -1252,7 +1169,11 @@ function InfiniteCanvasPage() {
         dragRef.current.initialSelectedNodes = [];
         if (wasClick && clickedNodeId) {
             const clickedNode = nodesRef.current.find((node) => node.id === clickedNodeId);
+            const clickedDefinition = clickedNode ? getNodeDefinition(clickedNode.type) : undefined;
             if (clickedNode?.type === CanvasNodeType.Text) {
+                setDialogNodeId((current) => (current === clickedNodeId ? current : null));
+            } else if (clickedDefinition?.hidePanel) {
+                // 纯展示型插件节点:单击只选中,不弹下方面板
                 setDialogNodeId((current) => (current === clickedNodeId ? current : null));
             } else if (clickedNode?.type !== CanvasNodeType.Group) {
                 setDialogNodeId(clickedNodeId);
@@ -1687,7 +1608,7 @@ function InfiniteCanvasPage() {
                 const content = node.metadata?.content?.trim();
                 if (!content) return message.error("没有可保存的文本");
                 addAsset({ kind: "text", title: node.metadata?.prompt?.slice(0, 24) || "画布文本", coverUrl: "", tags: [], source: "Canvas", data: { content }, metadata: { source: "canvas", nodeId: node.id } });
-                message.success("已加入我的素材");
+                message.success("已加入我的资产");
                 return;
             }
             if (node.type === CanvasNodeType.Video) {
@@ -1701,7 +1622,7 @@ function InfiniteCanvasPage() {
                     data: { url: node.metadata.content, storageKey: node.metadata.storageKey, width: node.width, height: node.height, bytes: node.metadata.bytes || 0, mimeType: node.metadata.mimeType || "video/mp4" },
                     metadata: { source: "canvas", nodeId: node.id, prompt: node.metadata?.prompt },
                 });
-                message.success("已加入我的素材");
+                message.success("已加入我的资产");
                 return;
             }
             if (!node.metadata?.content) return message.error("没有可保存的图片");
@@ -1722,7 +1643,7 @@ function InfiniteCanvasPage() {
                 },
                 metadata: { source: "canvas", nodeId: node.id, prompt: node.metadata?.prompt },
             });
-            message.success("已加入我的素材");
+            message.success("已加入我的资产");
         },
         [addAsset, message],
     );
@@ -1889,6 +1810,7 @@ function InfiniteCanvasPage() {
                                       ...item.metadata,
                                       ...generationMetadata,
                                       ...imageMetadata(uploaded),
+                                      gatewayExecutionReceipt: image.executionReceipt,
                                       prompt,
                                       status: NODE_STATUS_SUCCESS,
                                       errorDetails: undefined,
@@ -2051,7 +1973,9 @@ function InfiniteCanvasPage() {
                 // 身份词只在延伸区确实包含人物身体时有用(向下补身体/外扩含下方);
                 // up/left/right 纯背景延伸拼身份词反而诱导模型在背景区再画一个人/头发/手。
                 const identityTagsForDirection = isFullBody || outpaintDirection === "down" || outpaintDirection === "outward" ? identityPack.tags : [];
-                const rawPrompt = joinPromptTokens([...identityTagsForDirection, ...splitPromptTokens(outpaintModePrompt(payload.mode, outpaintDirection)), ...splitPromptTokens(payload.prompt)]);
+                // 未改面板默认词：严格走规范默认词，不调用任何优化器；用户确实改过默认词时才轻量直译用户这段话，
+                // 不整体改写、不新增人物/场景/饰品（BOSS 2026-07-15：默认词严格规范，用户自己改的内容才需要生效）。
+                const userCustomizedPrompt = !isDefaultOutpaintPrompt(payload.prompt, payload.mode, outpaintDirection);
                 const fallbackPrompt = buildEnglishOutpaintFallback(payload.mode, payload.prompt, identityTagsForDirection, outpaintDirection);
                 const generationMetadata = buildImageGenerationMetadata("edit", generationConfig, 1, [source], operationProfile, execution.plan);
                 const previewSize = fitNodeSize(targetWidth, targetHeight, Math.max(node.width, 420), 720);
@@ -2084,11 +2008,33 @@ function InfiniteCanvasPage() {
                     let prompt: string;
                     if (isFullBody) {
                         // full_body 禁止走通用优化器：其 system 词默认“不要输出 standing”，会把站立全身洗崩成畸形姿势
-                        prompt = ensureFullBodyFramingPrompt(fallbackPrompt, fallbackPrompt);
+                        const framingSource = await resolveOutpaintPromptWithUserCustomization(
+                            generationConfig,
+                            payload.prompt,
+                            payload.mode,
+                            identityTagsForDirection,
+                            outpaintDirection,
+                            fallbackPrompt,
+                            userCustomizedPrompt,
+                            controller.signal,
+                        );
+                        prompt = ensureFullBodyFramingPrompt(framingSource, fallbackPrompt);
                         prompt = ensureFullBodyStandingPose(prompt);
                     } else {
-                        const optimizedPrompt = await optimizeLocalImagePrompt(generationConfig, rawPrompt, [source], identitySeed, controller.signal);
-                        prompt = normalizeEnglishOutpaintPrompt(optimizedPrompt, fallbackPrompt);
+                        // 原图续接禁止走通用优化器：它会把“向上补背景”改写成完整人物站姿描述，
+                        // 已实测导致延伸区再长出第二个人/光环角色（b6f434bc / inpaint_00039）。
+                        // 未改默认词：只用方向化英文默认词；用户改过默认词时轻量直译用户这段话，不整体改写。
+                        const extendSource = await resolveOutpaintPromptWithUserCustomization(
+                            generationConfig,
+                            payload.prompt,
+                            payload.mode,
+                            identityTagsForDirection,
+                            outpaintDirection,
+                            fallbackPrompt,
+                            userCustomizedPrompt,
+                            controller.signal,
+                        );
+                        prompt = normalizeEnglishOutpaintPrompt(extendSource, fallbackPrompt);
                     }
                     setNodes((prev) =>
                         prev.map((item) =>
@@ -2114,6 +2060,7 @@ function InfiniteCanvasPage() {
                                           ...item.metadata,
                                           ...generationMetadata,
                                           ...imageMetadata(uploaded),
+                                          gatewayExecutionReceipt: image.executionReceipt,
                                           prompt,
                                           status: NODE_STATUS_SUCCESS,
                                           errorDetails: undefined,
@@ -2274,7 +2221,7 @@ function InfiniteCanvasPage() {
                 ).then((items) => items[0]);
                 const uploaded = await uploadImage(image.dataUrl);
                 const size = fitNodeSize(uploaded.width, uploaded.height, imageConfig.width, imageConfig.height);
-                setNodes((prev) => prev.map((item) => (item.id === childId ? { ...item, width: size.width, height: size.height, metadata: { ...item.metadata, ...imageMetadata(uploaded), prompt, ...generationMetadata } } : item)));
+                setNodes((prev) => prev.map((item) => (item.id === childId ? { ...item, width: size.width, height: size.height, metadata: { ...item.metadata, ...imageMetadata(uploaded), gatewayExecutionReceipt: image.executionReceipt, prompt, ...generationMetadata } } : item)));
             } catch (error) {
                 if (isGenerationCanceled(error)) return;
                 const errorDetails = error instanceof Error ? error.message : "生成失败";
@@ -2365,7 +2312,7 @@ function InfiniteCanvasPage() {
                                   height: size.height,
                                   metadata: {
                                       ...node.metadata,
-                                      ...imageMetadata(image),
+                                      ...imageMetadata(image, node.metadata?.revision),
                                       errorDetails: undefined,
                                       freeResize: false,
                                       isBatchRoot: undefined,
@@ -2438,6 +2385,63 @@ function InfiniteCanvasPage() {
             }
             if (mode === "image" && isComfyModel(generationConfig.model) && generationConfig.textModel && !isAiConfigReady(generationConfig, generationConfig.textModel)) {
                 openConfigDialog(true);
+                return;
+            }
+            let comfyPreflight: CapabilityPreflightDecision | undefined;
+            if (mode === "image" && isComfyModel(generationConfig.model)) {
+                try {
+                    comfyPreflight = preflightComfyModel(await fetchComfyCapabilities(generationConfig, generationConfig.model), generationConfig.model);
+                    if (comfyPreflight.status === "unavailable") {
+                        message.error(`ComfyUI 能力不可用：${comfyPreflight.reasons.join("；") || "运行时预检未通过"}`, 6);
+                        return;
+                    }
+                    if (comfyPreflight.status === "degraded") {
+                        message.warning(`ComfyUI 将以降级状态执行：${comfyPreflight.reasons.join("；")}`, 6);
+                    }
+                } catch (error) {
+                    message.error(error instanceof Error ? error.message : "ComfyUI 运行时能力预检失败", 6);
+                    return;
+                }
+            }
+
+            // 插件节点声明了 useBuiltinPanel.writeBackToSelf:复用内置面板生成,但结果写回节点自身。
+            // 目前支持 image 模式(全景等展示型节点),前缀由 useBuiltinPanel.promptPrefix 指定。
+            const builtinPanel = sourceNode ? getNodeDefinition(sourceNode.type)?.useBuiltinPanel : undefined;
+            if (sourceNode && builtinPanel?.writeBackToSelf && builtinPanel.mode === "image") {
+                const scene = prompt.trim();
+                if (!scene) return;
+                setRunningNodeId(nodeId);
+                const controller = startGenerationRequest(nodeId, nodeId, nodeId);
+                setNodes((prev) => prev.map((node) => (node.id === nodeId ? { ...node, metadata: { ...node.metadata, prompt: scene, status: NODE_STATUS_LOADING, errorDetails: undefined } } : node)));
+                try {
+                    const fullPrompt = (builtinPanel.promptPrefix || "") + scene;
+                    // 上游图片节点作为参考图(图生图);无上游则纯文生图
+                    const upstreamNodes = connectionsRef.current
+                        .filter((conn) => conn.toNodeId === nodeId)
+                        .map((conn) => nodesRef.current.find((node) => node.id === conn.fromNodeId))
+                        .filter((node): node is CanvasNodeData => Boolean(node));
+                    const refs = upstreamNodes.flatMap((up) =>
+                        typeof up.metadata?.content === "string" && up.metadata.content && up.type !== sourceNode.type
+                            ? [{ id: up.id, name: `${up.title || up.id}.png`, type: up.metadata.mimeType || "image/png", dataUrl: up.metadata.content, storageKey: up.metadata.storageKey }]
+                            : [],
+                    );
+                    const image = refs.length
+                        ? await requestEdit({ ...generationConfig, count: "1" }, fullPrompt, refs, undefined, { signal: controller.signal }).then((items) => items[0])
+                        : await requestGeneration({ ...generationConfig, count: "1" }, fullPrompt, { signal: controller.signal }).then((items) => items[0]);
+                    const uploaded = await uploadImage(image.dataUrl);
+                    setNodes((prev) =>
+                        prev.map((node) => (node.id === nodeId ? { ...node, metadata: { ...node.metadata, ...imageMetadata(uploaded), prompt: scene, model: generationConfig.model, status: NODE_STATUS_SUCCESS, errorDetails: undefined } } : node)),
+                    );
+                    setDialogNodeId(null);
+                } catch (error) {
+                    if (!isGenerationCanceled(error)) {
+                        const errorDetails = error instanceof Error ? error.message : "生成失败";
+                        message.error(errorDetails);
+                        setNodes((prev) => prev.map((node) => (node.id === nodeId ? { ...node, metadata: { ...node.metadata, status: NODE_STATUS_ERROR, errorDetails } } : node)));
+                    }
+                } finally {
+                    finishGenerationRequest(nodeId, controller);
+                }
                 return;
             }
 
@@ -2566,7 +2570,21 @@ function InfiniteCanvasPage() {
                     }
                     if (runController.signal.aborted) return;
                     const generationType = referenceImages.length ? ("edit" as const) : ("generation" as const);
-                    const generationMetadata = buildImageGenerationMetadata(generationType, generationConfig, count, referenceImages);
+                    const sharedExecutionPlan = comfyPreflight
+                        ? buildComfyExecutionPlan({
+                              model: generationConfig.model,
+                              prompt: imagePrompt,
+                              mediaType: generationType === "edit" ? "image_edit" : "image_generation",
+                              operation: truePoseChange ? "pose_change" : "manual",
+                              count,
+                              references: referenceImages,
+                              nodes: nodesRef.current,
+                              sourceNodeId: sourceNode?.id,
+                              referenceMode: generationConfig.comfyExtra?.reference_mode,
+                              decision: comfyPreflight,
+                          })
+                        : undefined;
+                    const generationMetadata = buildImageGenerationMetadata(generationType, generationConfig, count, referenceImages, undefined, undefined, sharedExecutionPlan);
                     const parentConfig = NODE_DEFAULT_SIZE[isConfigNode ? CanvasNodeType.Config : isImageNode ? CanvasNodeType.Image : CanvasNodeType.Text];
                     const imageConfig = NODE_DEFAULT_SIZE[CanvasNodeType.Image];
                     const parentPosition = sourceNode?.position || { x: 0, y: 0 };
@@ -2684,7 +2702,7 @@ function InfiniteCanvasPage() {
                                                 position: { x: center.x - imageSize.width / 2, y: center.y - imageSize.height / 2 },
                                                 width: imageSize.width,
                                                 height: imageSize.height,
-                                                metadata: { ...node.metadata, ...imageMetadata(uploaded), primaryImageId: targetId },
+                                                metadata: { ...node.metadata, ...imageMetadata(uploaded, node.metadata?.revision), gatewayExecutionReceipt: image.executionReceipt, primaryImageId: targetId },
                                             };
                                         if (node.id === targetId)
                                             return {
@@ -2692,7 +2710,7 @@ function InfiniteCanvasPage() {
                                                 position: { x: center.x - imageSize.width / 2, y: center.y - imageSize.height / 2 },
                                                 width: imageSize.width,
                                                 height: imageSize.height,
-                                                metadata: { ...node.metadata, ...imageMetadata(uploaded) },
+                                                metadata: { ...node.metadata, ...imageMetadata(uploaded, node.metadata?.revision), gatewayExecutionReceipt: image.executionReceipt },
                                             };
                                         return node;
                                     });
@@ -2922,12 +2940,29 @@ function InfiniteCanvasPage() {
                           textModel: savedImageMetadata.promptModel || effectiveConfig.textModel,
                           quality: savedImageMetadata.quality || effectiveConfig.quality,
                           size: savedImageMetadata.size || effectiveConfig.size,
+                          background: savedImageMetadata.background ?? effectiveConfig.background,
                           count: "1",
                       }
                     : { ...buildGenerationConfig(effectiveConfig, sourceNode, node.type === CanvasNodeType.Text ? "text" : node.type === CanvasNodeType.Video ? "video" : node.type === CanvasNodeType.Audio ? "audio" : "image"), count: "1" };
             if (!isAiConfigReady(generationConfig, generationConfig.model)) {
                 openConfigDialog(true);
                 return;
+            }
+            let comfyPreflight: CapabilityPreflightDecision | undefined;
+            if (node.type === CanvasNodeType.Image && isComfyModel(generationConfig.model)) {
+                try {
+                    comfyPreflight = preflightComfyModel(await fetchComfyCapabilities(generationConfig, generationConfig.model), generationConfig.model);
+                    if (comfyPreflight.status === "unavailable") {
+                        message.error(`ComfyUI 能力不可用：${comfyPreflight.reasons.join("；") || "运行时预检未通过"}`, 6);
+                        return;
+                    }
+                    if (comfyPreflight.status === "degraded") {
+                        message.warning(`ComfyUI 将以降级状态重试：${comfyPreflight.reasons.join("；")}`, 6);
+                    }
+                } catch (error) {
+                    message.error(error instanceof Error ? error.message : "ComfyUI 运行时能力预检失败", 6);
+                    return;
+                }
             }
 
             const context = hasSavedImageMetadata ? null : await hydrateNodeGenerationContext(buildNodeGenerationContext(sourceNode.id, nodesRef.current, connectionsRef.current, sourceNode.metadata?.prompt || node.metadata?.prompt || ""));
@@ -3053,6 +3088,24 @@ function InfiniteCanvasPage() {
                           ),
                       }
                     : undefined;
+                const sharedReplayPlan = savedImageMetadata?.sharedExecutionPlan
+                    ? comfyPreflight
+                        ? revalidateReplayedComfyExecutionPlan(savedImageMetadata.sharedExecutionPlan, comfyPreflight)
+                        : replayComfyExecutionPlan(savedImageMetadata.sharedExecutionPlan)
+                    : comfyPreflight
+                      ? buildComfyExecutionPlan({
+                            model: generationConfig.model,
+                            prompt,
+                            mediaType: useReferenceImages ? "image_edit" : "image_generation",
+                            operation: savedImageMetadata?.operationProfile?.kind || "manual",
+                            count: 1,
+                            references: retryImages,
+                            nodes: nodesRef.current,
+                            sourceNodeId: sourceNode.id,
+                            referenceMode: generationConfig.comfyExtra?.reference_mode,
+                            decision: comfyPreflight,
+                        })
+                      : undefined;
                 const generationMetadata = buildImageGenerationMetadata(
                     anchorToSelf ? "edit" : savedImageMetadata?.generationType || (useReferenceImages ? "edit" : "generation"),
                     generationConfig,
@@ -3060,6 +3113,7 @@ function InfiniteCanvasPage() {
                     retryImages,
                     savedImageMetadata?.operationProfile,
                     replayPlan,
+                    sharedReplayPlan,
                 );
                 setNodes((prev) =>
                     prev.map((item) =>
@@ -3069,7 +3123,7 @@ function InfiniteCanvasPage() {
                                   type: CanvasNodeType.Image,
                                   width: imageSize.width,
                                   height: imageSize.height,
-                                  metadata: { ...item.metadata, ...imageMetadata(uploadedImage), prompt, ...generationMetadata },
+                                  metadata: { ...item.metadata, ...imageMetadata(uploadedImage, item.metadata?.revision), gatewayExecutionReceipt: image.executionReceipt, prompt, ...generationMetadata },
                               }
                             : item,
                     ),
@@ -3195,10 +3249,78 @@ function InfiniteCanvasPage() {
         [insertAssistantImage, insertAssistantText, screenToCanvas, size.height, size.width],
     );
 
+    // --- 传给 CanvasNode 的回调/渲染函数统一 memo 化 ---
+    // CanvasNode 是 React.memo,但只要这些 prop 每次渲染都是新引用,memo 就失效,
+    // 导致点击/悬停/移动视角时全部节点跟着重渲染(markdown 尤其明显)。全部 useCallback 后,
+    // 未变化的节点不再重渲染。依赖里的 map/handler 均已 memo 化,纯交互时保持稳定。
+    const handleNodeHoverStart = useCallback((nodeId: string) => {
+        if (nodeDraggingRef.current) return;
+        setHoveredNodeId(nodeId);
+    }, []);
+    const handleNodeHoverEnd = useCallback((nodeId: string) => {
+        setHoveredNodeId((current) => (current === nodeId ? null : current));
+    }, []);
+    const handleNodeViewImage = useCallback((node: CanvasNodeData) => setPreviewNodeId(node.id), []);
+    const handleNodeRetry = useCallback((node: CanvasNodeData) => void handleRetryNode(node), [handleRetryNode]);
+    const handleNodeContextMenu = useCallback((event: ReactMouseEvent, nodeId: string) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setContextMenu({ type: "node", x: event.clientX, y: event.clientY, nodeId });
+    }, []);
+
+    const renderNodePanel = useCallback(
+        (panelNode: CanvasNodeData) =>
+            getNodeDefinition(panelNode.type)?.Panel ? (
+                renderPluginPanel(panelNode)
+            ) : panelNode.type === CanvasNodeType.Config ? (
+                <CanvasConfigComposer
+                    value={panelNode.metadata?.composerContent ?? panelNode.metadata?.prompt ?? ""}
+                    inputs={configInputsById.get(panelNode.id) || []}
+                    onChange={(composerContent) => handleConfigNodeChange(panelNode.id, { composerContent })}
+                    onClose={() => setDialogNodeId(null)}
+                />
+            ) : (
+                <CanvasNodePromptPanel
+                    node={panelNode}
+                    isRunning={runningNodeId === panelNode.id}
+                    mentionReferences={mentionReferencesByNodeId.get(panelNode.id) || EMPTY_REFERENCES}
+                    onPromptChange={handleNodePromptChange}
+                    onConfigChange={handleConfigNodeChange}
+                    onGenerate={handleGenerateNode}
+                    onStop={confirmStopGeneration}
+                    modeOverride={getNodeDefinition(panelNode.type)?.useBuiltinPanel?.mode}
+                    onImageSettingsOpenChange={(open) => {
+                        setNodeImageSettingsOpen(open);
+                        if (open) setToolbarNodeId(null);
+                    }}
+                />
+            ),
+        [configInputsById, confirmStopGeneration, handleConfigNodeChange, handleGenerateNode, handleNodePromptChange, mentionReferencesByNodeId, renderPluginPanel, runningNodeId],
+    );
+
+    const renderNodeContentPanel = useCallback(
+        (contentNode: CanvasNodeData) => (
+            <CanvasConfigNodePanel
+                node={contentNode}
+                isRunning={runningNodeId === contentNode.id}
+                inputSummary={getInputSummary(configInputsById.get(contentNode.id) || [])}
+                onConfigChange={handleConfigNodeChange}
+                onComposerToggle={() => setDialogNodeId((current) => (current === contentNode.id ? null : contentNode.id))}
+                onStop={confirmStopGeneration}
+                onGenerate={(nodeId) => {
+                    const target = nodesRef.current.find((item) => item.id === nodeId);
+                    void handleGenerateNode(nodeId, target?.metadata?.generationMode || "image", target?.metadata?.composerContent ?? target?.metadata?.prompt ?? "");
+                }}
+            />
+        ),
+        [configInputsById, confirmStopGeneration, handleConfigNodeChange, handleGenerateNode, runningNodeId],
+    );
+
     if (!projectLoaded) return <CanvasRefreshShell />;
 
     return (
         <main className="flex h-full min-h-0 overflow-hidden" style={{ background: theme.canvas.background, color: theme.node.text }}>
+            <CanvasSidePanel nodes={nodes} selectedNodeIds={selectedNodeIds} onFocusNode={focusNode} onInsertAsset={handleAssetInsert} />
             <section className="relative min-w-0 flex-1 overflow-hidden">
                 <CanvasTopBar
                     title={currentProject?.title || "未命名画布"}
@@ -3214,7 +3336,9 @@ function InfiniteCanvasPage() {
                     onProjects={() => navigate("/canvas")}
                     onCreateProject={createAndOpenProject}
                     onDeleteProject={deleteCurrentProject}
+                    onExportProject={exportCurrentProject}
                     onImportImage={() => handleUploadRequest()}
+                    onOpenPlugins={() => setPluginManagerOpen(true)}
                     onUndo={undoCanvas}
                     onRedo={redoCanvas}
                     agentOpen={agentPanelOpen}
@@ -3285,7 +3409,7 @@ function InfiniteCanvasPage() {
                             isConnectionTarget={connectionTargetNodeId === node.id}
                             isConnecting={Boolean(connectingParams)}
                             editRequestNonce={editingNodeId === node.id ? editRequestNonce : 0}
-                            showPanel={dialogNodeId === node.id && !selectionBox}
+                            showPanel={dialogNodeId === node.id && !selectionBox && !getNodeDefinition(node.type)?.hidePanel}
                             batchCount={batchChildCountById.get(node.id) || 0}
                             groupChildCount={groupChildCountById.get(node.id) || 0}
                             isGroupDropTarget={dropTargetGroupId === node.id}
@@ -3295,68 +3419,25 @@ function InfiniteCanvasPage() {
                             batchRecovering={collapsingBatchIds.has(node.id)}
                             batchMotion={batchMotionById.get(node.id)}
                             showImageInfo={showImageInfo}
-                            resourceLabel={resourceReferenceByNodeId.get(node.id)}
-                            mentionReferences={mentionReferencesByNodeId.get(node.id) || []}
-                            renderPanel={(panelNode) =>
-                                panelNode.type === CanvasNodeType.Config ? (
-                                    <CanvasConfigComposer
-                                        value={panelNode.metadata?.composerContent ?? panelNode.metadata?.prompt ?? ""}
-                                        inputs={configInputsById.get(panelNode.id) || []}
-                                        onChange={(composerContent) => handleConfigNodeChange(panelNode.id, { composerContent })}
-                                        onClose={() => setDialogNodeId(null)}
-                                    />
-                                ) : (
-                                    <CanvasNodePromptPanel
-                                        node={panelNode}
-                                        isRunning={runningNodeId === panelNode.id}
-                                        mentionReferences={mentionReferencesByNodeId.get(panelNode.id) || []}
-                                        onPromptChange={handleNodePromptChange}
-                                        onConfigChange={handleConfigNodeChange}
-                                        onGenerate={handleGenerateNode}
-                                        onStop={confirmStopGeneration}
-                                        onImageSettingsOpenChange={(open) => {
-                                            setNodeImageSettingsOpen(open);
-                                            if (open) setToolbarNodeId(null);
-                                        }}
-                                    />
-                                )
-                            }
-                            renderNodeContent={(contentNode) => (
-                                <CanvasConfigNodePanel
-                                    node={contentNode}
-                                    isRunning={runningNodeId === contentNode.id}
-                                    inputSummary={getInputSummary(configInputsById.get(contentNode.id) || [])}
-                                    onConfigChange={handleConfigNodeChange}
-                                    onComposerToggle={() => setDialogNodeId((current) => (current === contentNode.id ? null : contentNode.id))}
-                                    onStop={confirmStopGeneration}
-                                    onGenerate={(nodeId, promptOverride, promptSource) => {
-                                        const target = nodesRef.current.find((item) => item.id === nodeId);
-                                        void handleGenerateNode(nodeId, target?.metadata?.generationMode || "image", promptOverride ?? target?.metadata?.composerContent ?? target?.metadata?.prompt ?? "", promptSource);
-                                    }}
-                                />
-                            )}
+                            mentionReferences={mentionReferencesByNodeId.get(node.id) || EMPTY_REFERENCES}
+                            pluginHost={pluginHost}
+                            registryVersion={nodeRegistryVersion}
+                            renderPanel={renderNodePanel}
+                            renderNodeContent={renderNodeContentPanel}
                             onMouseDown={handleNodeMouseDown}
-                            onHoverStart={(nodeId) => {
-                                if (nodeDraggingRef.current) return;
-                                setHoveredNodeId(nodeId);
-                            }}
-                            onHoverEnd={(nodeId) => {
-                                setHoveredNodeId((current) => (current === nodeId ? null : current));
-                            }}
+                            onSelectCapture={handleNodeSelectCapture}
+                            onHoverStart={handleNodeHoverStart}
+                            onHoverEnd={handleNodeHoverEnd}
                             onConnectStart={handleConnectStart}
                             onResize={handleNodeResize}
                             onContentChange={handleNodeContentChange}
                             onTitleChange={handleNodeTitleChange}
                             onToggleBatch={toggleBatchExpanded}
                             onSetBatchPrimary={setBatchPrimary}
-                            onRetry={(node) => void handleRetryNode(node)}
+                            onRetry={handleNodeRetry}
                             onGenerateImage={generateImageFromTextNode}
-                            onViewImage={(node) => setPreviewNodeId(node.id)}
-                            onContextMenu={(event, id) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                setContextMenu({ type: "node", x: event.clientX, y: event.clientY, nodeId: id });
-                            }}
+                            onViewImage={handleNodeViewImage}
+                            onContextMenu={handleNodeContextMenu}
                         />
                     ))}
 
@@ -3389,6 +3470,7 @@ function InfiniteCanvasPage() {
                 <CanvasNodeHoverToolbar
                     node={isNodeDragging || nodeImageSettingsOpen ? null : toolbarNode}
                     viewport={viewport}
+                    extraTools={toolbarNode ? buildNodeToolbarItems(toolbarNode) : undefined}
                     onKeep={keepNodeToolbar}
                     onLeave={hideNodeToolbar}
                     onInfo={(node) => setInfoNodeId(node.id)}
@@ -3427,6 +3509,7 @@ function InfiniteCanvasPage() {
                     onAddText={() => createNode(CanvasNodeType.Text)}
                     onAddConfig={() => createNode(CanvasNodeType.Config)}
                     onAddGroup={() => createNode(CanvasNodeType.Group)}
+                    onAddExtensionNode={(type) => createNode(type)}
                     onUndo={undoCanvas}
                     onRedo={redoCanvas}
                     onUpload={() => handleUploadRequest()}
@@ -3435,9 +3518,6 @@ function InfiniteCanvasPage() {
                     onDeselect={deselectCanvas}
                     onBackgroundModeChange={setBackgroundMode}
                     onShowImageInfoChange={setShowImageInfo}
-                    onOpenMyAssets={() => {
-                        setAssetPickerOpen(true);
-                    }}
                 />
 
                 {isMiniMapOpen ? <Minimap nodes={nodes} viewport={viewport} viewportSize={size} onViewportChange={setViewport} /> : null}
@@ -3467,6 +3547,7 @@ function InfiniteCanvasPage() {
                 <input ref={imageInputRef} type="file" accept="image/*,video/*,audio/mpeg,audio/wav,audio/x-wav,.mp3,.wav" className="hidden" onChange={handleImageInputChange} />
 
                 <CanvasNodeInfoModal node={infoNode} open={Boolean(infoNode)} onClose={() => setInfoNodeId(null)} />
+                <CanvasPluginManagerModal open={pluginManagerOpen} onClose={() => setPluginManagerOpen(false)} />
 
                 {cropNode?.metadata?.content ? <CanvasNodeCropDialog dataUrl={cropNode.metadata.content} open={Boolean(cropNode)} onClose={() => setCropNodeId(null)} onConfirm={(crop) => void cropImageNode(cropNode!, crop)} /> : null}
 
@@ -3527,201 +3608,6 @@ function InfiniteCanvasPage() {
     );
 }
 
-function CanvasTopBar({
-    title,
-    titleDraft,
-    isTitleEditing,
-    onTitleDraftChange,
-    onStartTitleEditing,
-    onFinishTitleEditing,
-    onCancelTitleEditing,
-    canUndo,
-    canRedo,
-    onHome,
-    onProjects,
-    onCreateProject,
-    onDeleteProject,
-    onImportImage,
-    onUndo,
-    onRedo,
-    agentOpen,
-    compactAgentStatus,
-    onToggleAgent,
-}: {
-    title: string;
-    titleDraft: string;
-    isTitleEditing: boolean;
-    onTitleDraftChange: (value: string) => void;
-    onStartTitleEditing: () => void;
-    onFinishTitleEditing: () => void;
-    onCancelTitleEditing: () => void;
-    canUndo: boolean;
-    canRedo: boolean;
-    onHome: () => void;
-    onProjects: () => void;
-    onCreateProject: () => void;
-    onDeleteProject: () => void;
-    onImportImage: () => void;
-    onUndo: () => void;
-    onRedo: () => void;
-    agentOpen: boolean;
-    compactAgentStatus?: { connected: boolean; agentOnline?: boolean; enabled: boolean; activity: string };
-    onToggleAgent: () => void;
-}) {
-    const colorTheme = useThemeStore((state) => state.theme);
-    const theme = canvasThemes[colorTheme];
-    const titleRef = useRef<HTMLDivElement>(null);
-    const [shortcutsOpen, setShortcutsOpen] = useState(false);
-
-    useEffect(() => {
-        if (!isTitleEditing) return;
-        const close = (event: PointerEvent) => {
-            if (!titleRef.current?.contains(event.target as Node)) onFinishTitleEditing();
-        };
-        document.addEventListener("pointerdown", close, true);
-        return () => document.removeEventListener("pointerdown", close, true);
-    }, [isTitleEditing, onFinishTitleEditing]);
-
-    return (
-        <>
-            <div className="pointer-events-none absolute left-0 right-0 top-0 z-50 flex h-16 items-center justify-between px-4">
-                <div className="pointer-events-auto flex min-w-0 items-center gap-3">
-                    <Dropdown
-                        trigger={["click"]}
-                        menu={{
-                            items: [
-                                { key: "home", icon: <Home className="size-4" />, label: "主页", onClick: onHome },
-                                { key: "docs", icon: <BookOpen className="size-4" />, label: "文档", onClick: () => window.open(DOCS_URL, "_blank", "noopener,noreferrer") },
-                                { key: "projects", icon: <Images className="size-4" />, label: "我的画布", onClick: onProjects },
-                                { type: "divider" },
-                                { key: "new", icon: <Plus className="size-4" />, label: "新建画布", onClick: onCreateProject },
-                                { key: "delete", danger: true, icon: <Trash2 className="size-4" />, label: "删除当前画布", onClick: onDeleteProject },
-                                { type: "divider" },
-                                { key: "import", icon: <Upload className="size-4" />, label: "导入素材", onClick: onImportImage },
-                                { type: "divider" },
-                                { key: "undo", disabled: !canUndo, icon: <Undo2 className="size-4" />, label: <MenuLabel text="撤销" shortcut="⌘ Z" />, onClick: onUndo },
-                                { key: "redo", disabled: !canRedo, icon: <Redo2 className="size-4" />, label: <MenuLabel text="重做" shortcut="⌘ ⇧ Z / ⌘ Y" />, onClick: onRedo },
-                            ],
-                        }}
-                    >
-                        <button type="button" className="grid size-9 place-items-center rounded-full transition hover:bg-black/5 dark:hover:bg-white/10" style={{ color: theme.node.text }} aria-label="打开画布菜单">
-                            <Menu className="size-5" />
-                        </button>
-                    </Dropdown>
-
-                    <div ref={titleRef} className="flex min-w-0 items-center gap-2">
-                        {isTitleEditing ? (
-                            <input
-                                autoFocus
-                                value={titleDraft}
-                                onChange={(event) => onTitleDraftChange(event.target.value)}
-                                onBlur={onFinishTitleEditing}
-                                onKeyDown={(event) => {
-                                    if (event.key === "Enter") onFinishTitleEditing();
-                                    if (event.key === "Escape") onCancelTitleEditing();
-                                }}
-                                className="max-w-[280px] bg-transparent p-0 text-left text-lg font-semibold tracking-normal outline-none"
-                                style={{ color: theme.node.text }}
-                            />
-                        ) : (
-                            <button
-                                type="button"
-                                className="max-w-[280px] truncate border-b border-dashed border-transparent text-left text-lg font-semibold tracking-normal transition hover:border-current"
-                                onDoubleClick={onStartTitleEditing}
-                                title="双击修改画布名称"
-                            >
-                                {title}
-                            </button>
-                        )}
-                    </div>
-                    <CompactAgentStatus status={compactAgentStatus || { connected: false, agentOnline: false, enabled: false, activity: "" }} onClick={onToggleAgent} />
-                </div>
-
-                <div className="pointer-events-auto flex items-center gap-1.5">
-                    <UserStatusActions variant="canvas" onOpenShortcuts={() => setShortcutsOpen(true)} />
-                    <span className="h-6 w-px" style={{ background: theme.toolbar.border }} />
-                    <Button
-                        type="text"
-                        className="!h-10 !rounded-xl !px-3 !font-medium"
-                        style={{ background: agentOpen ? theme.toolbar.activeBg : theme.toolbar.panel, color: theme.node.text, boxShadow: "0 10px 30px rgba(28,25,23,.10)" }}
-                        icon={<Bot className="size-4" />}
-                        onClick={onToggleAgent}
-                    >
-                        Agent
-                    </Button>
-                </div>
-            </div>
-            <Modal title="快捷键" open={shortcutsOpen} onCancel={() => setShortcutsOpen(false)} footer={null} centered>
-                <div className="space-y-2 border-t pt-4 text-sm" style={{ borderColor: theme.node.stroke }}>
-                    <Shortcut keys={["拖动画布"]} value="平移视图" />
-                    <Shortcut keys={["滚轮"]} value="缩放画布" />
-                    <Shortcut keys={["缩放滑杆"]} value="精确调整缩放" />
-                    <Shortcut keys={["Ctrl / Cmd", "拖动"]} value="框选多个节点" />
-                    <Shortcut keys={["Shift / Ctrl / Cmd", "点击"]} value="追加选择节点" />
-                    <Shortcut keys={["Ctrl / Cmd", "A"]} value="全选节点" />
-                    <Shortcut keys={["Ctrl / Cmd", "C / V"]} value="复制 / 粘贴节点，或粘贴剪切板文本/图片" />
-                    <Shortcut keys={["Ctrl / Cmd", "Z"]} value="撤销" />
-                    <Shortcut keys={["Ctrl / Cmd", "Shift", "Z"]} value="重做" />
-                    <Shortcut keys={["Ctrl / Cmd", "Y"]} value="重做" />
-                    <Shortcut keys={["Delete / Backspace"]} value="删除选中" />
-                    <Shortcut keys={["Esc"]} value="取消选择并关闭浮层" />
-                    <Shortcut keys={["拖入图片/视频/音频"]} value="上传到画布" />
-                </div>
-            </Modal>
-        </>
-    );
-}
-
-function MenuLabel({ text, shortcut }: { text: string; shortcut: string }) {
-    return (
-        <span className="flex min-w-36 items-center justify-between gap-8">
-            <span>{text}</span>
-            <span className="text-xs opacity-45">{shortcut}</span>
-        </span>
-    );
-}
-
-function CompactAgentStatus({ status, onClick }: { status: { connected: boolean; agentOnline?: boolean; enabled: boolean; activity: string }; onClick: () => void }) {
-    const colorTheme = useThemeStore((state) => state.theme);
-    const theme = canvasThemes[colorTheme];
-    const online = Boolean(status.agentOnline || status.enabled);
-    const label = status.connected ? "画布已连接" : online ? status.activity || "Agent 在线" : "Codex 未连接";
-    const dotColor = status.connected ? "#22c55e" : online ? "#f59e0b" : theme.node.muted;
-    return (
-        <button
-            type="button"
-            className="flex h-8 items-center gap-1.5 text-xs transition hover:opacity-75"
-            style={{ color: status.connected ? "#16a34a" : online ? "#d97706" : theme.node.muted }}
-            onClick={onClick}
-            title={status.connected ? "画布工具桥已就绪，可操作节点" : online ? "Agent 在线，等待工具桥" : "打开本地 Codex 面板"}
-        >
-            <span className="size-2 rounded-full" style={{ background: dotColor }} />
-            <span className="max-w-[140px] truncate">{label}</span>
-        </button>
-    );
-}
-
-function Shortcut({ keys, value }: { keys: string[]; value: string }) {
-    return (
-        <div className="grid grid-cols-[minmax(0,1fr)_120px] items-center gap-6 rounded-lg px-1 py-1.5">
-            <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-                {keys.map((key, index) => (
-                    <span key={`${key}-${index}`} className="flex items-center gap-1.5">
-                        {index ? <span className="text-xs opacity-35">+</span> : null}
-                        <kbd
-                            className="min-w-9 rounded-md border px-2.5 py-1.5 text-center text-xs font-medium leading-none shadow-[inset_0_-1px_0_rgba(0,0,0,.08),0_1px_2px_rgba(0,0,0,.06)]"
-                            style={{ borderColor: "rgba(120,113,108,.28)", background: "linear-gradient(#fff, rgba(245,245,244,.92))", color: "rgb(68,64,60)" }}
-                        >
-                            {key}
-                        </kbd>
-                    </span>
-                ))}
-            </span>
-            <span className="text-right text-sm opacity-55">{value}</span>
-        </div>
-    );
-}
-
 function imageExtension(dataUrl: string) {
     return dataUrl.match(/^data:image[/]([^;]+)/)?.[1] || dataUrl.match(/image[/]([^;]+)/)?.[1] || "png";
 }
@@ -3735,8 +3621,17 @@ function audioExtension(mimeType?: string) {
     return "mp3";
 }
 
-function imageMetadata(image: UploadedImage): CanvasNodeMetadata {
-    return { content: image.url, storageKey: image.storageKey, status: "success", naturalWidth: image.width, naturalHeight: image.height, bytes: image.bytes, mimeType: image.mimeType };
+function imageMetadata(image: UploadedImage, previousRevision?: number): CanvasNodeMetadata {
+    return {
+        content: image.url,
+        storageKey: image.storageKey,
+        status: "success",
+        naturalWidth: image.width,
+        naturalHeight: image.height,
+        bytes: image.bytes,
+        mimeType: image.mimeType,
+        ...createImageContentVersion(image, previousRevision),
+    };
 }
 
 function videoMetadata(video: UploadedFile): CanvasNodeMetadata {
@@ -3762,6 +3657,7 @@ function pickGenerationMetadata(metadata?: CanvasNodeMetadata): CanvasNodeMetada
     if (metadata.promptModel) picked.promptModel = metadata.promptModel;
     if (metadata.size) picked.size = metadata.size;
     if (metadata.quality) picked.quality = metadata.quality;
+    if (metadata.background) picked.background = metadata.background;
     if (metadata.count) picked.count = metadata.count;
     if (metadata.comfyReferenceMode) picked.comfyReferenceMode = metadata.comfyReferenceMode;
     if (Array.isArray(metadata.comfyLoras)) picked.comfyLoras = [...metadata.comfyLoras];
@@ -3776,10 +3672,19 @@ function pickGenerationMetadata(metadata?: CanvasNodeMetadata): CanvasNodeMetada
             values: Object.fromEntries(Object.entries(metadata.executionPlan.values).map(([key, value]) => [key, value && Array.isArray(value.value) ? { ...value, value: [...value.value] } : value ? { ...value } : value])),
             protections: metadata.executionPlan.protections ? [...metadata.executionPlan.protections] : undefined,
         };
+    if (metadata.sharedExecutionPlan) picked.sharedExecutionPlan = cloneComfyExecutionPlan(metadata.sharedExecutionPlan);
     return picked;
 }
 
-function buildImageGenerationMetadata(type: CanvasImageGenerationType, config: AiConfig, count: number, references: ReferenceImage[], operationProfile?: CanvasOperationProfile, executionPlan?: CanvasNodeMetadata["executionPlan"]): CanvasNodeMetadata {
+function buildImageGenerationMetadata(
+    type: CanvasImageGenerationType,
+    config: AiConfig,
+    count: number,
+    references: ReferenceImage[],
+    operationProfile?: CanvasOperationProfile,
+    executionPlan?: CanvasNodeMetadata["executionPlan"],
+    sharedExecutionPlan?: CanvasNodeMetadata["sharedExecutionPlan"],
+): CanvasNodeMetadata {
     const extra = config.comfyExtra;
     const referenceUrls = references.map(referenceUrl).filter((url): url is string => Boolean(url));
     const hasExtra = (key: keyof ComfyExtraConfig) => Boolean(extra && Object.prototype.hasOwnProperty.call(extra, key));
@@ -3807,6 +3712,7 @@ function buildImageGenerationMetadata(type: CanvasImageGenerationType, config: A
         promptModel: config.textModel,
         size: config.size,
         quality: config.quality,
+        ...(config.background ? { background: config.background } : {}),
         count,
         references: referenceUrls,
         sourceGenerationRecipe: sourceGenerationRecipeFromConfig(type, config, count, referenceUrls),
@@ -3816,6 +3722,7 @@ function buildImageGenerationMetadata(type: CanvasImageGenerationType, config: A
         ...(hasExtra("denoise") ? { comfyDenoise: extra?.denoise } : {}),
         ...(operationProfile ? { operationProfile: { ...operationProfile } } : {}),
         executionPlan: resolvedExecutionPlan,
+        ...(sharedExecutionPlan ? { sharedExecutionPlan } : {}),
     };
 }
 
@@ -3869,7 +3776,16 @@ async function hydrateCanvasImages(nodes: CanvasNodeData[]) {
             if (node.type !== CanvasNodeType.Image || !content) return node;
             if (node.metadata?.storageKey) return { ...node, metadata: { ...node.metadata, content: await resolveImageUrl(node.metadata.storageKey, content) } };
             if (!content.startsWith("data:image/")) return node;
-            return { ...node, metadata: { ...node.metadata, ...imageMetadata(await uploadImage(content)) } };
+            const metadata = imageMetadata(await uploadImage(content));
+            return {
+                ...node,
+                metadata: {
+                    ...node.metadata,
+                    ...metadata,
+                    revision: node.metadata?.revision || metadata.revision,
+                    contentHash: node.metadata?.contentHash || metadata.contentHash,
+                },
+            };
         }),
     );
 }
@@ -4002,8 +3918,13 @@ function comfyExtraFromMetadata(metadata?: CanvasNodeMetadata): ComfyExtraConfig
     const faceDetailer = metadata.comfyFaceDetailer ?? recipe.faceDetailer;
     const denoise = metadata.comfyDenoise ?? recipe.denoise;
     const isFullBody = metadata.operationProfile?.kind === "outpaint" && metadata.operationProfile.outpaintMode === "full_body";
+    // 原图续接（非全身重构）重试需要原样带回方向/融合宽度，否则网关收不到 outpaint_direction，
+    // up/left/right 的第二人/光环负向清洗与羽化联动会在重试时静默失效。
+    const isMaskedOutpaint = metadata.operationProfile?.kind === "outpaint" && !isFullBody;
+    const outpaintDirection = isMaskedOutpaint ? metadata.operationProfile?.direction : undefined;
+    const seamFeather = isMaskedOutpaint ? metadata.operationProfile?.seamOverlapPixels : undefined;
     const identitySeed = metadata.originalIdentityPrompt || metadata.originalPrompt || "";
-    if (!(mode || loras !== undefined || faceDetailer !== undefined || denoise !== undefined || isFullBody || identitySeed)) return undefined;
+    if (!(mode || loras !== undefined || faceDetailer !== undefined || denoise !== undefined || isFullBody || identitySeed || outpaintDirection || seamFeather !== undefined)) return undefined;
     // denoise 只对 img2img/蒙版重绘生效；ipadapter/faceid/controlnet 模式一旦带数值 denoise，
     // 网关会走 reference_as_latent（参考图→VAEEncode→重绘），会把近景构图钉死。
     // 但 denoise:false / null 是“显式关闭 latent 重绘”，full_body/faceid 重试必须原样带回。
@@ -4014,6 +3935,8 @@ function comfyExtraFromMetadata(metadata?: CanvasNodeMetadata): ComfyExtraConfig
         ...(loras !== undefined ? { lora_keys: [...loras] } : {}),
         ...(faceDetailer !== undefined ? { face_detailer: faceDetailer } : {}),
         ...((denoiseApplies || preserveExplicitNoDenoise) && denoise !== undefined ? { denoise } : {}),
+        ...(outpaintDirection ? { outpaint_direction: outpaintDirection } : {}),
+        ...(seamFeather !== undefined ? { seam_feather: seamFeather } : {}),
         ...(isFullBody
             ? {
                   reference_mode: "ipadapter",
@@ -4043,6 +3966,7 @@ function buildGenerationConfig(config: AiConfig, node: CanvasNodeData | undefine
         textModel: node?.metadata?.promptModel || config.textModel || defaultConfig.textModel,
         quality: node?.metadata?.quality || config.quality || defaultConfig.quality,
         size: node?.metadata?.size || config.size || defaultConfig.size,
+        background: node?.metadata?.background ?? config.background ?? defaultConfig.background,
         videoSeconds: node?.metadata?.seconds || config.videoSeconds || defaultConfig.videoSeconds,
         vquality: node?.metadata?.vquality || config.vquality || defaultConfig.vquality,
         videoGenerateAudio: node?.metadata?.generateAudio || config.videoGenerateAudio || defaultConfig.videoGenerateAudio,
@@ -4069,22 +3993,23 @@ async function optimizeLocalImagePrompt(config: AiConfig, prompt: string, refere
 async function requestOptimizedLocalImagePrompt(config: AiConfig, input: string, references: ReferenceImage[], referencePrompt: string, signal?: AbortSignal) {
     // 本地 Comfy 提示词优化只允许使用文本证据，不上传参考图像本体给云端文本模型。
     // 角色身份来自 referencePrompt；避免 R18/私密参考图触发上游审查，也避免正常图生图被视觉模型改写。
+    // Profile 拆分（BOSS 2026-07-15）：无参考图=纯提示词直出（含组合器 R18 生产），
+    // 不套用"参考图换姿"那套规则，避免误伤组合器已写好的姿势/成人内容；
+    // 有参考图时才需要防止优化器把新姿势又写回参考图原本的站姿。
+    const hasReferences = references.length > 0;
+    const systemPrompt = hasReferences
+        ? "你是本地 ComfyUI 生图提示词优化器。把用户需求改写为适合 SDXL/Illustrious/WAI/NoobAI 的英文图像 prompt。保留人物身份、发色、瞳色、服装。严禁根据参考图重写姿势：若用户要求 reverse cowgirl / sex position / change pose completely，必须完整保留这些动作词，并写 man lying under her、girl on top facing away，明确覆盖站姿；不要把用户已经明确要求的新姿势又写回参考图原本的站立姿势。明确 penis belongs to the man under her、no futanari。用户若要求成人插入细节必须保留。只输出最终 prompt，不要解释、不要 Markdown、不要 JSON。"
+        : "你是本地 ComfyUI 生图提示词优化器。把用户需求整理改写为适合 SDXL/Illustrious/WAI/NoobAI 的英文图像 prompt，只做措辞规范化、标签化和必要的中译英，忠实保留用户已经写明的姿势、动作、成人内容、场景等一切细节，不删减、不弱化、不替换；不额外新增用户没有提到的人物、饰品或场景元素。只输出最终 prompt，不要解释、不要 Markdown、不要 JSON。";
+    const userText = hasReferences
+        ? `用户需求：${input}\n参考图数量：${references.length}${referencePrompt ? `\n参考图的原始生成提示词：${referencePrompt}\n要求：保留角色外貌/发色/瞳色/服装；若用户要求新姿势或新镜头，优先满足新姿势与新镜头，不要沿用原图站姿构图。如果需求包含 keep character / change pose completely，请原样保留这些约束。` : ""}\n请输出一段可直接送入本地生图模型的英文 prompt。`
+        : `用户需求：${input}\n请输出一段可直接送入本地生图模型的英文 prompt，忠实保留用户已写明的所有内容（含姿势/动作/成人描写），不要新增或删减。`;
     const answer = await requestImageQuestion(
         { ...config, model: config.textModel, systemPrompt: "" },
         [
-            {
-                role: "system",
-                content:
-                    "你是本地 ComfyUI 生图提示词优化器。把用户需求改写为适合 SDXL/Illustrious/WAI/NoobAI 的英文图像 prompt。保留人物身份、发色、瞳色、服装。严禁根据参考图重写姿势：若用户要求 reverse cowgirl / sex position / change pose completely，必须完整保留这些动作词，并写 man lying under her、girl on top facing away，明确覆盖站姿；不要输出 standing / stand up。明确 penis belongs to the man under her、no futanari。用户若要求成人插入细节必须保留。只输出最终 prompt，不要解释、不要 Markdown、不要 JSON。",
-            },
+            { role: "system", content: systemPrompt },
             {
                 role: "user",
-                content: [
-                    {
-                        type: "text",
-                        text: `用户需求：${input}\n参考图数量：${references.length}${referencePrompt ? `\n参考图的原始生成提示词：${referencePrompt}\n要求：保留角色外貌/发色/瞳色/服装；若用户要求新姿势或新镜头，优先满足新姿势与新镜头，不要沿用原图站姿构图。如果需求包含 keep character / change pose completely，请原样保留这些约束。` : ""}\n请输出一段可直接送入本地生图模型的英文 prompt。`,
-                    },
-                ],
+                content: [{ type: "text", text: userText }],
             },
         ],
         () => {},
@@ -4206,7 +4131,7 @@ function outpaintModePrompt(mode: CanvasOutpaintMode, direction: CanvasOutpaintD
     }
     if (direction === "up") {
         // 延伸区在头顶上方,多数是纯背景;提 head/hair 会诱导模型在空白区再画头发/手/头顶物
-        return "seamless upward continuation, preserve the original character and composition, naturally continue only the background scene, walls, ceiling, sky and architecture above the source image, open empty space above the head, consistent lighting, perspective and color";
+        return "seamless upward continuation, preserve the original character and composition, naturally continue only the background scene, walls, ceiling, sky and architecture above the source image, clean background only above the head with no hands or arms, consistent lighting, perspective and color";
     }
     if (direction === "left") {
         return "seamless leftward continuation, preserve the original character and composition, naturally continue body and background to the left of the source image, consistent lighting, fabric, anatomy, perspective and color";
@@ -4321,6 +4246,54 @@ function buildEnglishOutpaintFallback(mode: CanvasOutpaintMode, userPrompt: stri
 function normalizeEnglishOutpaintPrompt(value: string, fallback: string) {
     const cleaned = cleanOptimizedPrompt(value);
     return cleaned && !/[\u3400-\u9fff]/u.test(cleaned) ? cleaned : fallback;
+}
+
+/**
+ * 原图续接/全身重构：用户默认词未改动时不调用任何优化器，严格走规范默认词；
+ * 用户确实改过默认词（面板文案与 EXTEND_DEFAULT_PROMPT_BY_DIRECTION/FULL_BODY_DEFAULT_PROMPT 不一致）
+ * 且含中文时，只做逐句直译，不套用通用优化器的人物/姿势改写规则，避免延伸区二次长人。
+ */
+async function translateOutpaintUserPrompt(config: AiConfig, input: string, signal?: AbortSignal): Promise<string> {
+    const trimmed = input.trim();
+    if (!trimmed) return "";
+    if (!/[\u3400-\u9fff]/u.test(trimmed)) return cleanOptimizedPrompt(trimmed);
+    if (!isComfyModel(config.model) || !config.textModel) return "";
+    try {
+        const answer = await requestImageQuestion(
+            { ...config, model: config.textModel, systemPrompt: "" },
+            [
+                {
+                    role: "system",
+                    content:
+                        "你是本地图像生成提示词直译器。把用户这段中文逐句直译成英文 SDXL/Illustrious tag 风格短语，只翻译原文已有内容，不新增、不删减、不脑补场景，不把描述改写成完整人物姿势/构图描述，不添加原文没有提到的人物、饰品、动作。只输出翻译结果，不要解释、不要 Markdown、不要标注语言。",
+                },
+                { role: "user", content: [{ type: "text", text: trimmed }] },
+            ],
+            () => {},
+            { signal },
+        );
+        const cleaned = cleanOptimizedPrompt(answer);
+        return !cleaned || cleaned === "没有返回内容" ? "" : cleaned;
+    } catch (error) {
+        if (error instanceof Error && (error.message === "请求已取消" || error.name === "AbortError")) throw error;
+        return "";
+    }
+}
+
+async function resolveOutpaintPromptWithUserCustomization(
+    config: AiConfig,
+    userPrompt: string,
+    mode: CanvasOutpaintMode,
+    identityTags: string[],
+    direction: CanvasOutpaintDirection,
+    fallbackPrompt: string,
+    userCustomized: boolean,
+    signal?: AbortSignal,
+): Promise<string> {
+    if (!userCustomized) return fallbackPrompt;
+    const translated = await translateOutpaintUserPrompt(config, userPrompt, signal);
+    if (!translated || /[\u3400-\u9fff]/u.test(translated)) return fallbackPrompt;
+    return buildEnglishOutpaintFallback(mode, translated, identityTags, direction);
 }
 
 export function normalizeOutpaintPromptForStorage(value: string, mode: CanvasOutpaintMode = "extend") {

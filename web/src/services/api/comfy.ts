@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import { modelOptionName, resolveModelChannel, type AiConfig } from "@/stores/use-config-store";
+import type { CapabilityPreflightDecision, CapabilityRegistryResponse } from "@/types/generation";
 
 export type ComfyReferenceMode = {
     key: string;
@@ -52,6 +53,7 @@ export type ComfyPresets = {
 
 const CACHE_TTL_MS = 60_000;
 let cache: { baseUrl: string; fetchedAt: number; data: ComfyPresets } | null = null;
+let capabilityCache: { baseUrl: string; fetchedAt: number; data: CapabilityRegistryResponse } | null = null;
 
 function textValue(value: unknown, fallback = "") {
     return typeof value === "string" && value.trim() ? value : fallback;
@@ -197,6 +199,101 @@ export async function fetchComfyPresets(config: AiConfig, model: string): Promis
     return data;
 }
 
+export async function fetchComfyCapabilities(config: AiConfig, model: string): Promise<CapabilityRegistryResponse> {
+    const baseUrl = comfyGatewayBase(config, model);
+    if (!baseUrl) {
+        throw new Error("未找到本地 ComfyUI 网关渠道，无法执行运行时能力预检");
+    }
+    if (capabilityCache && capabilityCache.baseUrl === baseUrl && Date.now() - capabilityCache.fetchedAt < CACHE_TTL_MS) {
+        return capabilityCache.data;
+    }
+    let response;
+    try {
+        response = await axios.get<CapabilityRegistryResponse>(`${baseUrl}/api/v1/capabilities`, { timeout: 30000 });
+    } catch (error) {
+        if (axios.isAxiosError(error) && error.response?.status === 404) {
+            throw new Error(`运行时能力接口 404：${baseUrl}/api/v1/capabilities。请更新并重启 Mission_manager Gateway`);
+        }
+        throw error;
+    }
+    if (
+        response.data?.schemaVersion !== "1"
+        || typeof response.data.runtime?.reachable !== "boolean"
+        || !response.data.preflight
+        || !Array.isArray(response.data.preflight.uncheckedLayers)
+        || !Array.isArray(response.data.capabilities)
+        || !Array.isArray(response.data.workflowBindings)
+        || response.data.capabilities.some((item) => (
+            typeof item.runtime?.runtimeReady !== "boolean"
+            || typeof item.runtime.available !== "boolean"
+            || typeof item.runtime.filesPresent !== "boolean"
+            || typeof item.runtime.nodesPresent !== "boolean"
+            || typeof item.runtime.workflowReady !== "boolean"
+            || !Array.isArray(item.workflowBindingIds)
+        ))
+        || response.data.workflowBindings.some((item) => (
+            typeof item.workflowExists !== "boolean"
+            || !["", "workflow_missing", "invalid_workflow_json", "unsupported_workflow_shape"].includes(item.parseError)
+            || !["checked", "unavailable"].includes(item.runtimeProbeStatus)
+            || !Array.isArray(item.requiredNodeTypes)
+            || !Array.isArray(item.missingNodeTypes)
+            || !Array.isArray(item.requiredRuntimeAssets)
+            || !item.inputCompatibility
+            || !["compatible", "incompatible", "unavailable"].includes(item.inputCompatibility.status)
+            || !Array.isArray(item.inputCompatibility.issues)
+        ))
+    ) {
+        throw new Error("运行时能力接口返回了不受支持的契约");
+    }
+    capabilityCache = { baseUrl, fetchedAt: Date.now(), data: response.data };
+    return response.data;
+}
+
+export function preflightComfyModel(registry: CapabilityRegistryResponse, model: string, kind: "image" | "video" = "image"): CapabilityPreflightDecision {
+    const presetKey = comfyPresetKey(model);
+    const capabilityId = `comfy.${kind}.${presetKey}`;
+    const capability = registry.capabilities.find((item) => item.capabilityId === capabilityId);
+    if (!registry.runtime.reachable) {
+        return { status: "unavailable", capability, workflowBindings: [], reasons: ["ComfyUI 运行时不可达"] };
+    }
+    if (!capability) {
+        return { status: "unavailable", workflowBindings: [], reasons: [`能力未登记：${capabilityId}`] };
+    }
+    const workflowBindings = registry.workflowBindings.filter((item) => capability.workflowBindingIds.includes(item.workflowBindingId));
+    const primaryTemplateField = kind === "image" ? "txt2img_template" : "template";
+    const primaryWorkflowBindings = workflowBindings.filter((item) => item.inputBindings.templateField === primaryTemplateField);
+    const gateBindings = primaryWorkflowBindings.length ? primaryWorkflowBindings : workflowBindings;
+    const reasons = registry.preflight.uncheckedLayers.map((item) => `尚未验证：${item}`);
+    if (!capability.runtime.runtimeReady) {
+        reasons.push(
+            ...capability.runtime.missingNodeTypes.map((item) => `缺少节点：${item}`),
+            ...capability.runtime.missingRuntimeAssets.map((item) => `缺少运行时资产：${item}`),
+        );
+    }
+    if (capability.runtime.disabledReason) reasons.push(`能力已禁用：${capability.runtime.disabledReason}`);
+    if (!workflowBindings.length) reasons.push("没有可用的 WorkflowBinding");
+    for (const binding of gateBindings) {
+        if (!binding.workflowExists) reasons.push(`WorkflowBinding 文件缺失：${binding.workflowFile}`);
+        if (binding.parseError) reasons.push(`WorkflowBinding 解析失败：${binding.workflowFile} (${binding.parseError})`);
+        if (binding.runtimeProbeStatus !== "checked") reasons.push(`WorkflowBinding 运行时探针不可用：${binding.workflowFile}`);
+        for (const nodeType of binding.missingNodeTypes) reasons.push(`WorkflowBinding 缺少节点：${nodeType}`);
+    }
+    if (!capability.runtime.filesPresent) reasons.push("能力所需文件不完整");
+    if (capability.runtime.loaderVisible !== true) reasons.push("Loader 未确认所需模型可见");
+    if (!capability.runtime.nodesPresent) reasons.push("工作流节点未通过运行时检查");
+    if (!capability.runtime.workflowReady) reasons.push("WorkflowBinding 未就绪");
+    if (capability.runtime.smokeStatus !== "passed") reasons.push(`最小 smoke 尚未通过：${capability.runtime.smokeStatus}`);
+    if (!capability.runtime.runtimeReady) {
+        return { status: "unavailable", capability, workflowBindings, reasons };
+    }
+    return {
+        status: reasons.length ? "degraded" : "ready",
+        capability,
+        workflowBindings,
+        reasons,
+    };
+}
+
 export function compatibleLoras(presets: ComfyPresets, presetKey: string) {
     const preset = presets.imagePresets[presetKey];
     if (!preset || !preset.loraFamilies.length) return presets.loraPresets;
@@ -276,11 +373,8 @@ export function findComfyGatewayBase(config: AiConfig) {
     if (isComfyModel(config.imageModel)) {
         push(resolveModelChannel(config, config.imageModel).baseUrl);
     }
-    for (const model of config.imageModels || []) {
-        if (isComfyModel(model)) push(resolveModelChannel(config, model).baseUrl);
-    }
     for (const channel of config.channels || []) {
-        if ((channel.models || []).some((model) => model.toLowerCase().startsWith("comfy/"))) {
+        if ((channel.models || []).some((model) => model.capability === "image" && isComfyModel(model.name))) {
             push(channel.baseUrl);
         }
     }

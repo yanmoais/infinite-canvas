@@ -18,6 +18,14 @@
 - [本地开发](/docs/development/local-development)
 - [画布数据结构](/docs/development/canvas-data-structure)
 
+以下五项是仓库根目录 Markdown 文件，供 AI 与本地开发直接读取，不是文档站 `/docs/...` 路由：
+
+- [Infinite Canvas 统一设计与开发计划 v1.0](infinite-canvas-unified-development-plan.md)（跨会话唯一总排期；当前按 U1 Outpaint UAT → U2-E Windows 编辑 smoke → U2-D → U3/U4 → Character Atelier → Story 执行）
+- [故事工作流 PRD v0.5](story-workflow-prd.md)（独立工具 + 共享专业生成底座 + 可选 Story 编排）
+- [人体骨骼与姿势控制开发计划 v0.2](pose-control-development-plan.md)（独立换姿先行，含 PoseAsset、联合冒烟、分批验收）
+- [角色部件工坊设计 v0.4](character-atelier-design.md)（角色拆解、保护、部件、能力路由）
+- [角色部件工坊开发清单](character-atelier-dev-checklist.md)（Atelier 域内执行状态）
+
 ## 商务合作
 
 - [开源协议](/docs/business/license)
@@ -27,8 +35,7 @@
 ## 支持与安全
 
 - [漏洞提交](/docs/support/security)
-- [打赏支持](/docs/support/donate)
-- [广告赞助](/docs/support/sponsor)
+- [赞助支持](/docs/support/sponsor)
 
 ## 项目进度
 
@@ -43,4 +50,4 @@
 
 ## 原理说明
 
-- [本地 Codex 连接画布原理](/docs/overview/local-codex-canvas)
+- [本地 Codex 连接画布原理](/docs/development/local-codex-canvas)

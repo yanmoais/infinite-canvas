@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Button, Input, Modal, Segmented, Slider } from "antd";
 import { ArrowDownToLine, ArrowLeftToLine, ArrowRightToLine, ArrowUpToLine, ChevronDown, Frame, LockKeyhole, Maximize2, Move, ScanLine, ShieldCheck, Sparkles, WandSparkles, X } from "lucide-react";
 
-import { calculateDownwardOutpaintGeometry, extendToFullBodyRatio, normalizeOutpaintDirection, suggestOutpaintDirection, suggestOutpaintMode } from "@/lib/canvas/canvas-outpaint-data";
+import { calculateDownwardOutpaintGeometry, defaultSeamOverlapForDirection, EXTEND_DEFAULT_PROMPT_BY_DIRECTION, extendToFullBodyRatio, FULL_BODY_DEFAULT_PROMPT, normalizeOutpaintDirection, suggestOutpaintDirection, suggestOutpaintMode } from "@/lib/canvas/canvas-outpaint-data";
 import { canvasThemes } from "@/lib/canvas-theme";
 import { sourceGenerationRecipeFromMetadata } from "@/lib/canvas/generation-plan";
 import { useThemeStore } from "@/stores/use-theme-store";
@@ -39,15 +39,8 @@ const directionOptions: { value: CanvasOutpaintDirection; label: string; hint: s
     { value: "right", label: "向右扩展", hint: "补右侧身体与背景", icon: <ArrowRightToLine className="size-3.5" /> },
 ];
 
-const fullBodyPrompt = "尽量保持同一个角色的脸型、五官、发型、发色和服装气质，广角远景全身立绘，完整看见从头到脚，直立站立，头部竖直不低头，正视镜头，面部完整清晰可见，双手自然背在身后，完整全身入镜，画面无裁切、无畸变。注意：本模式是软参考重生成，不保证像素级锁脸。";
-const extendPromptByDirection: Record<CanvasOutpaintDirection, string> = {
-    outward: "保持同一个角色和画面构图不变，自然向四周扩展背景与边缘内容，原图主体位置不动，接缝无痕，透视、光线和材质保持一致。",
-    // 与引擎侧 up 默认词对齐：头已完整时只续场景，不主动写头部/发型/上半身，避免空白区再长实体
-    up: "保持同一个角色和画面构图不变，自然向上延续墙面、天花板、天空或建筑等上方背景，头顶上方保持干净留白/场景空间，不要新增饰品或第二个人，接缝无痕，透视、光线和材质保持一致。",
-    down: "保持同一个角色和画面构图完全不变，原图主体像素锁定，自然向下补全服装、身体、双脚与地面背景，接缝无痕，透视、光线和材质保持一致。适合近景/半身续接成全身。",
-    left: "保持同一个角色和画面构图不变，自然向左扩展身体与背景，接缝无痕，透视、光线和材质保持一致。",
-    right: "保持同一个角色和画面构图不变，自然向右扩展身体与背景，接缝无痕，透视、光线和材质保持一致。",
-};
+const fullBodyPrompt = FULL_BODY_DEFAULT_PROMPT;
+const extendPromptByDirection = EXTEND_DEFAULT_PROMPT_BY_DIRECTION;
 
 export function CanvasNodeOutpaintDialog({ node, open, onClose, onConfirm }: { node: CanvasNodeData | null; open: boolean; onClose: () => void; onConfirm: (payload: CanvasImageOutpaintPayload) => void }) {
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
@@ -62,9 +55,9 @@ export function CanvasNodeOutpaintDialog({ node, open, onClose, onConfirm }: { n
     const [direction, setDirection] = useState<CanvasOutpaintDirection>(suggestedDirection);
     const [prompt, setPrompt] = useState(extendPromptByDirection[suggestedDirection] || extendPromptByDirection.down);
     const [extensionRatio, setExtensionRatio] = useState(suggestedExtendRatio);
-    const [seamOverlapPixels, setSeamOverlapPixels] = useState(96);
+    const [seamOverlapPixels, setSeamOverlapPixels] = useState(() => defaultSeamOverlapForDirection(suggestedDirection));
     const [sourceScale, setSourceScale] = useState(0.58);
-    const [denoise, setDenoise] = useState(0.68);
+    const [denoise, setDenoise] = useState(0.60);
     const [error, setError] = useState("");
     const sourceRecipe = useMemo(() => sourceGenerationRecipeFromMetadata(node?.metadata), [node?.metadata]);
     const extendOptions = useMemo(() => {
@@ -101,9 +94,9 @@ export function CanvasNodeOutpaintDialog({ node, open, onClose, onConfirm }: { n
         setDirection(nextDirection);
         setPrompt(nextMode === "full_body" ? fullBodyPrompt : extendPromptByDirection[nextDirection]);
         setExtensionRatio(nextMode === "full_body" ? 0.75 : nextRatio);
-        setSeamOverlapPixels(nextMode === "full_body" ? 64 : 96);
+        setSeamOverlapPixels(nextMode === "full_body" ? 64 : defaultSeamOverlapForDirection(nextDirection));
         setSourceScale(0.58);
-        setDenoise(nextMode === "full_body" ? 0.72 : 0.68);
+        setDenoise(nextMode === "full_body" ? 0.72 : 0.60);
         setError("");
     }, [node?.id, open, sourceHeight, sourceWidth]);
 
@@ -123,8 +116,8 @@ export function CanvasNodeOutpaintDialog({ node, open, onClose, onConfirm }: { n
             setDirection(nextDirection);
             setPrompt(extendPromptByDirection[nextDirection]);
             setExtensionRatio(nextRatio);
-            setSeamOverlapPixels(96);
-            setDenoise(0.68);
+            setSeamOverlapPixels(defaultSeamOverlapForDirection(nextDirection));
+            setDenoise(0.60);
         }
         setError("");
     };
@@ -134,6 +127,7 @@ export function CanvasNodeOutpaintDialog({ node, open, onClose, onConfirm }: { n
         setDirection(normalized);
         if (mode === "extend") {
             setPrompt(extendPromptByDirection[normalized]);
+            setSeamOverlapPixels(defaultSeamOverlapForDirection(normalized));
             if (normalized === "down" && sourceWidth && sourceHeight && sourceHeight / sourceWidth < 1.35) {
                 setExtensionRatio(extendToFullBodyRatio(sourceWidth, sourceHeight));
             } else if (normalized === "outward") {
@@ -316,7 +310,7 @@ export function CanvasNodeOutpaintDialog({ node, open, onClose, onConfirm }: { n
                                         <SettingSlider
                                             label="画面改动幅度"
                                             valueText={denoise.toFixed(2)}
-                                            description="标准续接建议 0.62–0.75；过高会把接缝内侧也改花。"
+                                            description="标准续接建议 0.58–0.68（向下默认 0.60）；过高易改花接缝或远端塌成暗块。"
                                             min={0.5}
                                             max={0.9}
                                             step={0.02}

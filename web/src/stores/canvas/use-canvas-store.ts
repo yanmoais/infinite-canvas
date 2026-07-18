@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, type PersistStorage, type StorageValue } from "zustand/middleware";
 
 import { nanoid } from "nanoid";
+import { markDirectDependentsStale } from "@/lib/canvas/generation-dependencies";
 import { localForageStorage } from "@/lib/localforage-storage";
 import type { CanvasBackgroundMode } from "@/lib/canvas-theme";
 import type { CanvasAssistantSession, CanvasConnection, CanvasNodeData, ViewportTransform } from "@/types/canvas";
@@ -116,7 +117,11 @@ export const useCanvasStore = create<CanvasStore>()(
             replaceProjects: (projects) => set({ projects }),
             updateProject: (id, patch) =>
                 set((state) => ({
-                    projects: state.projects.map((project) => (project.id === id ? { ...project, ...patch, updatedAt: new Date().toISOString() } : project)),
+                    projects: state.projects.map((project) => {
+                        if (project.id !== id) return project;
+                        const nodes = patch.nodes ? markDirectDependentsStale(project.nodes, patch.nodes, patch.connections || project.connections) : project.nodes;
+                        return { ...project, ...patch, nodes, updatedAt: new Date().toISOString() };
+                    }),
                 })),
         }),
         {

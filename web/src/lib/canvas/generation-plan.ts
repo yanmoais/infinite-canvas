@@ -86,6 +86,7 @@ export function buildManagedImageExecution(baseConfig: AiConfig, sourceMetadata:
         ...(faceDetailer !== undefined ? { face_detailer: faceDetailer } : {}),
         ...(denoise !== undefined ? { denoise } : {}),
         ...(isMaskedOutpaint && operationProfile.seamOverlapPixels !== undefined ? { seam_feather: operationProfile.seamOverlapPixels } : {}),
+        ...(isMaskedOutpaint && operationProfile.direction ? { outpaint_direction: operationProfile.direction } : {}),
         prompt_optimize: false,
     };
     const config: AiConfig = {

@@ -12,8 +12,13 @@ web/dist
 
 **/dist
 web/public/plugins
+plugins/canvas/*/dist
+plugins/canvas/*/node_modules
 
 # local 二开 debug / backup artifacts
 tmp-fullbody-debug/
 **/*.bak.*
 *.bak
+
+# CodeGraph index (local artifact, per-machine)
+.codegraph/

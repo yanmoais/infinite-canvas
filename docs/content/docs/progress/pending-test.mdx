@@ -1,9 +1,101 @@
 ---
 title: 待测试
-description: 当前版本已实现但仍需人工验证的变更项
+description: 当前版本已实现但仍需验证的变更项；已发版本遗留项单独分区
 ---
 
-## 本地同步官方 v0.7.1（yanmoais fork）
+# 当前版本待测试
+
+## 同步官方 v0.9.0
+
+- 已把官方 v0.8.0–v0.9.0 合入 yanmoais 二开：画布插件系统、可调/可收起左侧面板、资产卡增删、选中元素与整画布导出、提示词图片引用芯片、透明背景、模型渠道显式能力与自定义调用脚本，以及 GA4/百度统计运行时配置。
+- 冲突融合保留本地 Comfy 模型浏览与参数、托管画面扩图/全身重构、蒙版重试、Shared Generation Core、运行时能力/回执、角色工坊文档，以及 Agent 在线/画布已连接区分和 headless 工具桥。
+- 需重点验证：旧浏览器渠道配置升级后模型能力与默认模型选择；Comfy 生图/图生图/扩图/蒙版重试；插件安装、启停、更新和自定义工具条；侧栏宽度与折叠持久化；资产增删/插入；图片引用芯片；透明背景请求；Agent 收起面板后仍可写画布。
+- 本次按项目规则只完成静态冲突与差异检查，未执行构建、类型检查或测试；以上行为均等待宝宝实际验证。
+
+## U1 Outpaint 历史实图证据
+
+> Gate 0 正在收敛主线、PoC 与共享 Gateway。以下内容是已实现或已执行的历史证据，不代表 U1-R0 已实现，也不得在 Gate 0 完成前继续产出可归因实验结论。
+
+- 已固定 `1024×1024` 角色基线、模型 `comfy/illustrious-mmmix-v8`、seed `424242` 与结果目录 `.uat/u1-outpaint/`；8080 Gateway 与 Windows ComfyUI 可达。
+- 向下续接 A2→A2R9 真实任务链已完成；**U1-A 五方向默认矩阵已全部真实提交**。
+- **A2R9 向下修链最佳点**（历史）：gdom 0.33 / dark% 24.6（`.uat/u1-outpaint/a2r9-down-voidneg-denoise060/`）。
+- **U1-A 五方向矩阵（当前）** 证据：`.uat/u1-outpaint/u1a-five-dir/u1a-summary.json`
+  - 参数：`extensionRatio=0.625`；denoise down 0.60 / left·right 0.70 / up·outward 0.78；seam down 96 / up·left·right 112 / outward 104；推荐 6 LoRA；seed 424242
+  - up：`METRIC_FAIL` dark% **85.8** gdom **31.28** protect 0；prompt `fab4d197…` / `inpaint_00060`
+  - down：`METRIC_PASS_PENDING_VISUAL` dark% **12.6** gdom **-5.21** protect 0；prompt `6879b96b…` / `inpaint_00061`
+  - left：`METRIC_WARN_PENDING_VISUAL` dark% **47.3** gdom **-29.85** protect 0；prompt `ead6cb1b…` / `inpaint_00063`
+  - right：`METRIC_WARN_PENDING_VISUAL` dark% **37.6** gdom **18.41** protect 0；prompt `f12eaa5a…` / `inpaint_00065`
+  - outward：`METRIC_WARN_PENDING_VISUAL` dark% **56.9** gdom **54.4** protect 0；prompt `0c39f360…` / `inpaint_00066`
+- **U1-A 整包已被 BOSS 初判否定，不再请 BOSS 对 U1-A 原始五方向做“是否可过”终验。**
+- **U1-QA v1 已落地**：`.uat/u1-outpaint/u1_qa/`；五方向重算见 `u1a-five-dir/u1-qa-summary.json` 与各方向 `qa-report.json` / `qa-crops/`。
+  - up FAIL；down PASS_PENDING_VISUAL；left FAIL（seamGradPeak 硬缝）；right WARN；outward FAIL
+- U1-R 定向回修保留现有历史结果，但当前因 Gate 0 暂停；Gate 0 完成后先执行 U1-R0 预注册归因实验，再决定后续方向顺序。
+- U1-R0 裸模 A/B 仍是计划工作：manifest、QA pair schema 和运行时实际 LoRA 完整性证明未落盘，不属于本页待测试功能。
+- BOSS 下一次介入点仍是 **U1-Z**：只看 U1-R 后候选 + 失败清单 + metrics/qa-report + 总尝试分母；出口 `QUALIFIED` / `PARTIAL` / `REJECTED`。
+- 完整头脚全身仍走 full_body（U1-B），不要求像素锁定续接一次补齐；U1-B 默认等 U1-Z。
+- 历史向下修链证据：`.uat/u1-outpaint/a2r9-down-voidneg-denoise060/`、`.uat/u1-outpaint/a2-down-series-summary.json`。
+
+
+## Shared Generation Core M0
+
+- 新增共享生成契约，统一 `CompositionContext`、`ReferenceBinding`、`PoseAsset`、`OperationProfile`、`ExecutionPlan`、CapabilityRegistry 与 WorkflowBinding 的前端类型权威。
+- `CanvasOperationKind` 与 `MediaGenerationType` 已分离，Story 不再成为独立生图、扩图、局部编辑和换姿的必填上下文。
+- 新增类型化 PromptCompiler 适配层，按保护、身份、姿势、构图、相机、场景、光影、操作和用户覆盖顺序编译，并复用现有 smart compose 冲突处理。
+- 节点元数据新增 Shared Core `ExecutionPlan` 快照及 `revision/contentHash`；上游快照变化后，只把真实引用它的直接下游标记为 `stale`，不会递归污染更深层节点。
+- Mission_manager Gateway 已接收并校验 `extra.pose_control`：字段、枚举、数值范围或单人物限制不合法时返回 `400 invalid_pose_control`；契约合法但真实 WorkflowBinding 尚未连接时返回 `501 pose_control_not_ready`，不得继续普通生图。
+- Infinite Canvas 前端已执行 `npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund`、`npm test` 和 `npm run typecheck`：依赖安装成功，8/8 测试文件通过，TypeScript 检查退出码为 0；本批未执行构建。
+
+## Runtime Capability Batch U2-A / U2-B
+
+- Mission_manager Gateway 新增 `GET /api/v1/capabilities`，返回 Registry 版本、ComfyUI 可达性、ModelCapability、WorkflowBinding、RuntimeAssetRequirement 和聚合预检结果。
+- WorkflowBinding 会记录工作流文件、文件哈希、实际节点类型和所需运行时资产；模型物理哈希未登记时保持空值，不会用 Registry 指纹冒充模型哈希。
+- 前端能力客户端和 `preflightComfyModel()` 已接入普通画布生图与图片重试：运行时或能力不可用时阻断提交，降级时展示中文原因后继续。
+- Gateway 按能力主路径判断可提交状态：图片优先使用 `txt2img_template`；可选 ControlNet 工作流、节点或模型损坏仍会出现在 binding/缺失信息中，但不得把健康纯文生图误判为不可用。
+- 前端普通生图 Preflight 的主提示只评估主 WorkflowBinding；可选 ControlNet 故障仍保留在 Registry 快照中，但不再给健康 txt2img 注入无关的缺节点/缺资产警告。ControlNet 等专项操作仍需后续操作级 gate。
+- Comfy 生图节点会生成 Shared Core `ExecutionPlan`：记录实际提交的模型、能力决策、已登记的运行时资产哈希、降级原因和参考图来源；仅当 `reference_mode` 能与 Registry 的模板字段确定对应时才记录 WorkflowBinding/工作流哈希。
+- `faceid`、`ipadapter`、Registry 默认参考模式等尚无能力专用 WorkflowBinding 映射的路径会明确降级并留空工作流字段，不把 `txt2img/img2img` 猜测值写成运行时事实。
+- 参考图片按本次提交列表的确定性顺序写入 `ReferenceBinding[]`：源图片或首张图片作为 `body_identity`，后续图片作为 `style`，并保存可用的 revision/contentHash。
+- 图片首次成功写入 revision/contentHash；替换上传或原节点重试成功后 revision 递增，真实引用该节点的直接下游 Shared ExecutionPlan 应变为 `stale`，间接下游保持原状态。
+- 图片重试重新执行 Preflight；已有 Shared ExecutionPlan 时先按 `exact_replay` 克隆旧快照，再叠加当前 gate，旧 WorkflowBinding、工作流/资产哈希和 `compiledFromHash` 不得被当前 Registry 重建覆盖。
+- 当前 Registry 尚未提供 Qwen Fidelity/Multiangle、BiRefNet、Florence2 各自的引用角色和输入字段映射，因此本批只完成通用绑定和提交前计划，不把专项 Gateway 自动注入标为完成。
+- 全局 `preflight.status=ready` 只有在字段级兼容、最小 smoke 和 validated pair 均完成并从 `uncheckedLayers` 移除后才允许出现；生产默认 WAI 的对应未检查层已清除，但全局仍因其他未安装能力保持 `degraded`。
+- 两次 `grok-4.5` 阶段 review 均为 `PASS WITH CHANGES`；复审确认离线假阳性 Blocking 已关闭、无新 P0，并补齐缺 Workflow、Loader 无枚举、model_patch 全快照及前端生产态降级测试定义。
+- 本轮快速复审同样为 `PASS WITH CHANGES` 且无 P0；提出的主路径空资产回退和可选 ControlNet 警告噪声两项 P1 已处理，旧节点无 Shared Plan 的重试也不再冒充 `exact_replay`。
+- 已补 `fetchComfyCapabilities` 请求、缓存、404、字段兼容响应契约、运行后回执透传/拒绝坏 schema，以及 Shared ExecutionPlan 引用、WorkflowBinding、资产哈希、降级、深拷贝、重放再校验、图片版本写入和“可选 ControlNet 故障不阻断/不污染 txt2img 主提示”的前后端测试；`npm test` 实际结果为 8/8 通过。
+- `generation-dependencies.test.ts` 已覆盖 store `updateProject()` 路径：源图片重试/替换后的 `revision/contentHash` 变化经画布状态持久化入口触发，只把真实引用该源图的直接下游标记为 `stale`，间接下游保持 `fresh`。
+## Runtime Capability Batch U2-C
+
+- WorkflowBinding 新增字段级兼容检查，未知输入字段或缺失必填字段会进入结构化 `inputCompatibility.issues` 并阻断对应 binding 的 `runtimeReady`。
+- WAI 与 OpenPose ControlNet 已登记物理 SHA-256、publisher/source；Windows 与 Mac 的 WAI 副本哈希一致，Registry 指纹与物理模型哈希保持分离。
+- 生产默认 WAI 已完成两条 Windows ComfyUI 真实 smoke：txt2img prompt ID `8ccd35d5-45a7-43ad-a553-9e3fbb1557bb`，Comfy 执行 6.2 秒；OpenPose ControlNet prompt ID `bad55360-cda9-43a6-93be-c089db57242a`，Comfy 执行 12.9 秒。两条均生成 1 张图片并写回 Registry evidence。
+- Gateway 已消费 validated pair：未验证组合返回 `409 unvalidated_model_pair`，底模与 ControlNet 架构不匹配返回 `model_architecture_mismatch`；真实 Pose 执行仍未接线时返回 `501 pose_control_not_ready`，不冒充 Pose 已可用。
+- Gateway 的生图与编辑响应新增 `execution_receipt`，记录 planned/actual binding、workflow hash、fallback、资产 SHA-256、prompt ID、耗时和结果，并原子写入本地回执目录；编辑链以 `primaryStageId/finalStageId/stages[]` 记录主生成、重试和局部精修，inpaint 显式记录基础模板与 `canvas_inpaint` mutator；空 media 失败同样有回执。
+- 前端把 Gateway 回执附到返回图片并保存为画布节点 `gatewayExecutionReceipt`，生成、局部编辑、扩图、角度图、批量生成和重试结果均保留运行后事实。
+- Mission_manager 已执行 `python3 -m unittest test_capability_registry test_pose_control_contract`，24/24 通过。
+- 新增 `.github/workflows/web-quality.yml`，PR 或 main push 涉及 `web/**` 时自动执行 Node 22、`npm ci`、`npm run typecheck` 与 `npm test`；远端 CI 首次运行状态需在后续 PR/push 核验。
+- 首轮 `grok-4.5` 独立审查为 `NO-GO`；编辑多阶段回执 Blocking、空 media P0、ControlNet 架构校验与普通路径 pair gate、前端字段兼容/回执 schema 校验均已修复。复审结论为 `PASS WITH CHANGES`、无 Blocking/P0，M2 已通过验证门。
+
+## Runtime Capability Batch U2-E
+
+- 回执顶层 `actual` 当前定义为“最终交付 stage 快照 + 主阶段 fallback 摘要”；逐阶段事实以 `stages[]`、`primaryStageId`、`finalStageId` 为权威。
+- U2-E 已为 WAI/SDXL 的 FaceID、FaceID Style、IPAdapter 和完整角色参考登记能力专用 WorkflowBinding，绑定包含底模、Adapter、FaceID LoRA、CLIP Vision 与完整 buffalo_l InsightFace 五文件物理 SHA-256；实时 WAI 快照中四个 binding 分别为 5/5、5/5、10/10、11/11 资产哈希完整。未登记物理哈希的 SD15 资产显式返回 `hashStatus=unregistered`，不得当作可精确回放。
+- Windows 挂载盘已实测两个 CLIP Vision 文件名均为 1,264,219,396 bytes、SHA-256 `64a7ef761bfccbadbaa3da77366aac4185a6c58fa5de5f589b42a65bcc21f161` 的同一份 Comfy-Org repack；Registry 已修正 publisher/source，不再把该物理文件登记为 h94 官方 image encoder。
+- InsightFace `buffalo_l` 五文件已显式登记 `commercialUse=restricted` 和官方许可入口，并透传到 Capability `requiredRuntimeAssets` 与运行后 `assetVersions`；当前 FaceID 只允许本地研究/验证，商用或对外发布前必须取得 InsightFace 授权或替换模型。
+- 默认 face → skirt、可选 hair 的连续精修现在逐次写入独立 stage，分别保存 prompt ID、耗时、结果和 `canvas_inpaint` mutator；validated pair 缺少或只含空白的 base/pair/control architecture 时返回 `pair_incomplete`。
+- capability runtime 新增 `optionalMissingNodeTypes`、`optionalMissingRuntimeAssets` 和 `optionalInputCompatibilityIssues`；可选参考路径故障可被诊断，但不参与健康 txt2img 的 `runtimeReady` 判定。
+- 前端 `GenerationExecutionStage.assetVersions[]` 已消费 `hashStatus`，运行时校验器会逐项验证 `stages[]`、fallback、mutator 和资产版本；畸形 stage 或未知哈希状态不再进入画布节点。
+- `hashStatus=registered` 只表示 Registry 已登记 SHA，不表示每次提交前已重新计算 Windows 物理文件哈希；未登记资产继续返回 `unregistered`，不得将 `registered` 解读为运行时校验通过。
+- 历史回执可能缺少 `stages[]`、`hashStatus` 或 `totalComfyExecutionSeconds`，新校验器会丢弃旧回执元数据但仍保留图片；这是契约升级的预期降级，不代表图片生成失败。
+- Claude + Grok 对抗审查提出的两个 P0、四个 P1 和相关 P2 已修复；当前本地验证结果为 Web `npm test` 8/8、`npm run typecheck` 通过，Mission_manager 全仓 `python3 -m unittest discover -s scripts/local-agent -p 'test_*.py'` 108/108 通过，Registry JSON 与双仓 `git diff --check` 通过。
+- `grok-4.5` 修复复审结论为 `PASS WITH CHANGES`、无 Blocking/P0，并明确允许进入 U1；复审提出的哈希状态语义、许可运行时透传、页眉状态、receipt 边界负例和旧回执降级说明已继续修复并完成同一组全量回归。
+- 当前 IPAdapter/FaceID 专用 binding 依赖已归档、maintenance-only 的 `cubiq/ComfyUI_IPAdapter_plus`；本地验证需固定插件版本与节点签名，U3/U4 前需完成替代实现或迁移评估。
+- 本批尚未执行 Windows 真实 mask/inpaint、FaceID → IPAdapter、framing retry 和 part refine 编辑 smoke；需人工核对各阶段 prompt ID、耗时、fallback、mutator 与最终图片是否一致。该项不影响 M2 代码/契约验证结论。
+
+## 已发版本历史遗留待验
+
+本节不代表当前 Unreleased 变更。完成集中验收后，应把已确认能力移入 `features.mdx`，失败项转回 `todo.mdx`，不继续长期堆在当前版本待测试区。
+
+### 本地同步官方 v0.7.1（yanmoais fork）
 
 - 远端调整为 `origin=yanmoais/infinite-canvas`、`upstream=basketikun/infinite-canvas`。
 - 已合并官方 v0.7.0/v0.7.1：全站 Agent 面板、站点级工具、streamdown、nanoid、空白区双击建节点等。
@@ -11,9 +103,20 @@ description: 当前版本已实现但仍需人工验证的变更项
 - 配置页不再提供 Codex Tab，连接统一在全站 Agent 面板完成。
 
 
-# 待测试
+### v0.7.1 及更早遗留项
 
-- 画布节点创建：鼠标左键双击画布空白区域会在点击位置打开节点选择菜单，可创建文本、图片、视频、音频、生成配置和组节点；双击已有节点或连线不应触发菜单。
+- 左侧画布面板「资产」Tab：搜索框旁「添加」按钮可上传图片/视频文件（支持多选）加入资产库；每张资产卡片悬停显示移除按钮，二次确认后删除；点击卡片仍插入到画布；需验证添加图片/视频、非图片视频文件的提示、移除确认与插入行为。
+- 左侧画布面板：支持拖拽右边缘调整宽度（记忆到本地）、通过顶栏菜单左侧的开关按钮展开/收起，展开收起有动画；需验证宽度拖拽、动画、刷新后保持展开/收起状态与宽度。
+- 左侧画布面板：「画布/资产」切换改为带滑动下划线的动画；点击「画布元素」列表项跳转到对应节点时带缓动动画（视图平滑移动缩放而非瞬移）；文本/配置/视频/音频等非图片元素的图标去掉灰色底色；需验证视觉与交互。
+- 左侧画布面板：画布元素列表点击「选择」进入多选模式，可勾选/全选节点后「导出选中」为压缩包；压缩包为扁平结构——图片/视频/音频直接是对应文件（按节点名称命名、重名自动加序号），文本节点为 `.txt`，其余无法识别的节点各自导出为同名 `.json`；需验证多选、全选、导出内容与命名正确。
+- 顶栏菜单：新增「导出当前画布」，导出当前画布为压缩包（与项目列表页单个导出格式一致）；需验证导出文件名与内容。
+- 画布节点插件系统:内置节点(图片/文本/视频/音频/配置/组)改为统一注册表管理,创建菜单由注册表动态生成;需验证六种内置节点的创建、渲染、缩放、连线、小地图颜色、作为生成输入等行为与之前一致。内置节点仅这六种,其余均为插件。
+- 画布节点插件系统:左上菜单新增「节点插件」,可通过 URL 安装远程插件、启用/禁用、更新、卸载;安装时有安全警告说明插件代码在页面内执行、可访问本地数据。可用 `/plugins/sticky-note.js` 安装便利贴节点验证:换色、编辑、「衍生文本节点」(演示 applyOps 增节点+连线)。
+- 画布节点插件系统:示例插件 Markdown(编辑/渲染)、HTML(沙箱 iframe 渲染,支持 `{{input}}` 注入上游文本)、SVG(渲染/编辑,可取上游文本 SVG 源码)、3D 全景(three.js CDN 动态加载,可从上游图片节点取全景图并拖拽查看);均为远程插件,需分别安装 `/plugins/markdown.js`、`/plugins/html.js`、`/plugins/svg.js`、`/plugins/panorama.js` 后验证创建、渲染、编辑及与上游节点的交互。
+- 画布节点插件系统:卸载或禁用插件后,画布上遗留的该类型节点显示「缺少插件」占位且数据保留,重新安装/启用后恢复渲染;需验证刷新后已启用插件自动加载。
+- 画布节点插件系统:每个插件为 `plugins/canvas/<name>/` 独立目录(各自 package.json + esbuild + src + README,互不耦合),`npm run build` 产物落到 `dist/<name>.js` 并同步到 `web/public/plugins/`;需验证各插件可独立构建与安装。
+- 画布节点插件本地开发:每个插件支持 `npm run dev`(watch 自动构建并同步到 `web/public/plugins/`),配合 `web/.env.local` 的 `VITE_DEV_PLUGINS`(逗号分隔 URL)每次刷新重新拉取、无需反复安装;需验证改源码刷新页面即生效。
+- 画布节点创建:鼠标左键双击画布空白区域会在点击位置打开节点选择菜单,可创建文本、图片、视频、音频、生成配置和组节点;双击已有节点或连线不应触发菜单。
 - 本地 Agent 连接说明：新增提醒说明只有安装 Codex 插件或手动添加 MCP 后才会增加 Codex token 消耗，直接运行 `npx -y @basketikun/canvas-agent` 不会安装 MCP；需验证文案位置清晰。
 - 本地 Agent 连接说明：画布面板和配置页 Codex Tab 改为区分“Codex 插件启动画布”和“直接运行 Agent 后网页连接”两种方式，需验证文案和布局清晰。
 - 全站 Agent：Agent 面板从画布页抽离为全站常驻面板，挂在全局布局右侧，开/关只挤压左侧内容不遮挡；顶栏和画布工具条各有一个开关按钮，需验证在首页、生图、视频、素材、提示词库、画布等页面都能打开面板并保持 SSE 连接不断开。
@@ -61,8 +164,17 @@ description: 当前版本已实现但仍需人工验证的变更项
 - 本地工作流配方：选择“裸跑”后生成结果应保存明确空 LoRA，重试不得自动补推荐 LoRA；FaceDetailer 未显式设置时界面应显示“默认开启”，显式关闭后网关收到 `false`。
 - 托管蒙版重试：局部编辑和向下扩图结果点重试时应复用原参考底图、持久化蒙版和源图配方；蒙版资源丢失时明确报错，不降级为整图重抽。
 
+## 当前版本其他待验
+
 - 画布扩图：原图续接面板与全身重构同一套表述；方向为“向上/下补全、左右扩展”，画幅为“小幅/标准/大幅续接”；近景向上补头时原图像素锁定在下方，新增区在上方接缝无痕。
 - 原图续接伪影修复：延伸区底图远缝段淡出为边带均值色（近缝保留条带保证接缝连续），修复深处区域把模糊拉伸底纹长成“头顶生物/第二张脸/格纹装饰带”的问题；向上补全默认词改为只延续背景场景（墙面/天花板/天空/建筑），不再提及头发/上半身，避免俯拍自拍图在头顶画出手撩头发；up/left/right 纯背景方向不再拼接人物身份词。
 - 原图续接默认词收紧：未经用户点名时压制帽子、发带、发饰、头冠、兽耳等头部新增饰品和“手扶头顶”姿势（负向词），用户在画面要求里显式写明想要的饰品时自动放开。
 - 向上扩图稳定基线（任务 `8498e2f4-a37e-41b0-a285-26f1cf31a4b0` / `illustrious-mmmix-v8-inpaint_00033_.png`）：源图 1024×1024 自拍近景，方向 `up` + 标准续接 0.5 → 1024×1536；`seam_feather=96`（高斯半径 32）+ 远缝均值色淡出；网关 denoise 固定 0.88（UI 0.68 忽略）；`reference_mode=none` + 蒙版 inpaint + `ImageCompositeMasked` 像素回贴；正向默认只续背景场景、不拼身份词；负向含相机/第二脸/饰品/手扶头簇。深保护区相对原图像素差约 0.002/255。刷新前端后可复测同图向上标准续接。
+- 向上扩图接缝优化（任务 `65ac74c6-5207-41a0-b8b0-26d27967ccbd` / `illustrious-mmmix-v8-inpaint_00040_.png`）：原图续接改为 seam 区 alpha 渐变蒙版 + 近缝轻模糊/远缝均值垫图；网关 `preserve_gradient` 连续映射、denoise_mask≠blend_mask、up/left/right 的 GrowMask=0、向上 denoise 固定 0.84、默认融合宽度 112。复测同图向上标准续接：头顶发丝/人物边缘应无明显硬横缝，延伸区场景与近景光色更连续；日志应出现 `blend_gaussian` 与 `grow=0`。刷新前端 + 已重启网关后测。
+- 向上补全第二人修复：失败样例 `b6f434bc` / `inpaint_00039` 根因是前端通用提示词优化器把“向上补背景”改写成完整人物站姿描述；现原图续接跳过该优化器，只走方向化英文默认词。网关同步接收 `outpaint_direction`，对 up/left/right 清洗人物主体正向词并注入 background-only 负向（2girls/another girl/halo/angel），光环权重提高。刷新前端 + 网关已重启后复测同图向上标准续接。
 - 全身重构构图：近景/头像选“全身重构”后，输出应为完整头脚入镜全身，不再只出下半身；若曾裁切会自动重试强构图，toast/节点信息可看到 pure txt2img 与重试备注。
+- 一键外扩（outward）摄像机/肩部畸形修复：BOSS 反馈的原始问题（左肩畸形团块、头顶多出摄像机）根因是网关 `render_image_workflow` 把 `final_negative`（含相机/底座/多余肢体兜底词）整段丢弃，只有固定基线负向词真正写入节点；已改为追加合并，并新增 `EXTEND_OUTPAINT_NEGATIVE`（相机/底座/多余肢体/接缝痕迹）注入所有原图续接方向（不分 up/down/left/right/outward）。用 BOSS 原图复测 outward，头顶无摄像机、左右肩解剖结构正常。
+- 原图续接接缝修复跨方向复核：在向上（任务 `65ac74c6.../inpaint_00040`）基础上，用同一张 BOSS 原图对 down/left/right/outward 四个方向补测（`tmp-fullbody-debug/iter/seamfix_{down,left,right,outward}_result.png`），确认 seam 区 alpha 渐变蒙版 + 分层垫图在各方向均无硬横/竖缝、无多余摄像机、无肢体畸形；left/right 迭代中曾出现手臂结构异常（`_r6_arm` 样本），已在最终结果中确认修复。
+- 原图续接 / 全身重构自定义提示词修复：面板默认词未修改时严格只用 `EXTEND_DEFAULT_PROMPT_BY_DIRECTION` / `FULL_BODY_DEFAULT_PROMPT` 方向化默认词，不经过任何优化器；用户确实修改过默认词时，改为对这段中文做逐句直译（不新增、不删减、不脑补场景/人物/饰品）后再套回英文默认词框架，避免用户自己填写的画面要求被优化器静默丢弃或替换回默认词。需验证：改过默认词提交后，生成结果应体现用户新增的具体要求，而不是退回默认续接效果。
+- 生图提示词优化器 profile 拆分：`requestOptimizedLocalImagePrompt` 按是否带参考图使用不同 system prompt——有参考图（图生图/换姿）沿用原有防止优化器把新姿势写回参考图站姿的规则；无参考图的纯提示词生图（含组合器 R18 生产路径）改为只做措辞规范化和中译英，忠实保留用户已写明的姿势/动作/成人内容，不删减、不弱化、不替换、不新增。需验证：组合器生成的 R18 提示词经过优化后动作/部位描述不丢失。
+- 原图续接重试补传方向参数：`comfyExtraFromMetadata` 对非全身重构的原图续接重试节点，会从 `operationProfile` 回填 `outpaint_direction` 与 `seam_feather`；此前重试请求缺失这两个字段，网关收不到方向信息会导致 up/left/right 的第二人/光环负向清洗与羽化联动静默失效。需验证：向上续接结果点重试，网关日志仍应出现 `extend_outpaint positive sanitized dir='up'` 而非方向缺失。

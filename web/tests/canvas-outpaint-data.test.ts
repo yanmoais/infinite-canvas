@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { calculateDownwardOutpaintGeometry, extendToFullBodyRatio, fullBodyPortraitAspect, normalizeOutpaintDirection, suggestOutpaintDirection, suggestOutpaintMode } from "../src/lib/canvas/canvas-outpaint-data.ts";
+import { calculateDownwardOutpaintGeometry, computeRobustMeanRgb, defaultSeamOverlapForDirection, edgeBandPixels, extendToFullBodyRatio, fullBodyPortraitAspect, nearEdgeStructurePixels, normalizeOutpaintDirection, suggestOutpaintDirection, suggestOutpaintMode } from "../src/lib/canvas/canvas-outpaint-data.ts";
 
 const halfExtension = calculateDownwardOutpaintGeometry(1152, 1280, {
     extensionRatio: 0.5,
@@ -135,5 +135,27 @@ const extendFull = calculateDownwardOutpaintGeometry(1024, 1024, {
 assert.equal(extendFull.sourceOffsetY, 0);
 assert.ok(extendFull.targetHeight >= 1536, "extend-to-fullbody should reach full-body portrait height");
 assert.equal(extendFull.sourceDrawHeight, 1024, "extend path must keep source pixel height 1:1");
+
+assert.equal(defaultSeamOverlapForDirection("up"), 112);
+assert.equal(defaultSeamOverlapForDirection("down"), 96);
+assert.equal(defaultSeamOverlapForDirection("outward"), 104);
+assert.ok(edgeBandPixels(1024, 512) >= 64);
+assert.ok(edgeBandPixels(1024, 512) <= 160);
+assert.ok(edgeBandPixels(80, 200) <= 80, "band cannot exceed source dim");
+assert.equal(edgeBandPixels(40, 200), 40, "tiny source clamps band to source dim");
+assert.equal(nearEdgeStructurePixels(96, 1024, 640), 96, "near-edge structure must follow seam width, not 42% of the extension");
+assert.equal(nearEdgeStructurePixels(16, 1024, 256), 24, "tiny seams keep a minimal anti-seam strip");
+assert.equal(nearEdgeStructurePixels(96, 20, 640), 20, "near-edge structure cannot exceed the padded span");
+
+
+const robust = computeRobustMeanRgb([
+    [200, 180, 160],
+    [190, 170, 150],
+    [40, 180, 40], // aqua/green outlier should be dropped
+    [210, 185, 165],
+    [30, 200, 50],
+]);
+assert.ok(robust[1] - (robust[0] + robust[2]) / 2 < 20, "robust mean should reject green-dominant outliers");
+assert.ok(robust[0] > 150, "robust mean should stay near warm clothing/background colors");
 
 console.log("canvas outpaint geometry tests passed");

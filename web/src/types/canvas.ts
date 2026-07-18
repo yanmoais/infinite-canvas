@@ -1,3 +1,27 @@
+import type { CanvasOperationKind, CanvasOutpaintDirection, CanvasOutpaintMode, ExecutionPlan, GenerationExecutionReceipt, GenerationValueSource, OperationProfile } from "@/types/generation";
+
+export type {
+    CameraIntent,
+    CanvasOperationKind,
+    CanvasOutpaintDirection,
+    CanvasOutpaintMode,
+    CompositionContext,
+    ExecutionPlan,
+    FramingIntent,
+    GenerationIntent,
+    LightingIntent,
+    MediaGenerationType,
+    ModelCapability,
+    OperationProfile,
+    PoseAsset,
+    PoseControlRequest,
+    PoseControlSettings,
+    PoseIntent,
+    ReferenceBinding,
+    SceneIntent,
+    WorkflowBinding,
+} from "@/types/generation";
+
 export type Position = {
     x: number;
     y: number;
@@ -18,13 +42,13 @@ export enum CanvasNodeType {
     Group = "group",
 }
 
+// 节点类型放开为字符串,内置类型用 CanvasNodeType,插件类型为 "<pluginId>:<name>"
+export type CanvasNodeTypeId = CanvasNodeType | (string & {});
+
 export type CanvasNodeStatus = "idle" | "success" | "loading" | "error";
 export type CanvasGenerationMode = "text" | "image" | "video" | "audio";
 export type CanvasImageGenerationType = "generation" | "edit";
-export type CanvasOperationKind = "manual" | "inpaint" | "outpaint" | "character_atelier" | "exact_replay";
-export type CanvasOutpaintMode = "extend" | "full_body";
-export type CanvasOutpaintDirection = "up" | "down" | "left" | "right" | "outward";
-export type CanvasGenerationValueSource = "manual_node" | "source_recipe" | "operation_profile" | "preset_default" | "exact_replay";
+export type CanvasGenerationValueSource = GenerationValueSource;
 
 export type CanvasGenerationSettings = {
     model?: string;
@@ -43,30 +67,7 @@ export type CanvasSourceGenerationRecipe = CanvasGenerationSettings & {
     references?: string[];
 };
 
-export type CanvasOperationProfile = {
-    kind: CanvasOperationKind;
-    managed: boolean;
-    sourceNodeId?: string;
-    direction?: CanvasOutpaintDirection;
-    outpaintMode?: CanvasOutpaintMode;
-    originalPixelLock?: boolean;
-    inheritSourceRecipe?: boolean;
-    faceProtection?: boolean;
-    denoise?: number;
-    seamOverlapPixels?: number;
-    extensionPixels?: number;
-    sourceScale?: number;
-    sourceOffsetX?: number;
-    sourceOffsetY?: number;
-    sourceDrawWidth?: number;
-    sourceDrawHeight?: number;
-    sourceWidth?: number;
-    sourceHeight?: number;
-    targetWidth?: number;
-    targetHeight?: number;
-    baseStorageKey?: string;
-    maskStorageKey?: string;
-};
+export type CanvasOperationProfile = OperationProfile;
 
 export type CanvasExecutionPlanValue = {
     value: string | number | boolean | string[] | null;
@@ -97,6 +98,7 @@ export type CanvasNodeMetadata = {
     promptModel?: string;
     size?: string;
     quality?: string;
+    background?: string;
     count?: number;
     seconds?: string;
     vquality?: string;
@@ -115,6 +117,10 @@ export type CanvasNodeMetadata = {
     sourceGenerationRecipe?: CanvasSourceGenerationRecipe;
     operationProfile?: CanvasOperationProfile;
     executionPlan?: CanvasExecutionPlan;
+    revision?: number;
+    contentHash?: string;
+    sharedExecutionPlan?: ExecutionPlan;
+    gatewayExecutionReceipt?: GenerationExecutionReceipt;
     naturalWidth?: number;
     naturalHeight?: number;
     freeResize?: boolean;
@@ -129,11 +135,12 @@ export type CanvasNodeMetadata = {
     bytes?: number;
     durationMs?: number;
     groupId?: string;
+    interactive?: boolean; // 插件节点「交互 ⇄ 移动」开关状态(见 CanvasNodeDefinition.interactionToggle)
 };
 
 export type CanvasNodeData = {
     id: string;
-    type: CanvasNodeType;
+    type: CanvasNodeTypeId;
     title: string;
     position: Position;
     width: number;
@@ -149,7 +156,7 @@ export type CanvasConnection = {
 
 export type CanvasAssistantReference = {
     id: string;
-    type: CanvasNodeType;
+    type: CanvasNodeTypeId;
     title: string;
     dataUrl?: string;
     storageKey?: string;

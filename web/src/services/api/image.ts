@@ -1,10 +1,12 @@
 import axios from "axios";
 
-import { buildApiUrl, resolveModelRequestConfig, type AiConfig, type ModelChannel } from "@/stores/use-config-store";
+import { buildApiUrl, resolveModelRequestConfig, resolveModelScript, type AiConfig, type ModelChannel } from "@/stores/use-config-store";
+import { normalizePluginImages, runModelPlugin } from "./model-plugin";
 import { nanoid } from "nanoid";
 import { dataUrlToFile } from "@/lib/image-utils";
 import { buildImageReferencePromptText } from "@/lib/image-reference-prompt";
 import { imageToDataUrl } from "@/services/image-storage";
+import type { GenerationExecutionReceipt } from "@/types/generation";
 import type { ReferenceImage } from "@/types/image";
 
 export type AiTextMessage = {
@@ -73,10 +75,17 @@ type ImageApiResponse = {
     msg?: string;
     nannan_note?: string;
     nannan_reference_mode?: string;
+    execution_receipt?: GenerationExecutionReceipt;
+};
+
+export type GeneratedImage = {
+    id: string;
+    dataUrl: string;
+    executionReceipt?: GenerationExecutionReceipt;
 };
 
 export type ImageGenerationResult = {
-    images: Array<{ id: string; dataUrl: string }>;
+    images: GeneratedImage[];
     nannanNote?: string;
     nannanReferenceMode?: string;
 };
@@ -127,6 +136,11 @@ function normalizeQuality(quality: string) {
     const value = quality.trim().toLowerCase();
     const normalized = QUALITY_ALIASES[value] || value;
     return QUALITY_BASE[normalized] ? normalized : undefined;
+}
+
+/** Only "transparent" is forwarded; any other value (incl. empty) means keep the default opaque background. */
+function normalizeBackground(background: string | undefined) {
+    return background?.trim().toLowerCase() === "transparent" ? "transparent" : undefined;
 }
 
 /** Map "quality + ratio" to an explicit pixel dimension like "3840x2160". */
@@ -259,9 +273,69 @@ function parseImagePayload(payload: ImageApiResponse) {
     return images;
 }
 
-function parseImageResponse(payload: ImageApiResponse): ImageGenerationResult {
+function isNullableString(value: unknown) {
+    return value === null || typeof value === "string";
+}
+
+function isGenerationAssetVersion(value: unknown) {
+    if (!isRecord(value)) return false;
+    return typeof value.assetId === "string"
+        && typeof value.sha256 === "string"
+        && ["registered", "unregistered"].includes(String(value.hashStatus))
+        && (value.license === undefined || typeof value.license === "string")
+        && (value.commercialUse === undefined || typeof value.commercialUse === "string")
+        && (value.licenseUrl === undefined || typeof value.licenseUrl === "string");
+}
+
+function isGenerationExecutionStage(value: unknown) {
+    if (!isRecord(value) || !isRecord(value.fallback)) return false;
+    return typeof value.stageId === "string"
+        && typeof value.stageKind === "string"
+        && ["succeeded", "failed"].includes(String(value.taskResult))
+        && isNullableString(value.promptId)
+        && typeof value.baseCapabilityId === "string"
+        && isNullableString(value.workflowBindingId)
+        && isNullableString(value.workflowHash)
+        && isNullableString(value.workflowFile)
+        && typeof value.templateField === "string"
+        && typeof value.effectiveReferenceMode === "string"
+        && isNullableString(value.adapterKind)
+        && Array.isArray(value.mutators)
+        && value.mutators.every((mutator) => typeof mutator === "string")
+        && typeof value.fallback.used === "boolean"
+        && typeof value.fallback.requestedReferenceMode === "string"
+        && typeof value.fallback.effectiveReferenceMode === "string"
+        && Array.isArray(value.assetVersions)
+        && value.assetVersions.every(isGenerationAssetVersion)
+        && (value.comfyExecutionSeconds === null || typeof value.comfyExecutionSeconds === "number")
+        && isNullableString(value.error);
+}
+
+function isGenerationExecutionReceipt(value: unknown): value is GenerationExecutionReceipt {
+    if (!isRecord(value) || !isRecord(value.planned) || !isRecord(value.actual)) return false;
+    return value.schemaVersion === "1"
+        && typeof value.receiptId === "string"
+        && typeof value.planned.baseCapabilityId === "string"
+        && isNullableString(value.planned.baseModelId)
+        && typeof value.planned.requestedReferenceMode === "string"
+        && isNullableString(value.planned.workflowBindingId)
+        && typeof value.planned.templateField === "string"
+        && typeof value.primaryStageId === "string"
+        && typeof value.finalStageId === "string"
+        && Array.isArray(value.stages)
+        && value.stages.length > 0
+        && value.stages.every(isGenerationExecutionStage)
+        && isGenerationExecutionStage(value.actual)
+        && typeof value.actual.totalComfyExecutionSeconds === "number";
+}
+
+export function parseImageResponse(payload: ImageApiResponse): ImageGenerationResult {
+    const executionReceipt = isGenerationExecutionReceipt(payload.execution_receipt) ? payload.execution_receipt : undefined;
     return {
-        images: parseImagePayload(payload),
+        images: parseImagePayload(payload).map((image) => ({
+            ...image,
+            executionReceipt,
+        })),
         nannanNote: typeof payload.nannan_note === "string" && payload.nannan_note.trim() ? payload.nannan_note.trim() : undefined,
         nannanReferenceMode: typeof payload.nannan_reference_mode === "string" && payload.nannan_reference_mode.trim() ? payload.nannan_reference_mode.trim() : undefined,
     };
@@ -670,9 +744,29 @@ function parseGeminiImagePayload(payload: GeminiPayload) {
     return images;
 }
 
-export async function requestGeneration(config: AiConfig, prompt: string, options?: RequestOptions) {
+export async function requestGeneration(config: AiConfig, prompt: string, options?: RequestOptions): Promise<GeneratedImage[]> {
     const requestConfig = resolveModelRequestConfig(config, config.model || config.imageModel);
     const n = Math.max(1, Math.min(15, Math.floor(Math.abs(Number(config.count)) || 1)));
+    const script = resolveModelScript(config, config.model || config.imageModel);
+    if (script) {
+        const quality = normalizeQuality(config.quality);
+        const requestSize = resolveRequestSize(quality, config.size);
+        const background = normalizeBackground(config.background);
+        try {
+            const result = await runModelPlugin({
+                capability: "image",
+                script,
+                config: requestConfig,
+                prompt: withSystemPrompt(requestConfig, prompt),
+                images: [],
+                params: { size: requestSize, quality, count: n, ...(background ? { background } : {}) },
+                signal: options?.signal,
+            });
+            return normalizePluginImages(result).map((dataUrl) => ({ id: nanoid(), dataUrl }));
+        } catch (error) {
+            throw new Error(readAxiosError(error, "请求失败"));
+        }
+    }
     if (requestConfig.apiFormat === "gemini") {
         try {
             return await requestGeminiImages(requestConfig, prompt, [], n, options);
@@ -682,6 +776,7 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
     }
     const quality = normalizeQuality(config.quality);
     const requestSize = resolveRequestSize(quality, config.size);
+    const background = normalizeBackground(config.background);
     try {
         const response = await axios.post<ImageApiResponse>(
             aiApiUrl(requestConfig, "/images/generations"),
@@ -691,6 +786,7 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
                 n,
                 ...(quality ? { quality } : {}),
                 ...(requestSize ? { size: requestSize } : {}),
+                ...(background ? { background } : {}),
                 response_format: "b64_json",
                 output_format: IMAGE_OUTPUT_FORMAT,
                 ...(requestConfig.comfyExtra ? { extra: requestConfig.comfyExtra } : {}),
@@ -710,10 +806,31 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
     }
 }
 
-export async function requestEdit(config: AiConfig, prompt: string, references: ReferenceImage[], mask?: ReferenceImage, options?: RequestOptions) {
+export async function requestEdit(config: AiConfig, prompt: string, references: ReferenceImage[], mask?: ReferenceImage, options?: RequestOptions): Promise<GeneratedImage[]> {
     const requestConfig = resolveModelRequestConfig(config, config.model || config.imageModel);
     const n = Math.max(1, Math.min(15, Math.floor(Math.abs(Number(config.count)) || 1)));
     const requestPrompt = buildImageReferencePromptText(prompt, references);
+    const script = resolveModelScript(config, config.model || config.imageModel);
+    if (script) {
+        const quality = normalizeQuality(config.quality);
+        const requestSize = resolveRequestSize(quality, config.size);
+        const background = normalizeBackground(config.background);
+        const refs = await Promise.all(references.map((image) => imageToDataUrl(image)));
+        try {
+            const result = await runModelPlugin({
+                capability: "image",
+                script,
+                config: requestConfig,
+                prompt: withSystemPrompt(requestConfig, requestPrompt),
+                images: refs,
+                params: { size: requestSize, quality, count: n, ...(background ? { background } : {}) },
+                signal: options?.signal,
+            });
+            return normalizePluginImages(result).map((dataUrl) => ({ id: nanoid(), dataUrl }));
+        } catch (error) {
+            throw new Error(readAxiosError(error, "请求失败"));
+        }
+    }
     if (requestConfig.apiFormat === "gemini") {
         if (mask) throw new Error("Gemini 调用格式暂不支持蒙版编辑");
         try {
@@ -724,6 +841,7 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
     }
     const quality = normalizeQuality(config.quality);
     const requestSize = resolveRequestSize(quality, config.size);
+    const background = normalizeBackground(config.background);
     const formData = new FormData();
     formData.set("model", requestConfig.model);
     formData.set("prompt", withSystemPrompt(requestConfig, requestPrompt));
@@ -738,6 +856,9 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
     }
     if (requestConfig.comfyExtra) {
         formData.set("extra", JSON.stringify(requestConfig.comfyExtra));
+    }
+    if (background) {
+        formData.set("background", background);
     }
     const files = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
     files.forEach((file) => formData.append("image", file));
@@ -757,6 +878,24 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
 
 export async function requestImageQuestion(config: AiConfig, messages: AiTextMessage[], onDelta: (text: string) => void, options?: RequestOptions) {
     const requestConfig = resolveModelRequestConfig(config, config.model || config.textModel);
+    const script = resolveModelScript(config, config.model || config.textModel);
+    if (script) {
+        try {
+            const answer = await runModelPlugin<string>({
+                capability: "text",
+                script,
+                config: requestConfig,
+                messages: withSystemMessage(requestConfig, messages),
+                signal: options?.signal,
+                onDelta,
+            });
+            const text = String(answer ?? "").trim() || "没有返回内容";
+            if (text === "没有返回内容") onDelta(text);
+            return text;
+        } catch (error) {
+            throw new Error(readAxiosError(error, "请求失败"));
+        }
+    }
     try {
         if (requestConfig.apiFormat === "gemini") {
             const answer = (await requestGeminiStreamingResponse(requestConfig, toGeminiBody(requestConfig, messages), onDelta, options)).content || "没有返回内容";
