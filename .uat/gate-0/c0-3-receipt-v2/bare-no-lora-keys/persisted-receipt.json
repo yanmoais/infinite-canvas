@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "2",
+  "receiptId": "5d440fec-1ab0-49da-941e-1d694a43069d",
+  "planned": {
+    "baseCapabilityId": "comfy.image.illustrious",
+    "baseModelId": null,
+    "requestedReferenceMode": "none",
+    "workflowBindingId": "comfy.image.illustrious:txt2img_template",
+    "templateField": "txt2img_template"
+  },
+  "primaryStageId": "primary",
+  "finalStageId": "primary",
+  "stages": [
+    {
+      "stageId": "primary",
+      "stageKind": "primary",
+      "taskResult": "succeeded",
+      "promptId": "5d440fec-1ab0-49da-941e-1d694a43069d",
+      "baseCapabilityId": "comfy.image.illustrious",
+      "workflowBindingId": "comfy.image.illustrious:txt2img_template",
+      "workflowHash": "eed3161add63103d07c01a5dde7298a4fbe79a4ee04f43bf96a0097e2c670073",
+      "workflowFile": "illustrious-simple-api.json",
+      "templateField": "txt2img_template",
+      "effectiveReferenceMode": "none",
+      "adapterKind": null,
+      "mutators": [],
+      "fallback": {
+        "used": false,
+        "requestedReferenceMode": "none",
+        "effectiveReferenceMode": "none",
+        "preset": null
+      },
+      "assetVersions": [
+        {
+          "assetId": "models/checkpoints/illustriousXL_v01.safetensors",
+          "sha256": "",
+          "hashStatus": "unregistered"
+        },
+        {
+          "assetId": "models/vae/sdxl_vae.safetensors",
+          "sha256": "",
+          "hashStatus": "unregistered"
+        }
+      ],
+      "actualLoras": [],
+      "loraEvidence": {
+        "status": "complete",
+        "opaqueSources": []
+      },
+      "comfyExecutionSeconds": 12.2,
+      "error": null
+    }
+  ],
+  "actual": {
+    "stageId": "primary",
+    "stageKind": "primary",
+    "taskResult": "succeeded",
+    "promptId": "5d440fec-1ab0-49da-941e-1d694a43069d",
+    "baseCapabilityId": "comfy.image.illustrious",
+    "workflowBindingId": "comfy.image.illustrious:txt2img_template",
+    "workflowHash": "eed3161add63103d07c01a5dde7298a4fbe79a4ee04f43bf96a0097e2c670073",
+    "workflowFile": "illustrious-simple-api.json",
+    "templateField": "txt2img_template",
+    "effectiveReferenceMode": "none",
+    "adapterKind": null,
+    "mutators": [],
+    "fallback": {
+      "used": false,
+      "requestedReferenceMode": "none",
+      "effectiveReferenceMode": "none",
+      "preset": null
+    },
+    "assetVersions": [
+      {
+        "assetId": "models/checkpoints/illustriousXL_v01.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/vae/sdxl_vae.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      }
+    ],
+    "actualLoras": [],
+    "loraEvidence": {
+      "status": "complete",
+      "opaqueSources": []
+    },
+    "comfyExecutionSeconds": 12.2,
+    "error": null,
+    "totalComfyExecutionSeconds": 12.2
+  }
+}

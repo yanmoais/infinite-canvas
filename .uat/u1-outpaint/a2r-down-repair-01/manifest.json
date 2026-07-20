@@ -1,0 +1,138 @@
+{
+  "caseId": "U1-A2R1-down-repair",
+  "stage": "U1-A2R1",
+  "verdict": "FAIL_WITH_IMPROVEMENT",
+  "input": {
+    "baseline": ".uat/u1-outpaint/baseline/u1-character-baseline.png",
+    "baselineSha256": "e42321da229f440ffe100df64a4080dbba719ba9b7e2b4813fa7d9d01ab36b80"
+  },
+  "changes": [
+    "soft seam detected 时不再二次 Gaussian 扩张",
+    "down GrowMask 从 4 改为 0",
+    "down 托管 denoise 从 0.88 降到 0.80",
+    "向下提示词不再要求有限画幅补完整腿脚",
+    "回执合并实际动态 LoRA 资产"
+  ],
+  "execution": {
+    "receiptId": "28d0ca6b-1bff-4f1c-bdb0-97fd8e549653",
+    "promptId": "28d0ca6b-1bff-4f1c-bdb0-97fd8e549653",
+    "comfyExecutionSeconds": 32.2,
+    "windowsOutput": "llama_bridge\\canvas/illustrious-mmmix-v8-inpaint_00043_.png",
+    "assetVersions": [
+      {
+        "assetId": "models/checkpoints/illustriousxlMmmix_v80.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/illustrious_masterpieces_v3.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/bss_detail_enhancer_v3.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/bss_visual_enhancer_v3.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/bss_skin_texture_v2.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/eyes_for_illustrious.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/dramatic_lighting_slider.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      }
+    ],
+    "actualLoraNodes": [
+      {
+        "node_id": "10",
+        "class_type": "LoraLoader",
+        "title": "LoRA - Illustrious Masterpiece v3",
+        "lora_name": "illustrious_masterpieces_v3.safetensors",
+        "strength_model": 0.65,
+        "strength_clip": 0.65
+      },
+      {
+        "node_id": "11",
+        "class_type": "LoraLoader",
+        "title": "LoRA - BSS Detail Enhancer v3",
+        "lora_name": "bss_detail_enhancer_v3.safetensors",
+        "strength_model": 0.7,
+        "strength_clip": 0.7
+      },
+      {
+        "node_id": "12",
+        "class_type": "LoraLoader",
+        "title": "LoRA - BSS Visual Enhancer v3",
+        "lora_name": "bss_visual_enhancer_v3.safetensors",
+        "strength_model": 1.0,
+        "strength_clip": 1.0
+      },
+      {
+        "node_id": "13",
+        "class_type": "LoraLoader",
+        "title": "LoRA - BSS Skin Texture v2",
+        "lora_name": "bss_skin_texture_v2.safetensors",
+        "strength_model": 0.6,
+        "strength_clip": 0.6
+      },
+      {
+        "node_id": "14",
+        "class_type": "LoraLoader",
+        "title": "LoRA - Eyes for Illustrious",
+        "lora_name": "eyes_for_illustrious.safetensors",
+        "strength_model": 0.6,
+        "strength_clip": 0.6
+      },
+      {
+        "node_id": "15",
+        "class_type": "LoraLoader",
+        "title": "LoRA - Dramatic Lighting Slider",
+        "lora_name": "dramatic_lighting_slider.safetensors",
+        "strength_model": 1.5,
+        "strength_clip": 1.5
+      }
+    ]
+  },
+  "result": {
+    "file": ".uat/u1-outpaint/a2r-down-repair-01/a2r-down-result.png",
+    "resultSha256": "55f1ad0265a0bf179f12b3f434c988caff4dc19458166a57805d1ac1cbe56d3a",
+    "protectedRegionDiff": {
+      "differentPixels": 94948,
+      "totalPixels": 1048576,
+      "ratio": 0.090549,
+      "changedYRange": [
+        929,
+        1023
+      ],
+      "changedRows": 95
+    },
+    "comparisonToA2": {
+      "differentPixelsDelta": -23234,
+      "changedRowsDelta": -26
+    },
+    "findings": [
+      "保护区影响已收敛到声明的 96px seam 范围",
+      "运行回执已包含 checkpoint 和 6 个动态 LoRA",
+      "接缝下方仍发生白色上衣到高饱和青绿色服装的严重突变",
+      "新增区域出现畸形手臂/手指，人物结构不可用",
+      "全部推荐 LoRA 不能无条件作为 outpaint 操作配方"
+    ]
+  },
+  "nextHypothesis": {
+    "id": "U1-A2R2",
+    "action": "建立 outpaint 专用 LoRA profile，并进一步降低 down denoise；保持同基线同 seed 做对照"
+  }
+}

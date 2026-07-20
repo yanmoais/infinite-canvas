@@ -1,0 +1,29 @@
+{
+  "seed": 424243,
+  "caseDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-qwen2511/up-qwen2511-s424243-q1",
+  "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-qwen2511/up-qwen2511-s424243-q1/u1r-up-qwen2511-s424243-result.png",
+  "elapsedSec": 310.6,
+  "promptId": "9e025ce5-8a78-4ea9-8ef1-e7635ace5cfd",
+  "executionSeconds": 309.1,
+  "provisional": "METRIC_FAIL",
+  "darkPct": 13.8,
+  "farDarkPct": 21.7,
+  "gdom": 3.7,
+  "protectedCoreDiffRatio": 0.0,
+  "seamWorst": {
+    "name": "seam_up",
+    "lumaDelta": 20.16,
+    "rgbDelta": 35.78,
+    "gradPeak": 75.56
+  },
+  "autoFindings": [
+    [
+      "hard_seam",
+      "WARN"
+    ],
+    [
+      "green_cast",
+      "FAIL"
+    ]
+  ]
+}

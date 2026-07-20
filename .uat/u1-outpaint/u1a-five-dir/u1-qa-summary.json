@@ -1,0 +1,460 @@
+{
+  "stage": "U1-QA",
+  "schemaVersion": "u1-qa-v1",
+  "qaProfileVersion": "u1-qa-profile-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17",
+  "thresholdProfile": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1_qa/threshold_profile_v1.json",
+  "matrixRoot": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir",
+  "finishedAt": "2026-07-17T19:41:39+0800",
+  "matrix": [
+    {
+      "direction": "up",
+      "provisional": "METRIC_FAIL",
+      "provisionalReasons": [
+        "darkPct>=70.0",
+        "darkPct>=40.0",
+        "abs(gdom)>=15.0",
+        "farDarkPct>=70.0",
+        "farDarkPct>=45.0",
+        "abs(relGdom)>=18.0",
+        "relDeltaE>=35.0",
+        "relDeltaE>=22.0"
+      ],
+      "darkPct": 85.8,
+      "gdom": 31.26,
+      "farDarkPct": 89.2,
+      "relGdom": 25.05,
+      "relDeltaE": 47.42,
+      "protectedCoreDiffRatio": 0.0,
+      "seamWorst": {
+        "name": "seam_up",
+        "lumaDelta": 0.78,
+        "rgbDelta": 2.15,
+        "gradPeak": 2.55
+      },
+      "promptId": "fab4d197-d01f-417a-be40-6d8293654777",
+      "finalDisposition": "METRIC_FAIL_OPEN_REPAIR",
+      "qaReport": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir/u1a-up/qa-report.json"
+    },
+    {
+      "direction": "down",
+      "provisional": "METRIC_PASS_PENDING_VISUAL",
+      "provisionalReasons": [],
+      "darkPct": 12.6,
+      "gdom": -5.22,
+      "farDarkPct": 19.0,
+      "relGdom": -5.5,
+      "relDeltaE": 18.4,
+      "protectedCoreDiffRatio": 0.0,
+      "seamWorst": {
+        "name": "seam_down",
+        "lumaDelta": 0.19,
+        "rgbDelta": 2.03,
+        "gradPeak": 1.89
+      },
+      "promptId": "6879b96b-51ef-4e17-8200-85c2597f2980",
+      "finalDisposition": "NEEDS_VISUAL",
+      "qaReport": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir/u1a-down/qa-report.json"
+    },
+    {
+      "direction": "left",
+      "provisional": "METRIC_FAIL",
+      "provisionalReasons": [
+        "darkPct>=40.0",
+        "abs(gdom)>=15.0",
+        "seamRgbDeltaWarn",
+        "seamGradPeakFail",
+        "seamGradPeakWarn",
+        "relDeltaE>=35.0",
+        "relDeltaE>=22.0"
+      ],
+      "darkPct": 47.3,
+      "gdom": -30.11,
+      "farDarkPct": 28.8,
+      "relGdom": 5.11,
+      "relDeltaE": 175.29,
+      "protectedCoreDiffRatio": 0.0,
+      "seamWorst": {
+        "name": "seam_left",
+        "lumaDelta": 26.94,
+        "rgbDelta": 48.86,
+        "gradPeak": 110.44
+      },
+      "promptId": "ead6cb1b-a64c-4e18-aaf0-27034f0470d7",
+      "finalDisposition": "METRIC_FAIL_OPEN_REPAIR",
+      "qaReport": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir/u1a-left/qa-report.json"
+    },
+    {
+      "direction": "right",
+      "provisional": "METRIC_WARN_PENDING_VISUAL",
+      "provisionalReasons": [
+        "abs(gdom)>=15.0",
+        "farDarkPct>=45.0"
+      ],
+      "darkPct": 37.5,
+      "gdom": 18.45,
+      "farDarkPct": 50.3,
+      "relGdom": 13.3,
+      "relDeltaE": 8.99,
+      "protectedCoreDiffRatio": 0.0,
+      "seamWorst": {
+        "name": "seam_right",
+        "lumaDelta": 0.75,
+        "rgbDelta": 1.14,
+        "gradPeak": 1.7
+      },
+      "promptId": "f12eaa5a-3f5e-421a-a2d5-4e16eab9813f",
+      "finalDisposition": "NEEDS_VISUAL",
+      "qaReport": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir/u1a-right/qa-report.json"
+    },
+    {
+      "direction": "outward",
+      "provisional": "METRIC_FAIL",
+      "provisionalReasons": [
+        "darkPct>=40.0",
+        "abs(gdom)>=40.0",
+        "abs(gdom)>=15.0",
+        "farDarkPct>=70.0",
+        "farDarkPct>=45.0"
+      ],
+      "darkPct": 56.9,
+      "gdom": 54.4,
+      "farDarkPct": 86.3,
+      "relGdom": 9.29,
+      "relDeltaE": 6.54,
+      "protectedCoreDiffRatio": 0.0,
+      "seamWorst": {
+        "name": "seam_left",
+        "lumaDelta": 5.93,
+        "rgbDelta": 11.26,
+        "gradPeak": 8.98
+      },
+      "promptId": "0c39f360-420a-4144-91b4-2f19cc0b7aad",
+      "finalDisposition": "METRIC_FAIL_OPEN_REPAIR",
+      "qaReport": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir/u1a-outward/qa-report.json"
+    }
+  ],
+  "reports": [
+    {
+      "direction": "up",
+      "runId": "u1qa-up-r0-1784288497",
+      "deterministicVerdict": "METRIC_FAIL",
+      "finalDisposition": "METRIC_FAIL_OPEN_REPAIR",
+      "findingsAuto": [
+        {
+          "label": "void_dark",
+          "severity": "FAIL",
+          "region": {
+            "farDarkPct": 89.2,
+            "farDarkPctAvg": 89.2,
+            "worstRegion": "far_extension",
+            "regions": [
+              {
+                "sampleCount": 81920,
+                "meanRgb": [
+                  26.31,
+                  49.63,
+                  7.32
+                ],
+                "gdom": 32.81,
+                "darkPct": 89.2,
+                "greenishPct": 76.7,
+                "whiteishPct": 1.6,
+                "box": [
+                  0,
+                  0,
+                  1024,
+                  320
+                ],
+                "name": "far_extension"
+              }
+            ]
+          },
+          "cropPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir/u1a-up/qa-crops/far_extension.png",
+          "cropName": "far_extension.png",
+          "evaluator": "metric.voidDarkSpatial",
+          "confidence": 1.0,
+          "note": "farDarkPct=89.2 region=far_extension",
+          "humanReviewRequired": false
+        },
+        {
+          "label": "green_cast",
+          "severity": "FAIL",
+          "region": {
+            "sourceBand": {
+              "sampleCount": 14336,
+              "meanRgb": [
+                97.29,
+                86.5,
+                77.11
+              ],
+              "gdom": -0.7,
+              "darkPct": 50.5,
+              "greenishPct": 3.3,
+              "whiteishPct": 16.6,
+              "box": [
+                0,
+                640,
+                1024,
+                696
+              ]
+            },
+            "generatedBand": {
+              "sampleCount": 14336,
+              "meanRgb": [
+                42.09,
+                55.66,
+                20.53
+              ],
+              "gdom": 24.35,
+              "darkPct": 79.3,
+              "greenishPct": 54.0,
+              "whiteishPct": 3.5,
+              "box": [
+                0,
+                584,
+                1024,
+                640
+              ]
+            },
+            "relGdom": 25.05,
+            "relDeltaE": 47.42
+          },
+          "cropPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir/u1a-up/qa-crops/extension.png",
+          "cropName": "extension.png",
+          "evaluator": "metric.relativeColor",
+          "confidence": 1.0,
+          "note": "relGdom=25.05 relDeltaE=47.42",
+          "humanReviewRequired": false
+        }
+      ]
+    },
+    {
+      "direction": "down",
+      "runId": "u1qa-down-r0-1784288498",
+      "deterministicVerdict": "METRIC_PASS_PENDING_VISUAL",
+      "finalDisposition": "NEEDS_VISUAL",
+      "findingsAuto": []
+    },
+    {
+      "direction": "left",
+      "runId": "u1qa-left-r0-1784288498",
+      "deterministicVerdict": "METRIC_FAIL",
+      "finalDisposition": "METRIC_FAIL_OPEN_REPAIR",
+      "findingsAuto": [
+        {
+          "label": "hard_seam",
+          "severity": "FAIL",
+          "region": {
+            "name": "seam_left",
+            "lumaDelta": 26.94,
+            "rgbDelta": 48.86,
+            "gradPeak": 110.44
+          },
+          "cropPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir/u1a-left/qa-crops/seam.png",
+          "cropName": "seam.png",
+          "evaluator": "metric.seamContinuity",
+          "confidence": 1.0,
+          "note": "worst=seam_left luma=26.94 rgb=48.86 grad=110.44",
+          "humanReviewRequired": false
+        },
+        {
+          "label": "green_cast",
+          "severity": "FAIL",
+          "region": {
+            "sourceBand": {
+              "sampleCount": 14336,
+              "meanRgb": [
+                205.35,
+                181.23,
+                167.44
+              ],
+              "gdom": -5.16,
+              "darkPct": 8.6,
+              "greenishPct": 0.0,
+              "whiteishPct": 57.7,
+              "box": [
+                640,
+                0,
+                696,
+                1024
+              ]
+            },
+            "generatedBand": {
+              "sampleCount": 14336,
+              "meanRgb": [
+                35.08,
+                20.11,
+                5.23
+              ],
+              "gdom": -0.05,
+              "darkPct": 91.8,
+              "greenishPct": 5.1,
+              "whiteishPct": 0.0,
+              "box": [
+                584,
+                0,
+                640,
+                1024
+              ]
+            },
+            "relGdom": 5.11,
+            "relDeltaE": 175.29
+          },
+          "cropPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir/u1a-left/qa-crops/extension.png",
+          "cropName": "extension.png",
+          "evaluator": "metric.relativeColor",
+          "confidence": 1.0,
+          "note": "relGdom=5.11 relDeltaE=175.29",
+          "humanReviewRequired": false
+        }
+      ]
+    },
+    {
+      "direction": "right",
+      "runId": "u1qa-right-r0-1784288498",
+      "deterministicVerdict": "METRIC_WARN_PENDING_VISUAL",
+      "finalDisposition": "NEEDS_VISUAL",
+      "findingsAuto": [
+        {
+          "label": "void_dark",
+          "severity": "WARN",
+          "region": {
+            "farDarkPct": 50.3,
+            "farDarkPctAvg": 50.3,
+            "worstRegion": "far_extension",
+            "regions": [
+              {
+                "sampleCount": 81920,
+                "meanRgb": [
+                  123.81,
+                  96.29,
+                  48.5
+                ],
+                "gdom": 10.14,
+                "darkPct": 50.3,
+                "greenishPct": 12.5,
+                "whiteishPct": 7.1,
+                "box": [
+                  1344,
+                  0,
+                  1664,
+                  1024
+                ],
+                "name": "far_extension"
+              }
+            ]
+          },
+          "cropPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir/u1a-right/qa-crops/far_extension.png",
+          "cropName": "far_extension.png",
+          "evaluator": "metric.voidDarkSpatial",
+          "confidence": 1.0,
+          "note": "farDarkPct=50.3 region=far_extension",
+          "humanReviewRequired": false
+        }
+      ]
+    },
+    {
+      "direction": "outward",
+      "runId": "u1qa-outward-r0-1784288499",
+      "deterministicVerdict": "METRIC_FAIL",
+      "finalDisposition": "METRIC_FAIL_OPEN_REPAIR",
+      "findingsAuto": [
+        {
+          "label": "void_dark",
+          "severity": "FAIL",
+          "region": {
+            "farDarkPct": 86.3,
+            "farDarkPctAvg": 59.0,
+            "worstRegion": "far_top",
+            "regions": [
+              {
+                "sampleCount": 66560,
+                "meanRgb": [
+                  7.13,
+                  66.48,
+                  17.76
+                ],
+                "gdom": 54.04,
+                "darkPct": 86.3,
+                "greenishPct": 43.1,
+                "whiteishPct": 0.0,
+                "box": [
+                  0,
+                  0,
+                  1664,
+                  160
+                ],
+                "name": "far_top"
+              },
+              {
+                "sampleCount": 66560,
+                "meanRgb": [
+                  106.78,
+                  150.69,
+                  105.74
+                ],
+                "gdom": 44.43,
+                "darkPct": 35.6,
+                "greenishPct": 54.6,
+                "whiteishPct": 6.6,
+                "box": [
+                  0,
+                  1504,
+                  1664,
+                  1664
+                ],
+                "name": "far_bottom"
+              },
+              {
+                "sampleCount": 40960,
+                "meanRgb": [
+                  3.48,
+                  137.11,
+                  64.59
+                ],
+                "gdom": 103.08,
+                "darkPct": 48.7,
+                "greenishPct": 65.9,
+                "whiteishPct": 0.0,
+                "box": [
+                  0,
+                  320,
+                  160,
+                  1344
+                ],
+                "name": "far_left"
+              },
+              {
+                "sampleCount": 40960,
+                "meanRgb": [
+                  68.66,
+                  86.27,
+                  55.49
+                ],
+                "gdom": 24.2,
+                "darkPct": 65.5,
+                "greenishPct": 24.9,
+                "whiteishPct": 0.4,
+                "box": [
+                  1504,
+                  320,
+                  1664,
+                  1344
+                ],
+                "name": "far_right"
+              }
+            ]
+          },
+          "cropPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir/u1a-outward/qa-crops/far_top.png",
+          "cropName": "far_top.png",
+          "evaluator": "metric.voidDarkSpatial",
+          "confidence": 1.0,
+          "note": "farDarkPct=86.3 region=far_top",
+          "humanReviewRequired": false
+        }
+      ]
+    }
+  ],
+  "note": "U1-QA v1 deterministic gate only. BOSS/visual labels still pending. Do not treat METRIC_PASS as product acceptance."
+}

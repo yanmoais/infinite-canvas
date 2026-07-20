@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "u1-r0-pairs-v1",
+  "title": "U1-R0 pairs array",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "pairId",
+      "direction",
+      "seed",
+      "aCellId",
+      "bCellId",
+      "aAttemptId",
+      "bAttemptId",
+      "pairDisposition",
+      "comparisonReasons"
+    ],
+    "properties": {
+      "pairId": { "type": "string", "minLength": 1 },
+      "direction": { "enum": ["up", "down", "left", "right", "outward"] },
+      "seed": { "type": "integer", "minimum": 0 },
+      "aCellId": { "type": "string", "minLength": 1 },
+      "bCellId": { "type": "string", "minLength": 1 },
+      "aAttemptId": { "type": ["string", "null"] },
+      "bAttemptId": { "type": ["string", "null"] },
+      "pairDisposition": { "enum": ["B_WIN", "A_WIN", "TIE", "INVALID"] },
+      "comparisonReasons": {
+        "type": "object",
+        "required": ["ruleIndex", "summary"],
+        "properties": {
+          "ruleIndex": { "type": "integer", "minimum": 0, "maximum": 11 },
+          "summary": { "type": "string", "minLength": 1 },
+          "aHardGate": { "type": "boolean" },
+          "bHardGate": { "type": "boolean" },
+          "aHardFail": { "type": "boolean" },
+          "bHardFail": { "type": "boolean" },
+          "aSeverity": { "type": "number" },
+          "bSeverity": { "type": "number" },
+          "aGuardNonWorse": { "type": "boolean" },
+          "bGuardNonWorse": { "type": "boolean" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "allOf": [
+      {
+        "if": {
+          "anyOf": [
+            { "properties": { "aAttemptId": { "type": "null" } } },
+            { "properties": { "bAttemptId": { "type": "null" } } }
+          ]
+        },
+        "then": {
+          "properties": { "pairDisposition": { "const": "INVALID" } }
+        }
+      }
+    ]
+  }
+}

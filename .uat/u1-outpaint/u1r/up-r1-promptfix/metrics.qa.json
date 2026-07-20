@@ -1,0 +1,180 @@
+{
+  "schemaVersion": "u1-qa-v1",
+  "qaProfileVersion": "u1-qa-profile-v1",
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17",
+  "direction": "up",
+  "denoise": 0.78,
+  "seam": 112,
+  "size": "1024x1664",
+  "geometry": {
+    "targetWidth": 1024,
+    "targetHeight": 1664,
+    "extensionPixels": 640,
+    "seamOverlapPixels": 112,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 640,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "sizeMismatch": null,
+  "protectedCoreDiff": {
+    "box": [
+      0,
+      752,
+      1024,
+      1664
+    ],
+    "differentPixels": 0,
+    "totalPixels": 933888,
+    "ratio": 0.0,
+    "metricName": "protectedCoreDiffRatio"
+  },
+  "protectedRegionDiff": {
+    "differentPixels": 0,
+    "totalPixels": 933888,
+    "ratio": 0.0
+  },
+  "generatedRegionMeanRgb": [
+    46.64,
+    60.09,
+    19.06
+  ],
+  "generatedRegionGreenDominance": 27.24,
+  "generatedRegionGreenishPct": 54.9,
+  "generatedRegionWhiteishPct": 5.7,
+  "generatedRegionDarkPct": 79.5,
+  "extensionStats": {
+    "sampleCount": 163840,
+    "meanRgb": [
+      46.64,
+      60.09,
+      19.06
+    ],
+    "gdom": 27.24,
+    "darkPct": 79.5,
+    "greenishPct": 54.9,
+    "whiteishPct": 5.7,
+    "box": [
+      0,
+      0,
+      1024,
+      640
+    ]
+  },
+  "voidDarkSpatial": {
+    "farDarkPct": 80.2,
+    "farDarkPctAvg": 80.2,
+    "worstRegion": "far_extension",
+    "regions": [
+      {
+        "sampleCount": 81920,
+        "meanRgb": [
+          46.59,
+          60.13,
+          17.36
+        ],
+        "gdom": 28.16,
+        "darkPct": 80.2,
+        "greenishPct": 57.1,
+        "whiteishPct": 5.5,
+        "box": [
+          0,
+          0,
+          1024,
+          320
+        ],
+        "name": "far_extension"
+      }
+    ]
+  },
+  "relativeColor": {
+    "sourceBand": {
+      "sampleCount": 14336,
+      "meanRgb": [
+        97.29,
+        85.79,
+        76.0
+      ],
+      "gdom": -0.86,
+      "darkPct": 51.2,
+      "greenishPct": 2.1,
+      "whiteishPct": 15.9,
+      "box": [
+        0,
+        640,
+        1024,
+        696
+      ]
+    },
+    "generatedBand": {
+      "sampleCount": 14336,
+      "meanRgb": [
+        46.47,
+        54.22,
+        23.88
+      ],
+      "gdom": 19.04,
+      "darkPct": 78.4,
+      "greenishPct": 39.7,
+      "whiteishPct": 4.0,
+      "box": [
+        0,
+        584,
+        1024,
+        640
+      ]
+    },
+    "relGdom": 19.9,
+    "relDeltaE": 45.04
+  },
+  "seamContinuity": {
+    "seams": [
+      {
+        "name": "seam_up",
+        "axis": "horizontal",
+        "boundary": 640,
+        "srcMeanRgb": [
+          57.58,
+          55.7,
+          31.39
+        ],
+        "genMeanRgb": [
+          59.26,
+          56.13,
+          32.11
+        ],
+        "lumaDelta": 0.71,
+        "rgbDelta": 1.87,
+        "gradPeak": 3.73
+      }
+    ],
+    "worst": {
+      "name": "seam_up",
+      "lumaDelta": 0.71,
+      "rgbDelta": 1.87,
+      "gradPeak": 3.73
+    }
+  },
+  "sha256": "6d12593eb9a9858374753c569e4049e994b23fe1b71e18e1351bce38bc725c86",
+  "sourcePromptId": "28f02c78-f665-4941-ae5d-db7b38e856ca",
+  "windowsOutput": null,
+  "recoveredFromServer": null,
+  "provisional": "METRIC_FAIL",
+  "provisionalReasons": [
+    "darkPct>=70.0",
+    "darkPct>=40.0",
+    "abs(gdom)>=15.0",
+    "farDarkPct>=70.0",
+    "farDarkPct>=45.0",
+    "abs(relGdom)>=18.0",
+    "relDeltaE>=35.0",
+    "relDeltaE>=22.0"
+  ],
+  "seed": 424242,
+  "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-r1-promptfix/u1r-up-r1-result.png",
+  "basePath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-r1-promptfix/u1r-up-r1-base-1024x1664.png",
+  "resultSha256": "6d12593eb9a9858374753c569e4049e994b23fe1b71e18e1351bce38bc725c86",
+  "baseSha256": "f8784583804b896eefe25ef290aa33858833d78a3c0c474420da8385884cb4b0",
+  "requestSha256": "c697d52e7aa51afab501ec4be24d1351391c0270ff7f7a75f737a6fc304b6384"
+}

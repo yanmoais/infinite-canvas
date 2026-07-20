@@ -1,0 +1,183 @@
+{
+  "schemaVersion": "u1-qa-v1",
+  "qaProfileVersion": "u1-qa-profile-v1",
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17",
+  "direction": "up",
+  "denoise": 0.62,
+  "seam": 112,
+  "size": "2752x1024",
+  "geometry": {
+    "targetWidth": 1024,
+    "targetHeight": 1664,
+    "extensionPixels": 640,
+    "seamOverlapPixels": 112,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 640,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "sizeMismatch": {
+    "expected": [
+      1024,
+      1664
+    ],
+    "actual": [
+      2752,
+      1024
+    ]
+  },
+  "protectedCoreDiff": {
+    "box": [
+      0,
+      752,
+      1024,
+      1664
+    ],
+    "differentPixels": 932133,
+    "totalPixels": 933888,
+    "ratio": 0.998121,
+    "metricName": "protectedCoreDiffRatio"
+  },
+  "protectedRegionDiff": {
+    "differentPixels": 932133,
+    "totalPixels": 933888,
+    "ratio": 0.998121
+  },
+  "generatedRegionMeanRgb": [
+    123.1,
+    118.15,
+    115.18
+  ],
+  "generatedRegionGreenDominance": -0.99,
+  "generatedRegionGreenishPct": 0.1,
+  "generatedRegionWhiteishPct": 31.2,
+  "generatedRegionDarkPct": 29.3,
+  "extensionStats": {
+    "sampleCount": 163840,
+    "meanRgb": [
+      123.1,
+      118.15,
+      115.18
+    ],
+    "gdom": -0.99,
+    "darkPct": 29.3,
+    "greenishPct": 0.1,
+    "whiteishPct": 31.2,
+    "box": [
+      0,
+      0,
+      1024,
+      640
+    ]
+  },
+  "voidDarkSpatial": {
+    "farDarkPct": 13.6,
+    "farDarkPctAvg": 13.6,
+    "worstRegion": "far_extension",
+    "regions": [
+      {
+        "sampleCount": 81920,
+        "meanRgb": [
+          138.51,
+          132.64,
+          126.81
+        ],
+        "gdom": -0.02,
+        "darkPct": 13.6,
+        "greenishPct": 0.1,
+        "whiteishPct": 31.6,
+        "box": [
+          0,
+          0,
+          1024,
+          320
+        ],
+        "name": "far_extension"
+      }
+    ]
+  },
+  "relativeColor": {
+    "sourceBand": {
+      "sampleCount": 14336,
+      "meanRgb": [
+        67.98,
+        69.59,
+        71.64
+      ],
+      "gdom": -0.22,
+      "darkPct": 69.1,
+      "greenishPct": 0.0,
+      "whiteishPct": 18.9,
+      "box": [
+        0,
+        640,
+        1024,
+        696
+      ]
+    },
+    "generatedBand": {
+      "sampleCount": 14336,
+      "meanRgb": [
+        74.9,
+        74.53,
+        76.04
+      ],
+      "gdom": -0.94,
+      "darkPct": 65.2,
+      "greenishPct": 0.0,
+      "whiteishPct": 20.2,
+      "box": [
+        0,
+        584,
+        1024,
+        640
+      ]
+    },
+    "relGdom": -0.72,
+    "relDeltaE": 5.5
+  },
+  "seamContinuity": {
+    "seams": [
+      {
+        "name": "seam_up",
+        "axis": "horizontal",
+        "boundary": 640,
+        "srcMeanRgb": [
+          113.33,
+          102.2,
+          97.07
+        ],
+        "genMeanRgb": [
+          113.22,
+          101.92,
+          96.77
+        ],
+        "lumaDelta": 0.25,
+        "rgbDelta": 0.42,
+        "gradPeak": 0.46
+      }
+    ],
+    "worst": {
+      "name": "seam_up",
+      "lumaDelta": 0.25,
+      "rgbDelta": 0.42,
+      "gradPeak": 0.46
+    }
+  },
+  "sha256": "7010440e31204d3ed5072d85efee673c90fb72fa9fd4ecfdfc767cfb9d37fb24",
+  "sourcePromptId": "f9227d93-e9b3-4f51-863d-49e199331064",
+  "windowsOutput": null,
+  "recoveredFromServer": null,
+  "provisional": "METRIC_FAIL",
+  "provisionalReasons": [
+    "protectedCoreDiff>=0.05",
+    "protectedCoreDiff>0.02"
+  ],
+  "seed": 777001,
+  "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s777001-wf1/crop-result.png",
+  "basePath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s777001-wf1/full-canvas-before.png",
+  "resultSha256": "7010440e31204d3ed5072d85efee673c90fb72fa9fd4ecfdfc767cfb9d37fb24",
+  "baseSha256": "af823f64d07e30e09711ff57da0c902f350aa440caeade2d693d4cc7625db4ae",
+  "requestSha256": "f135316c5f17a26c2e2204277b19023d37ed3400751283ee7e41d921a84aa239"
+}

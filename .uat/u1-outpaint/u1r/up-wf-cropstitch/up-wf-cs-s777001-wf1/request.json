@@ -1,0 +1,52 @@
+{
+  "endpoint": "http://127.0.0.1:8080/v1/images/edits",
+  "model": "comfy/illustrious-mmmix-v8",
+  "size": "1024x1664",
+  "prompt": "soft warm out-of-focus indoor wall and ceiling bokeh only above the hairline, match source room light and color temperature, seamless hairline transition, background only, no hands, no arms, no fingers, no face, no second person, no extra hair mass, no hard horizontal seam",
+  "image": "full-canvas-before.png",
+  "mask": "crop-mask-2752x1024.png",
+  "extra": {
+    "lora_keys": [
+      "illustrious-masterpiece-v3",
+      "bss-detail-enhancer-v3",
+      "bss-skin-texture-v2",
+      "eyes-for-illustrious"
+    ],
+    "face_detailer": false,
+    "denoise": 0.62,
+    "seam_feather": 112,
+    "outpaint_direction": "up",
+    "prompt_optimize": false,
+    "seed": 777001,
+    "use_differential_diffusion": true,
+    "differential_strength": 1.0
+  },
+  "geometry": {
+    "mode": "extend",
+    "direction": "up",
+    "sourceWidth": 1024,
+    "sourceHeight": 1024,
+    "targetWidth": 1024,
+    "targetHeight": 1664,
+    "extensionPixels": 640,
+    "seamOverlapPixels": 112,
+    "sourceScale": 1,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 640,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "case": "U1-R-up-wf-cropstitch-s777001",
+  "hypothesis": "Crop+Stitch hairline window + soft mask; optional Differential Diffusion on gateway",
+  "cropWindow": [
+    0,
+    432,
+    1024,
+    816
+  ],
+  "localSy": 208,
+  "band": 160,
+  "scale": 2.6666666666666665,
+  "use_dd": true,
+  "seed": 777001
+}

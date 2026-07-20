@@ -1,7 +1,7 @@
 import axios from "axios";
 
 import { modelOptionName, resolveModelChannel, type AiConfig } from "@/stores/use-config-store";
-import type { CapabilityPreflightDecision, CapabilityRegistryResponse } from "@/types/generation";
+import type { CanvasOutpaintMode, CapabilityPreflightDecision, CapabilityRegistryResponse, WorkflowBinding } from "@/types/generation";
 
 export type ComfyReferenceMode = {
     key: string;
@@ -39,6 +39,7 @@ export type ComfyLoraProfile = {
     label: string;
     preset?: string;
     loras: string[];
+    enabled?: boolean;
     triggerWords?: string[];
     status?: string;
     notes?: string;
@@ -137,7 +138,7 @@ export async function fetchComfyPresets(config: AiConfig, model: string): Promis
             lora_presets?: Record<string, { label?: unknown; type?: string; nannan_style?: unknown; compatible_families?: string[]; enabled?: boolean; trigger_words?: string[] }>;
             image_presets?: Record<string, { label?: unknown; family?: string; lora_families?: string[]; supports?: string[]; nannan_style?: unknown; enabled?: boolean; recommended_loras?: string[] }>;
             defaults?: Record<string, unknown>;
-            recommended_lora_profiles?: Record<string, { label?: unknown; preset?: string; loras?: string[]; trigger_words?: string[]; status?: string; notes?: string }>;
+            recommended_lora_profiles?: Record<string, { label?: unknown; preset?: string; loras?: string[]; enabled?: boolean; trigger_words?: string[]; status?: string; notes?: string }>;
         }>(`${baseUrl}/nannan/generation-presets`, { timeout: 15000 });
     } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 404) {
@@ -151,7 +152,8 @@ export async function fetchComfyPresets(config: AiConfig, model: string): Promis
             key,
             label: textValue(value.label, key),
             kind: value.kind || key,
-            description: descriptionText(value.description),
+            // Gateway 档案里常用 notes 承载说明；兼容 description / notes 两种字段
+            description: descriptionText(value.description ?? (value as { notes?: unknown }).notes),
             enabled: value.enabled !== false,
         }))
         .filter((mode) => mode.enabled);
@@ -189,11 +191,12 @@ export async function fetchComfyPresets(config: AiConfig, model: string): Promis
             label: textValue(value.label, key),
             preset: value.preset,
             loras: value.loras || [],
+            enabled: value.enabled !== false,
             triggerWords: value.trigger_words,
             status: value.status,
             notes: value.notes,
         }))
-        .filter((profile) => profile.loras.length);
+        .filter((profile) => profile.enabled && profile.loras.length);
     const data = { referenceModes, loraPresets, imagePresets, recommendedLoraProfiles };
     cache = { baseUrl, fetchedAt: Date.now(), data };
     return data;
@@ -294,6 +297,67 @@ export function preflightComfyModel(registry: CapabilityRegistryResponse, model:
     };
 }
 
+/** Canonicalize runtime asset paths for equality checks. */
+export function normalizeAssetId(assetId: string) {
+    return assetId.trim().replace(/\\/g, "/").replace(/\/+/g, "/").toLowerCase();
+}
+
+/**
+ * Strip only known trailing diagnostic suffixes from Gateway missing-asset strings.
+ * Current Mission_manager formats: "(not visible)", "(ComfyUI 未扫到)", "(Loader 无枚举)".
+ * Must not strip version parentheses such as "model (v2).safetensors".
+ */
+export function normalizeMissingRuntimeAssetId(assetId: string) {
+    return normalizeAssetId(assetId.replace(/\s+\((?:not visible|ComfyUI 未扫到|Loader 无枚举)\)\s*$/i, ""));
+}
+
+function workflowBindingFailureReasons(binding: WorkflowBinding, missingRuntimeAssets: string[] = []) {
+    const missingAssetIds = new Set(missingRuntimeAssets.map(normalizeMissingRuntimeAssetId));
+    return [
+        ...(!binding.workflowExists ? [`WorkflowBinding 文件缺失：${binding.workflowFile}`] : []),
+        ...(binding.parseError ? [`WorkflowBinding 解析失败：${binding.workflowFile} (${binding.parseError})`] : []),
+        ...(binding.runtimeProbeStatus !== "checked" ? [`WorkflowBinding 运行时探针不可用：${binding.workflowFile}`] : []),
+        ...binding.missingNodeTypes.map((item) => `WorkflowBinding 缺少节点：${item}`),
+        ...binding.requiredRuntimeAssets.filter((asset) => missingAssetIds.has(normalizeAssetId(asset.assetId))).map((asset) => `WorkflowBinding 缺少运行时资产：${asset.assetId}`),
+        ...(binding.inputCompatibility.status !== "compatible" ? [`WorkflowBinding 输入字段不兼容：${binding.workflowFile}`] : []),
+    ];
+}
+
+/**
+ * Outpaint 专项 gate：先复用模型级检查，再验证本次实际基础模板。
+ * 现有 canvas_inpaint mutator 尚未在 Registry 中拆成独立 WorkflowBinding；在 operations 登记 outpaint 前保持 degraded，
+ * 由 Gateway 提交阶段继续校验动态注入的 mask / Differential Diffusion / ImageCompositeMasked 节点。
+ */
+export function preflightComfyOutpaint(registry: CapabilityRegistryResponse, model: string, mode: CanvasOutpaintMode): CapabilityPreflightDecision {
+    const base = preflightComfyModel(registry, model);
+    if (base.status === "unavailable") return base;
+    const templateField = mode === "full_body" ? "ipadapter_template" : "txt2img_template";
+    const bindings = base.workflowBindings.filter((item) => item.inputBindings.templateField === templateField);
+    const reasons = [...base.reasons];
+    const optionalMissingRuntimeAssets = base.capability?.runtime.optionalMissingRuntimeAssets || [];
+    if (!bindings.length) reasons.push(`没有可用的 ${templateField} WorkflowBinding`);
+    const bindingDiagnostics = bindings.map((binding) => ({
+        binding,
+        failures: workflowBindingFailureReasons(binding, [...(base.capability?.runtime.missingRuntimeAssets || []), ...optionalMissingRuntimeAssets]),
+    }));
+    const healthyBinding = bindingDiagnostics.find((item) => !item.failures.length)?.binding;
+    if (!healthyBinding) {
+        reasons.push(...bindingDiagnostics.flatMap((item) => item.failures));
+    } else if (bindingDiagnostics.some((item) => item.failures.length)) {
+        reasons.push(...bindingDiagnostics.filter((item) => item.failures.length).flatMap((item) => item.failures.map((reason) => `未选候选：${reason}`)));
+    }
+    if (!base.capability?.operations.includes("outpaint")) {
+        reasons.push("Registry 尚未把 canvas_inpaint 动态 mutator 登记为独立 outpaint 能力；Gateway 将在提交时继续校验");
+    }
+    const uniqueReasons = [...new Set(reasons)];
+    return {
+        ...base,
+        status: !bindings.length || !healthyBinding ? "unavailable" : uniqueReasons.length ? "degraded" : "ready",
+        workflowBindings: healthyBinding ? [healthyBinding] : bindings,
+        reasons: uniqueReasons,
+    };
+}
+
 export function compatibleLoras(presets: ComfyPresets, presetKey: string) {
     const preset = presets.imagePresets[presetKey];
     if (!preset || !preset.loraFamilies.length) return presets.loraPresets;
@@ -310,7 +374,7 @@ export function recommendedLoras(presets: ComfyPresets, presetKey: string) {
 
 export function recommendedLoraProfiles(presets: ComfyPresets, presetKey: string) {
     const compatible = new Set(compatibleLoras(presets, presetKey).map((lora) => lora.key));
-    return presets.recommendedLoraProfiles.filter((profile) => profile.preset === presetKey && profile.loras.some((key) => compatible.has(key)));
+    return presets.recommendedLoraProfiles.filter((profile) => profile.enabled !== false && profile.preset === presetKey && profile.loras.some((key) => compatible.has(key)));
 }
 
 export async function defaultLorasForModel(config: AiConfig, model: string) {

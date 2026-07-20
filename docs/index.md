@@ -20,7 +20,8 @@
 
 以下五项是仓库根目录 Markdown 文件，供 AI 与本地开发直接读取，不是文档站 `/docs/...` 路由：
 
-- [Infinite Canvas 统一设计与开发计划 v1.0](infinite-canvas-unified-development-plan.md)（跨会话唯一总排期；当前按 U1 Outpaint UAT → U2-E Windows 编辑 smoke → U2-D → U3/U4 → Character Atelier → Story 执行）
+- [Infinite Canvas 统一设计与开发计划 v1.0](infinite-canvas-unified-development-plan.md)（跨会话唯一总排期；当前按 Gate 0 → U1-R0 → U1-R → U1-Z → Gate B–G 执行）
+- [U1-R0 裸模 A/B 执行合同](u1-r0-execution-contract.md)（manifest / hash / attempt / pair / taxonomy；模板与 schema 见 `.uat/u1-outpaint/u1-r0/`）
 - [故事工作流 PRD v0.5](story-workflow-prd.md)（独立工具 + 共享专业生成底座 + 可选 Story 编排）
 - [人体骨骼与姿势控制开发计划 v0.2](pose-control-development-plan.md)（独立换姿先行，含 PoseAsset、联合冒烟、分批验收）
 - [角色部件工坊设计 v0.4](character-atelier-design.md)（角色拆解、保护、部件、能力路由）

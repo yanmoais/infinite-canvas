@@ -1,10 +1,8 @@
 # 角色部件工坊 · 开发清单（Dev Checklist）
 
 > 配套设计文档：`character-atelier-design.md` v0.4。
-> 跨域总排期：`infinite-canvas-unified-development-plan.md`。
-> 本文件是 **Character Atelier 域内执行进度看板**：每个条目只在实际验证通过后才改状态，禁止「写完代码就打勾」。
->
-> 创建：2026-07-13 · 维护：囡囡 · 审阅：BOSS
+> 跨域总控：`infinite-canvas-unified-development-plan.md`。
+> 本文件是 **Character Atelier 域内状态与验收索引**，不单独定义排期。仅当总控激活 Gate F 后，才可执行未完成条目；每个条目只在实际验证通过后才改状态，禁止「写完代码就打勾」。
 
 ## 状态图例
 
@@ -17,34 +15,34 @@
 | 🧪 实验 | Spike/验证性质，结论落盘即算完成 |
 | ❌ 已作废 | 产物或结论失效，不再作为验收依据 |
 
-## 已拍板前提（2026-07-13）
+## 已拍板域内约束
 
-- 节奏：P0A+P0B 并行，合计一周内，P1 紧跟。（2026-07-14 调整：P0A 暂停，主线转 Outpaint 双模式，见「当前主线」）
+- 排期：仅服从统一总控；Gate F 激活前，本清单不授权启动 Atelier 新阶段。
 - 存储：网关侧 `Mission_manager/data/atelier/`（SQLite WAL + content-addressed assets）。
 - P2A 首批槽位：legwear / bottom / dress / hair_front+hair_back。
 - 身材/胸型：`Profile.body_constraints`，默认锁定，不做可换槽。
 - VTON Spike：家里 5060Ti **16GB** 直接跑（CatVTON 官方口径 <8GB 可跑）。
-- 评测集：囡囡从历史生成筛 30–50 张初版 → BOSS 过目定稿。（2026-07-14 作废：角色形象未固定，稳定出图后重筛）
+- 评测集：从历史生成筛 30–50 张初版 → BOSS 过目定稿。旧定稿已因角色形象未固定而作废，Gate F 激活后重筛。
 
 ---
 
-## 当前主线
+## 当前域状态（Gate F 阻塞）
 
-- **P0A 评测集定稿作废**：角色形象尚未固定，2026-07-13 定稿的 34 张评测集失效（A1 改 ❌、A3 转 ⛔）；atelier.db 中 34 行 source_images 与已入库资产先留档不删，重筛时再决定清理或复用（删除需 BOSS 确认）。
-- **Outpaint 状态 = Gate 0 收敛中，Gate A 暂停**：历史代码回归、U1-A 五方向结果和 U1-QA 工具保留；主线/PoC/Gateway 尚未合流，U1-R0 manifest、QA pair schema 与实际 LoRA 完整性证明尚未落盘。X5 继续保持 🟨，不得把历史矩阵当成产品已通过。
-- **验收后主线**：Gate 0 → U1-R0 / U1-R → U1-Z；取得 `QUALIFIED` 或可接受的 `PARTIAL` 后固定角色形象，再重筛 P0A 评测集 → 完成 P0B → P1。Atelier 不另建平行排期。
+- **P0A 评测集定稿作废**：角色形象尚未固定，原 34 张评测集失效（A1 改 ❌、A3 转 ⛔）；atelier.db 中 34 行 source_images 与已入库资产先留档不删，重筛时再决定清理或复用（删除需 BOSS 确认）。
+- **跨域前置未完成**：Gate 0 已 DONE（C0-1~C0-Z），Gate A 仍因真实 U1-R0 `manifest.json` 未冻结而暂停；历史代码回归、U1-A 五方向结果和 U1-QA 工具只作证据保留。U1-R0 合同/schema/模板与语义门已由 C0-6/C0-Z 落盘，真实实验 `manifest.json` 尚未冻结（receipt v2 证据合同已在 C0-3 冻结）。X5 继续保持 🟨，不得把历史矩阵当成产品已通过。
+- **启动条件**：只有统一总控按顺序完成 Gate A–E 并激活 Gate F 后，才重筛 P0A 评测集并按本清单推进域内验收；本文件不建立平行入口。
 - **保留复用（不作废）**：A2 R18 隔离机制、A4 评测工装（CCIP/wd14 venv）、B1 SQLite 15 表、B2 CAS 资产目录。
 
-## P0A · 评测集与能力矩阵（3–5 天）
+## P0A · 评测集与能力矩阵
 
-> ⚠️ 2026-07-14 暂停：评测集定稿作废（角色形象未固定）。A5–A10 待角色形象固定、评测集重筛后再排期。
+> 当前阻塞：角色形象未固定且 Gate F 未激活。A5–A14 等未完成项须等待总控放行后再执行。
 
 | # | 条目 | 状态 | 验收口径 / 备注 |
 |---|---|---|---|
-| A1 | 从历史生成筛 30–50 张候选评测图（正/侧/坐/交叉腿、长发遮脸、连衣裙/上下装、透明丝袜、遮挡等场景全覆盖） | ❌ | **2026-07-14 作废：角色形象未固定，34 张定稿失效；待 Outpaint 双模式稳定出图、角色形象固定后重筛**。原定稿留档：BOSS 2026-07-13 勾选 34 张（动漫 25/写实 9；R18 26/SFW 8）；`evalset/final_manifest.json` + `final_sfw/`(8) + `final_r18/`(26, chmod700)；34 张曾入 atelier.db（留档不删） |
-| A2 | R18 子集单独隔离目录 + 访问控制 | ✅ | `candidates_r18/`（39 张）chmod 700，与 SFW（12 张）分离；2026-07-14：隔离机制保留复用，候选内容随评测集重筛更新 |
-| A3 | 评测集标注（可见槽位、遮挡关系、材质标签） | ⛔ | 2026-07-14：阻塞于角色形象未固定；评测集重筛定稿后再开标 |
-| A4 | 评测工装接入：`dghs-imgutils`（CCIP/wd14/抠像）+ `sdeval` 网关侧 pip 引入 | ✅ | venv `data/atelier/evaltools-venv`；CCIP 实测 self=0.0000 / 异图 0.4413（`ccip-caformer-24-randaug-pruned` 阈值约 `0.178475`）；mac 侧用 CPU onnxruntime；2026-07-14：工装与评测集解耦，保留复用 |
+| A1 | 从历史生成筛 30–50 张候选评测图（正/侧/坐/交叉腿、长发遮脸、连衣裙/上下装、透明丝袜、遮挡等场景全覆盖） | ❌ | **角色形象未固定，原 34 张定稿失效；Gate F 激活并固定角色基线后重筛**。旧资产只作留档：动漫 25/写实 9，R18 26/SFW 8；`evalset/final_manifest.json` + `final_sfw/`(8) + `final_r18/`(26, chmod700)；34 张曾入 atelier.db（留档不删） |
+| A2 | R18 子集单独隔离目录 + 访问控制 | ✅ | `candidates_r18/`（39 张）chmod 700，与 SFW（12 张）分离；隔离机制保留复用，候选内容随评测集重筛更新 |
+| A3 | 评测集标注（可见槽位、遮挡关系、材质标签） | ⛔ | 阻塞于 Gate F 未激活和角色形象未固定；评测集重筛定稿后再开标 |
+| A4 | 评测工装接入：`dghs-imgutils`（CCIP/wd14/抠像）+ `sdeval` 网关侧 pip 引入 | ✅ | venv `data/atelier/evaltools-venv`；CCIP 实测 self=0.0000 / 异图 0.4413（`ccip-caformer-24-randaug-pruned` 阈值约 `0.178475`）；mac 侧用 CPU onnxruntime；工装与评测集解耦，保留复用 |
 | A5 | 分割方案对比：ClothesSegment vs SegformerB2ClothesUltra vs SAM3 补洞组合 | ⬜ | 按类别 IoU + Boundary F-score 报表 |
 | A6 | SegAnimeChara 式「骨架→体积→SAM」皮肤/四肢补路评测 | ⬜ | 与 A5 同一报表口径 |
 | A7 | Qwen Edit 硬区域约束实测（supports_region_lock gate） | ⬜ | 结论写回设计文档 §6.1 |
@@ -119,7 +117,7 @@
 
 | # | 条目 | 状态 | 验收口径 / 备注 |
 |---|---|---|---|
-| G1 | 换姿产品化（R3：旧观测作废 + 重新分割） | ⬜ | 复用共享 Pose Foundation，不在 Character Atelier 内另造一套骨架执行器；前置排期见 `docs/pose-control-development-plan.md` |
+| G1 | 换姿产品化（R3：旧观测作废 + 重新分割） | ⬜ | 复用共享 Pose Foundation，不在 Character Atelier 内另造一套骨架执行器；设计与验收细节见 `docs/pose-control-development-plan.md`，启动前置仅以统一总控 Gate D/E 和 Gate F 状态为准 |
 | G2 | VTON 产品化（依据 A10 Spike 结论；CatVTON 非商用许可仅内部使用） | ⬜ | 许可证入能力矩阵 |
 | G3 | 捏脸模式（反向蒙版：只开放脸区） | ⬜ | |
 | G4 | 可选多视图角色表增强 Profile | ⬜ | 非阻塞增强 |
@@ -134,28 +132,11 @@
 | X2 | 显存调度（单 GPU 串行队列/OOM 降级/分辨率上限/健康检查） | ⬜ | §7.3 |
 | X3 | 文档同步：每阶段出口更新本清单 + 设计文档相关小节 | 🟨 | 设计文档已到 v0.4，并接入统一总开发计划；后续跨域状态只在总计划维护，本清单只维护 Atelier 验收 |
 | X4 | 无限画布普通生图与提示词组合器隔离 | ✅ | 2026-07-14 完整 review：direct/composer 请求分流；普通生图不再执行 smart-compose；full body 不触发 FaceID；无脸自动降级；参考图不上传云端提示词模型；U+0008 正则修复。详见 `Mission_manager/docs/infinite-canvas-prompt-composer-full-review-2026-07-14.md` |
-| X5 | 近脸参考→全身角色的身份/画风保真 | 🟨 | 历史 full_body 与五方向 Outpaint 实现/证据保留；当前受 Gate 0 与 Gate A 阻塞。须完成主线/PoC/Gateway 合流、U1-R0 归因、U1-R 回修和 U1-Z 后，才决定固定角色基线。 |
+| X5 | 近脸参考→全身角色的身份/画风保真 | 🟨 | 历史 full_body 与五方向 Outpaint 实现/证据保留；Gate 0 已 DONE，当前受 Gate A 阻塞。须完成 U1-R0 归因、U1-R 回修和 U1-Z 后，才决定固定角色基线。 |
 | X6 | 配置域隔离（Manual / Composer / Outpaint / Inpaint / Atelier / Replay） | 🟨 | 已落地 ManualNodeSettings / SourceGenerationRecipe / OperationProfile / ExecutionPlan，执行计划记录字段来源；空 LoRA `[]` 可持久化，Exact Replay 不再自动补推荐 LoRA；Outpaint/Inpaint 已走托管配置。待高级覆盖 UI 与 Atelier 路由接入 |
 | X7 | 共享人体骨骼与姿势控制底座 | ⬜ | 实现与验收统一按 `pose-control-development-plan.md` v0.2；P0 默认单人，Atelier 只在 P4 复用 PoseAsset/Adapter，并在接入时使旧 RegionObservation 作废 |
 | X8 | 共享运行时能力池 | 🟨 | 通用 CapabilityRegistry/WorkflowBinding 与画布 Preflight 已接；Qwen Edit、Florence2、BiRefNet、Upscale 的能力专用引用字段、自动注入和运行后回执仍待完成，见 B9–B12 |
 
-## 变更日志
+## 历史证据入口
 
-| 日期 | 变更 |
-|---|---|
-| 2026-07-13 | 建档；§16 六项拍板落定；修正 5060Ti 显存 8GB→16GB 历史误差 |
-| 2026-07-13 | P0 开工：A1 候选 51 张归集待过目、A2 ✅、A4 ✅（CCIP 跑通）、B1 ✅（15 表建库）、B2 ✅（CAS 去重验证）；评测集工作目录 `Mission_manager/data/atelier/evalset/`，BOSS 核对入口 `review_sfw.html` / `review_r18.html` |
-| 2026-07-13 | A1 ✅ 定稿：BOSS 勾选 34/51（SFW 8、R18 26），归集 `final_sfw/`+`final_r18/` 并全部入库（assets CAS 去重 + source_images 34 行）|
-| 2026-07-14 | X4 ✅：完成无限画布提示词组合器跨功能污染审查与修复；普通输入框、局部编辑、重试和组合器路径已分界；本地 ComfyUI 冒烟 HTTP 200 |
-| 2026-07-14 | X5 🟨：完成图二近脸参考→1152×2048 全身图的工作流级取证，确认不是续图而是全图重抽；明确 7 项根因与 P0/P1 改造路线 |
-| 2026-07-14 | X6 🟨：定稿本地工作流设置、提示词组合器、Outpaint、局部编辑、角色工坊与 Exact Replay 的配置隔离契约 |
-| 2026-07-14 | X5/X6 P0：实现托管向下 Outpaint、源图配方继承、字段来源执行计划、明确空 LoRA 与蒙版 Exact Replay；FaceDetailer UI 与网关默认语义对齐 |
-| 2026-07-14 | X5 review（grok-4.5）：确认双模式 UI/几何/执行计划/网关蒙版语义与像素回贴链路；单测通过；**未验收实图**。发现 denoise 滑条 max=0.9 与全身默认 0.92 冲突并已修；设计文档 denoise=0.62 口径过时 |
-| 2026-07-14 | X5 畸变修复：full_body 改 FaceID 全身重生成；废除缩小锚点硬贴；长幅 2:1 上限；单测/tsc 通过 |
-| 2026-07-14 | X5 二次修复：full_body 裁头/只出下半身——画幅 1.5~1.75、构图正负向、网关 full_body_rebuild、重试无蒙版放行、identity 重试保留；单测/tsc/网关已重启 |
-| 2026-07-14 | X5 三次修复：图一弯腰折叠畸变——跳过换姿优化器(禁 standing)；FaceID 失败改 soft PLUS FACE 非 character；站立正负向+脸部裁切；网关已重启 |
-| 2026-07-14 | X5 四次修复：主图 pure txt2img 构图优先 + 上半区无脸自动重试；原图续接支持上/下/左/右；单测/tsc 通过 |
-| 2026-07-14 | X5 五次修复：主图 soft IPAdapter 锁身份（纠正 pure txt2img 漂角色）+ EmptyLatent 保构图；单测/tsc/网关重启 |
-| 2026-07-14 | X5 续：一键外扩（四边）；全身重构松姿势锁（face crop soft IPA + 正视/不低头负向） |
-| 2026-07-14 | **计划转向**：角色形象未固定，P0A 评测集定稿作废（A1 ❌、A3 ⛔；A2/A4 机制与工装保留）；主线切到 Outpaint 双模式稳定出图（X5），稳定出图后重启 P0A → P0B → P1 |
-| 当前 | 接入统一总开发计划；设计文档升级 v0.4；新增 Qwen/Florence2/BiRefNet/Upscale 评测与 Gateway 自动参考图注入任务；Outpaint 状态更新为代码回归完成、待 BOSS 实图验收 |
+旧评测集、Outpaint 迭代与已完成基础设施的逐次记录不再作为执行排期；可复用结果以 A2、A4、B1、B2、X4–X6 的当前状态及其备注为准。跨域状态仅以统一总控为准，`pending-test.mdx` 只保存已实现待验或历史证据。

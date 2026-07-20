@@ -1,0 +1,356 @@
+{
+  "schemaVersion": "u1-qa-v1",
+  "qaProfileVersion": "u1-qa-profile-v1",
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17",
+  "direction": "outward",
+  "denoise": 0.78,
+  "seam": 104,
+  "size": "1664x1664",
+  "geometry": {
+    "targetWidth": 1664,
+    "targetHeight": 1664,
+    "extensionPixels": 1280,
+    "seamOverlapPixels": 104,
+    "sourceOffsetX": 320,
+    "sourceOffsetY": 320,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "sizeMismatch": null,
+  "protectedCoreDiff": {
+    "box": [
+      424,
+      424,
+      1240,
+      1240
+    ],
+    "differentPixels": 0,
+    "totalPixels": 665856,
+    "ratio": 0.0,
+    "metricName": "protectedCoreDiffRatio"
+  },
+  "protectedRegionDiff": {
+    "differentPixels": 0,
+    "totalPixels": 665856,
+    "ratio": 0.0
+  },
+  "generatedRegionMeanRgb": [
+    54.88,
+    112.9,
+    62.13
+  ],
+  "generatedRegionGreenDominance": 54.4,
+  "generatedRegionGreenishPct": 50.1,
+  "generatedRegionWhiteishPct": 2.0,
+  "generatedRegionDarkPct": 56.9,
+  "extensionStats": {
+    "sampleCount": 430080,
+    "meanRgb": [
+      54.88,
+      112.9,
+      62.13
+    ],
+    "gdom": 54.4,
+    "darkPct": 56.9,
+    "greenishPct": 50.1,
+    "whiteishPct": 2.0,
+    "sides": {
+      "extension_top": {
+        "sampleCount": 133120,
+        "meanRgb": [
+          16.94,
+          73.65,
+          23.92
+        ],
+        "gdom": 53.22,
+        "darkPct": 79.5,
+        "greenishPct": 42.0,
+        "whiteishPct": 0.6,
+        "box": [
+          0,
+          0,
+          1664,
+          320
+        ]
+      },
+      "extension_bottom": {
+        "sampleCount": 133120,
+        "meanRgb": [
+          106.7,
+          147.48,
+          97.89
+        ],
+        "gdom": 45.18,
+        "darkPct": 34.7,
+        "greenishPct": 53.8,
+        "whiteishPct": 5.5,
+        "box": [
+          0,
+          1344,
+          1664,
+          1664
+        ]
+      },
+      "extension_left": {
+        "sampleCount": 81920,
+        "meanRgb": [
+          13.42,
+          108.6,
+          45.19
+        ],
+        "gdom": 79.3,
+        "darkPct": 62.5,
+        "greenishPct": 58.3,
+        "whiteishPct": 0.0,
+        "box": [
+          0,
+          320,
+          320,
+          1344
+        ]
+      },
+      "extension_right": {
+        "sampleCount": 81920,
+        "meanRgb": [
+          73.79,
+          124.81,
+          83.03
+        ],
+        "gdom": 46.39,
+        "darkPct": 50.9,
+        "greenishPct": 49.2,
+        "whiteishPct": 0.6,
+        "box": [
+          1344,
+          320,
+          1664,
+          1344
+        ]
+      }
+    }
+  },
+  "voidDarkSpatial": {
+    "farDarkPct": 86.3,
+    "farDarkPctAvg": 59.0,
+    "worstRegion": "far_top",
+    "regions": [
+      {
+        "sampleCount": 66560,
+        "meanRgb": [
+          7.13,
+          66.48,
+          17.76
+        ],
+        "gdom": 54.04,
+        "darkPct": 86.3,
+        "greenishPct": 43.1,
+        "whiteishPct": 0.0,
+        "box": [
+          0,
+          0,
+          1664,
+          160
+        ],
+        "name": "far_top"
+      },
+      {
+        "sampleCount": 66560,
+        "meanRgb": [
+          106.78,
+          150.69,
+          105.74
+        ],
+        "gdom": 44.43,
+        "darkPct": 35.6,
+        "greenishPct": 54.6,
+        "whiteishPct": 6.6,
+        "box": [
+          0,
+          1504,
+          1664,
+          1664
+        ],
+        "name": "far_bottom"
+      },
+      {
+        "sampleCount": 40960,
+        "meanRgb": [
+          3.48,
+          137.11,
+          64.59
+        ],
+        "gdom": 103.08,
+        "darkPct": 48.7,
+        "greenishPct": 65.9,
+        "whiteishPct": 0.0,
+        "box": [
+          0,
+          320,
+          160,
+          1344
+        ],
+        "name": "far_left"
+      },
+      {
+        "sampleCount": 40960,
+        "meanRgb": [
+          68.66,
+          86.27,
+          55.49
+        ],
+        "gdom": 24.2,
+        "darkPct": 65.5,
+        "greenishPct": 24.9,
+        "whiteishPct": 0.4,
+        "box": [
+          1504,
+          320,
+          1664,
+          1344
+        ],
+        "name": "far_right"
+      }
+    ]
+  },
+  "relativeColor": {
+    "sourceBand": {
+      "sampleCount": 166464,
+      "meanRgb": [
+        120.79,
+        117.16,
+        112.98
+      ],
+      "gdom": 0.27,
+      "darkPct": 32.1,
+      "greenishPct": 7.2,
+      "whiteishPct": 21.3,
+      "box": [
+        424,
+        424,
+        1240,
+        1240
+      ]
+    },
+    "generatedBand": {
+      "sampleCount": 318096,
+      "meanRgb": [
+        121.31,
+        124.83,
+        109.23
+      ],
+      "gdom": 9.56,
+      "darkPct": 33.4,
+      "greenishPct": 16.1,
+      "whiteishPct": 21.8,
+      "box": [
+        268,
+        268,
+        1396,
+        1396
+      ]
+    },
+    "relGdom": 9.29,
+    "relDeltaE": 6.54
+  },
+  "seamContinuity": {
+    "seams": [
+      {
+        "name": "seam_top",
+        "axis": "horizontal",
+        "boundary": 320,
+        "srcMeanRgb": [
+          76.48,
+          79.94,
+          55.19
+        ],
+        "genMeanRgb": [
+          80.54,
+          80.79,
+          61.68
+        ],
+        "lumaDelta": 1.94,
+        "rgbDelta": 7.7,
+        "gradPeak": 2.05
+      },
+      {
+        "name": "seam_bottom",
+        "axis": "horizontal",
+        "boundary": 1344,
+        "srcMeanRgb": [
+          118.29,
+          154.3,
+          118.52
+        ],
+        "genMeanRgb": [
+          117.76,
+          156.75,
+          118.88
+        ],
+        "lumaDelta": 1.67,
+        "rgbDelta": 2.54,
+        "gradPeak": 3.83
+      },
+      {
+        "name": "seam_left",
+        "axis": "vertical",
+        "boundary": 320,
+        "srcMeanRgb": [
+          117.5,
+          91.86,
+          57.77
+        ],
+        "genMeanRgb": [
+          123.86,
+          97.52,
+          65.15
+        ],
+        "lumaDelta": 5.93,
+        "rgbDelta": 11.26,
+        "gradPeak": 8.98
+      },
+      {
+        "name": "seam_right",
+        "axis": "vertical",
+        "boundary": 1344,
+        "srcMeanRgb": [
+          86.86,
+          171.96,
+          91.29
+        ],
+        "genMeanRgb": [
+          86.46,
+          172.91,
+          92.53
+        ],
+        "lumaDelta": 0.68,
+        "rgbDelta": 1.6,
+        "gradPeak": 2.56
+      }
+    ],
+    "worst": {
+      "name": "seam_left",
+      "lumaDelta": 5.93,
+      "rgbDelta": 11.26,
+      "gradPeak": 8.98
+    }
+  },
+  "sha256": "07cbffa69b83b8cd1a51245331d41fb9b79172584f90da9500afcda8cdf1b5c3",
+  "sourcePromptId": "0c39f360-420a-4144-91b4-2f19cc0b7aad",
+  "windowsOutput": "illustrious-mmmix-v8-inpaint_00066_.png",
+  "recoveredFromServer": true,
+  "provisional": "METRIC_FAIL",
+  "provisionalReasons": [
+    "darkPct>=40.0",
+    "abs(gdom)>=40.0",
+    "abs(gdom)>=15.0",
+    "farDarkPct>=70.0",
+    "farDarkPct>=45.0"
+  ],
+  "seed": 424242,
+  "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir/u1a-outward/u1a-outward-result.png",
+  "basePath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1a-five-dir/u1a-outward/u1a-outward-base-1664x1664.png",
+  "resultSha256": "07cbffa69b83b8cd1a51245331d41fb9b79172584f90da9500afcda8cdf1b5c3",
+  "baseSha256": "49f78fb4479e1058a7ab29676e5b071f74e9fc8b1a9376bbfa8adc644c5b2578",
+  "requestSha256": "f02b17ff5e2fdbdfbf2fd23aa80c2733055d9a7028443939c8e9fcfe0dfea949"
+}

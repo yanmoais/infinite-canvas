@@ -1,0 +1,13 @@
+{
+  "endpoint": "http://127.0.0.1:8080/v1/images/generations",
+  "method": "POST",
+  "httpStatus": 200,
+  "startedAt": "2026-07-19T10:05:20.907749+00:00",
+  "finishedAt": "2026-07-19T10:05:37.812754+00:00",
+  "responseHeaders": {
+    "Content-Type": "application/json; charset=utf-8",
+    "Content-Length": "423778"
+  },
+  "receiptId": "ad748509-de69-40eb-9e1f-b46bbae8efe4",
+  "persistedReceiptPath": "/Users/zhenbao/work/Mission_manager/logs/local-agent/generation-receipts/ad748509-de69-40eb-9e1f-b46bbae8efe4.json"
+}

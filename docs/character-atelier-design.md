@@ -4,22 +4,7 @@
 > 像奇迹暖暖 / 无限暖暖那样自由捏脸、换发型、换衣服、换姿势，
 > 最后在本地无限画布里组合生成新图。
 
-—— 2026-07-13 · 囡囡 编写 · BOSS 审阅
-
-**版本历史**
-
-| 版本 | 日期 | 说明 |
-|---|---|---|
-| v0.1 | 2026-07-13 | 初稿：目标定义、现状盘点、拆解/组合双流程 |
-| v0.2 | 2026-07-13 | 引入三态资产、破坏半径、槽位互斥、分期门面 |
-| v0.3 | 2026-07-13 | 领域模型重构为四实体；蒙版保护、任务协议、验收标准全部契约化；两轮外部调研证据落盘。**本版为完整自洽规范，整体替代此前版本** |
-| v0.3.1 | 2026-07-13 | §16 六项全部拍板（记录化）；修正 5060Ti 显存 8GB→16GB 历史误差；配套开发清单建档 |
-| v0.3.2 | 2026-07-14 | §8.2C Outpaint 双模式（全身重构/原图续接）与蒙版/像素回贴/英文化口径同步 |
-| v0.3.3 | 2026-07-14 | full_body 改为 FaceID 全身重生成，废除缩小硬贴；长幅限 2:1；修复严重解剖畸变 |
-| v0.3.4 | 2026-07-14 | full_body 画幅改为 1.5~1.75 全身竖图（默认 1024×1536），补 full_body_rebuild 构图保护与重试无蒙版放行 |
-| v0.3.5 | 2026-07-14 | full_body 站立全身：跳过换姿优化器；FaceID 无脸降 soft face IPAdapter；强化直立站姿正负向 |
-| v0.3.6 | 2026-07-14 | full_body 主图 pure txt2img 构图优先 + 无脸上半区自动重试；原图续接支持上/下/左/右 |
-| v0.4 | 当前 | 接入统一总开发计划与 Shared Generation Core 类型权威；新增 Florence2、BiRefNet、Qwen Edit、Upscale 能力路由边界；Outpaint 当前受 Gate 0 收敛与 Gate A 验收阻塞 |
+> 当前版本：v0.4。跨域排期接入统一总控，类型权威统一到 Shared Generation Core；Florence2、BiRefNet、Qwen Edit、Upscale 仅通过能力路由接入；Outpaint 受 Gate 0 收敛与 Gate A 验收阻塞。
 
 ---
 
@@ -608,7 +593,7 @@ compose 链路：**slot → token → smart-compose**，不另起词库中心。
 - `full_body` 的身份和脸部精修参数由托管 OperationProfile 决定；不把节点手动 reference mode 覆盖托管策略。
 - 默认继承源图实际 GenerationRecipe，而不是自动添加推荐 LoRA。
 - 中文画面要求在提交前经文本模型整理为英文单语；失败时回落英文 fallback。
-- 当前状态：历史上/下/左/右/外扩实现、专项测试与失败证据保留；产品能力尚未放行。必须先完成 Gate 0 主线/PoC/Gateway 收敛，再执行 U1-R0 归因、U1-R 回修与 U1-Z BOSS 终验。
+- 当前状态：历史上/下/左/右/外扩实现、专项测试与失败证据保留；产品能力尚未放行。Gate 0 的 C0-1~C0-Z 已完成（U1-R0 合同/schema/语义门已落盘，真实 manifest 未冻结）；下一步执行 U1-R0 归因、U1-R 回修与 U1-Z BOSS 终验。合同入口：`docs/u1-r0-execution-contract.md`。
 
 #### D. 局部蒙版编辑
 
@@ -735,9 +720,11 @@ face_detailer: disabled by protected-face policy
 
 ---
 
-## 11. 分期路线
+## 11. Gate F 域内验收分解
 
-### P0A · 评测集与能力矩阵（3–5 天）
+> 本节只定义 Character Atelier 的内部依赖与验收内容，不定义跨域排期。Gate 0–E 的顺序和状态以统一总控为准；只有总控激活 Gate F 后，才可执行本节未完成工作。
+
+### P0A · 评测集与能力矩阵
 
 - 建 30–50 张固定评测集（含 R18 隔离子集）。
 - 比较 ClothesSegment / Segformer / SAM 组合策略（含 SegAnimeChara 式骨架→体积→SAM 补路）→ 校准 §10.2 阈值。
@@ -786,7 +773,7 @@ face_detailer: disabled by protected-face policy
 - 捏脸模式（反向蒙版：只开放脸区）。
 - 可选多视图角色表增强 Profile。
 
-**节奏立场**：契约（P0B）与评测集（P0A）并行推进，合计控制在一周内，P1 拆解核对台立刻跟上——契约工程是为了让后面不返工，但不能让流程完美主义拖死体感进度。
+**域内顺序**：Gate F 激活后，先确认角色基线并重筛 P0A 评测集；P0B 的未完成契约项依赖 Shared Generation Core 和前序 Gate 的已冻结能力。P0A、P0B 均满足各自入口后才能进入 P1，后续按 P2A → P2B → P3 → P4 推进。
 
 ---
 
@@ -851,11 +838,11 @@ face_detailer: disabled by protected-face policy
 
 ---
 
-## 16. 拍板记录（2026-07-13，BOSS 已全部确认）
+## 16. 域内决策记录
 
-> 原「待 BOSS 拍板」6 项已于 2026-07-13 全部按建议方案拍板，本节保留为决策记录。执行进度见《character-atelier-dev-checklist.md》。
+> 以下决策约束 Gate F 内部实现，不授权提前启动；跨域排期以统一总控为准。执行状态见《character-atelier-dev-checklist.md》。
 
-1. **节奏**：✅ 接受 P0A + P0B 合计约一周（评测集+契约先行，P1 核对台紧跟），不压缩 P0A 范围。
+1. **域内入口**：P0A 评测集须在角色基线固定且 Gate F 激活后重筛；P0B 未完成项须复用已冻结的 Shared Generation Core。两者通过各自入口后才能进入 P1。
 2. **存储落点**：✅ 部件库/SQLite 落在网关侧 `Mission_manager/data/atelier/`；Mac 端只留缓存不留主库。
 3. **P2A 首批槽位**：✅ legwear / bottom / dress / hair_front+hair_back（canonical 槽，UI 聚合成「下装/连衣裙」「头发」两个入口）。
 4. **身材/胸型**：✅ 按 `Profile.body_constraints` 处理（默认锁定、独立风险等级），不做可换槽。
@@ -869,7 +856,7 @@ face_detailer: disabled by protected-face policy
 | 项 | 路径/事实 |
 |---|---|
 | 本设计文档 | `infinite-canvas/docs/character-atelier-design.md`（v0.4） |
-| **开发清单（执行进度看板）** | `infinite-canvas/docs/character-atelier-dev-checklist.md`（P0A→P4 全量条目 + 状态） |
+| **开发清单（域内状态与验收索引）** | `infinite-canvas/docs/character-atelier-dev-checklist.md`（P0A→P4 条目 + 状态；不定义跨域排期） |
 | 独立评审记录 | `infinite-canvas/docs/character-atelier-review-sol.md`（gpt-5.6-sol，对 v0.2 的评审；其 P0/P1/P2 意见已全部融入本版） |
 | 外部调研笔记 | `infinite-canvas/docs/character-atelier-research-notes.md`（2026-07-13 两轮核验） |
 | v0.2 备份 | `/tmp/character-atelier-design-v02-backup.md` |

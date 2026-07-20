@@ -1,0 +1,116 @@
+{
+  "schemaVersion": "1",
+  "receiptId": "3e8a8865-0a15-497b-91cf-47dad2079a2a",
+  "planned": {
+    "baseCapabilityId": "comfy.image.illustrious-mmmix-v8",
+    "baseModelId": null,
+    "requestedReferenceMode": "inpaint",
+    "workflowBindingId": "comfy.image.illustrious-mmmix-v8:txt2img_template",
+    "templateField": "txt2img_template"
+  },
+  "primaryStageId": "primary",
+  "finalStageId": "primary",
+  "stages": [
+    {
+      "stageId": "primary",
+      "stageKind": "primary",
+      "taskResult": "succeeded",
+      "promptId": "3e8a8865-0a15-497b-91cf-47dad2079a2a",
+      "baseCapabilityId": "comfy.image.illustrious-mmmix-v8",
+      "workflowBindingId": "comfy.image.illustrious-mmmix-v8:txt2img_template",
+      "workflowHash": "eed3161add63103d07c01a5dde7298a4fbe79a4ee04f43bf96a0097e2c670073",
+      "workflowFile": "illustrious-simple-api.json",
+      "templateField": "txt2img_template",
+      "effectiveReferenceMode": "inpaint",
+      "adapterKind": null,
+      "mutators": [
+        "canvas_inpaint"
+      ],
+      "fallback": {
+        "used": false,
+        "requestedReferenceMode": "inpaint",
+        "effectiveReferenceMode": "inpaint"
+      },
+      "assetVersions": [
+        {
+          "assetId": "models/checkpoints/illustriousxlMmmix_v80.safetensors",
+          "sha256": "",
+          "hashStatus": "unregistered"
+        },
+        {
+          "assetId": "models/loras/illustrious_masterpieces_v3.safetensors",
+          "sha256": "",
+          "hashStatus": "unregistered"
+        },
+        {
+          "assetId": "models/loras/bss_detail_enhancer_v3.safetensors",
+          "sha256": "",
+          "hashStatus": "unregistered"
+        },
+        {
+          "assetId": "models/loras/bss_skin_texture_v2.safetensors",
+          "sha256": "",
+          "hashStatus": "unregistered"
+        },
+        {
+          "assetId": "models/loras/eyes_for_illustrious.safetensors",
+          "sha256": "",
+          "hashStatus": "unregistered"
+        }
+      ],
+      "comfyExecutionSeconds": 20.9,
+      "error": null
+    }
+  ],
+  "actual": {
+    "stageId": "primary",
+    "stageKind": "primary",
+    "taskResult": "succeeded",
+    "promptId": "3e8a8865-0a15-497b-91cf-47dad2079a2a",
+    "baseCapabilityId": "comfy.image.illustrious-mmmix-v8",
+    "workflowBindingId": "comfy.image.illustrious-mmmix-v8:txt2img_template",
+    "workflowHash": "eed3161add63103d07c01a5dde7298a4fbe79a4ee04f43bf96a0097e2c670073",
+    "workflowFile": "illustrious-simple-api.json",
+    "templateField": "txt2img_template",
+    "effectiveReferenceMode": "inpaint",
+    "adapterKind": null,
+    "mutators": [
+      "canvas_inpaint"
+    ],
+    "fallback": {
+      "used": false,
+      "requestedReferenceMode": "inpaint",
+      "effectiveReferenceMode": "inpaint"
+    },
+    "assetVersions": [
+      {
+        "assetId": "models/checkpoints/illustriousxlMmmix_v80.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/illustrious_masterpieces_v3.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/bss_detail_enhancer_v3.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/bss_skin_texture_v2.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/eyes_for_illustrious.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      }
+    ],
+    "comfyExecutionSeconds": 20.9,
+    "error": null,
+    "totalComfyExecutionSeconds": 20.9
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "endpoint": "http://127.0.0.1:8080/v1/images/edits",
+  "model": "comfy/illustrious-mmmix-v8",
+  "size": "1024x1664",
+  "prompt": "soft warm out-of-focus indoor wall and ceiling bokeh only above the hairline, match source room light and color temperature, seamless hairline transition, background only, no hands, no arms, no fingers, no face, no second person, no extra hair mass, no hard horizontal seam",
+  "image": "up-hybrid-base-1024x1664.png",
+  "mask": "up-hybrid-mask-band160-seam112-1024x1664.png",
+  "extra": {
+    "lora_keys": [
+      "illustrious-masterpiece-v3",
+      "bss-detail-enhancer-v3",
+      "bss-skin-texture-v2",
+      "eyes-for-illustrious"
+    ],
+    "face_detailer": false,
+    "denoise": 0.58,
+    "seam_feather": 112,
+    "outpaint_direction": "up",
+    "prompt_optimize": false,
+    "seed": 424243
+  },
+  "geometry": {
+    "mode": "extend",
+    "direction": "up",
+    "sourceWidth": 1024,
+    "sourceHeight": 1024,
+    "targetWidth": 1024,
+    "targetHeight": 1664,
+    "extensionPixels": 640,
+    "seamOverlapPixels": 112,
+    "sourceScale": 1,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 640,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "case": "U1-R-up-hybrid-seed424243",
+  "hypothesis": "Product up-hybrid: far soft pad + hairline narrow inpaint; multi-seed gate",
+  "bandInpaint": 160,
+  "meanBg": [
+    227,
+    210,
+    198
+  ],
+  "loras": [
+    "illustrious-masterpiece-v3",
+    "bss-detail-enhancer-v3",
+    "bss-skin-texture-v2",
+    "eyes-for-illustrious"
+  ],
+  "seed": 424243
+}

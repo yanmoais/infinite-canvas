@@ -1,0 +1,121 @@
+{
+  "caseId": "U1-A2-down-smoke-01",
+  "stage": "U1-A2",
+  "verdict": "FAIL",
+  "input": {
+    "baseline": ".uat/u1-outpaint/baseline/u1-character-baseline.png",
+    "baselineSha256": "e42321da229f440ffe100df64a4080dbba719ba9b7e2b4813fa7d9d01ab36b80",
+    "width": 1024,
+    "height": 1024
+  },
+  "request": {
+    "model": "comfy/illustrious-mmmix-v8",
+    "checkpoint": "illustriousxlMmmix_v80.safetensors",
+    "direction": "down",
+    "mode": "extend",
+    "targetWidth": 1024,
+    "targetHeight": 1664,
+    "extensionRatio": 0.625,
+    "seamOverlapPixels": 96,
+    "uiDenoise": 0.68,
+    "managedDenoise": 0.88,
+    "seed": 424242,
+    "faceDetailer": false,
+    "promptOptimize": false
+  },
+  "execution": {
+    "receiptId": "9fcc725d-4c5e-4b04-84a5-10b9577a4723",
+    "promptId": "9fcc725d-4c5e-4b04-84a5-10b9577a4723",
+    "workflowBindingId": "comfy.image.illustrious-mmmix-v8:txt2img_template",
+    "workflowHash": "eed3161add63103d07c01a5dde7298a4fbe79a4ee04f43bf96a0097e2c670073",
+    "mutators": [
+      "canvas_inpaint"
+    ],
+    "comfyExecutionSeconds": 34.4,
+    "windowsOutput": "llama_bridge\\\\canvas/illustrious-mmmix-v8-inpaint_00042_.png",
+    "actualLoraNodes": [
+      {
+        "node_id": "10",
+        "class_type": "LoraLoader",
+        "title": "LoRA - Illustrious Masterpiece v3",
+        "lora_name": "illustrious_masterpieces_v3.safetensors",
+        "strength_model": 0.65,
+        "strength_clip": 0.65
+      },
+      {
+        "node_id": "11",
+        "class_type": "LoraLoader",
+        "title": "LoRA - BSS Detail Enhancer v3",
+        "lora_name": "bss_detail_enhancer_v3.safetensors",
+        "strength_model": 0.7,
+        "strength_clip": 0.7
+      },
+      {
+        "node_id": "12",
+        "class_type": "LoraLoader",
+        "title": "LoRA - BSS Visual Enhancer v3",
+        "lora_name": "bss_visual_enhancer_v3.safetensors",
+        "strength_model": 1.0,
+        "strength_clip": 1.0
+      },
+      {
+        "node_id": "13",
+        "class_type": "LoraLoader",
+        "title": "LoRA - BSS Skin Texture v2",
+        "lora_name": "bss_skin_texture_v2.safetensors",
+        "strength_model": 0.6,
+        "strength_clip": 0.6
+      },
+      {
+        "node_id": "14",
+        "class_type": "LoraLoader",
+        "title": "LoRA - Eyes for Illustrious",
+        "lora_name": "eyes_for_illustrious.safetensors",
+        "strength_model": 0.6,
+        "strength_clip": 0.6
+      },
+      {
+        "node_id": "15",
+        "class_type": "LoraLoader",
+        "title": "LoRA - Dramatic Lighting Slider",
+        "lora_name": "dramatic_lighting_slider.safetensors",
+        "strength_model": 1.5,
+        "strength_clip": 1.5
+      }
+    ]
+  },
+  "result": {
+    "file": ".uat/u1-outpaint/a2-down-smoke/a2-down-result.png",
+    "resultSha256": "979a724dd9a3c916cefcedea3f8e3acdbfa62f116323fbb9c3072daaf6999880",
+    "width": 1024,
+    "height": 1664,
+    "protectedRegionDiff": {
+      "differentPixels": 118182,
+      "totalPixels": 1048576,
+      "ratio": 0.112707,
+      "changedYRange": [
+        903,
+        1023
+      ],
+      "changedRows": 121
+    },
+    "findings": [
+      "原图底边出现贯穿全宽的明显硬接缝",
+      "新增区域服装颜色、材质与原图白色上衣不连续",
+      "未补全双腿、双脚和地面，构图目标未达成",
+      "暖光与高饱和青绿色在接缝后突变",
+      "未出现第二人物，但主体结构与服装延伸不可信"
+    ],
+    "failureClasses": [
+      "seam_discontinuity",
+      "protected_region_drift",
+      "identity_outfit_discontinuity",
+      "composition_incomplete",
+      "lighting_color_mismatch"
+    ]
+  },
+  "receiptGap": {
+    "dynamicLorasAbsentFromAssetVersions": true,
+    "note": "Comfy history confirms six LoraLoader nodes, but execution receipt assetVersions currently only reports binding requiredRuntimeAssets/checkpoint."
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "direction": "up",
+  "denoise": 0.62,
+  "seam": 112,
+  "size": "2752x1024",
+  "protectedRegionDiff": {
+    "differentPixels": 932190,
+    "totalPixels": 933888,
+    "ratio": 0.998182
+  },
+  "protectedCoreDiff": {
+    "box": [
+      0,
+      752,
+      1024,
+      1664
+    ],
+    "differentPixels": 932190,
+    "totalPixels": 933888,
+    "ratio": 0.998182,
+    "metricName": "protectedCoreDiffRatio"
+  },
+  "generatedRegionMeanRgb": [
+    121.07,
+    117.06,
+    114.22
+  ],
+  "generatedRegionGreenDominance": -0.59,
+  "generatedRegionGreenishPct": 0.0,
+  "generatedRegionWhiteishPct": 28.6,
+  "generatedRegionDarkPct": 28.9,
+  "voidDarkSpatial": {
+    "farDarkPct": 13.7,
+    "farDarkPctAvg": 13.7,
+    "worstRegion": "far_extension",
+    "regions": [
+      {
+        "sampleCount": 81920,
+        "meanRgb": [
+          139.59,
+          132.07,
+          126.08
+        ],
+        "gdom": -0.76,
+        "darkPct": 13.7,
+        "greenishPct": 0.0,
+        "whiteishPct": 28.1,
+        "box": [
+          0,
+          0,
+          1024,
+          320
+        ],
+        "name": "far_extension"
+      }
+    ]
+  },
+  "relativeColor": {
+    "sourceBand": {
+      "sampleCount": 14336,
+      "meanRgb": [
+        69.32,
+        68.86,
+        68.67
+      ],
+      "gdom": -0.13,
+      "darkPct": 66.0,
+      "greenishPct": 0.0,
+      "whiteishPct": 14.5,
+      "box": [
+        0,
+        640,
+        1024,
+        696
+      ]
+    },
+    "generatedBand": {
+      "sampleCount": 14336,
+      "meanRgb": [
+        77.18,
+        75.71,
+        74.91
+      ],
+      "gdom": -0.34,
+      "darkPct": 57.1,
+      "greenishPct": 0.0,
+      "whiteishPct": 14.0,
+      "box": [
+        0,
+        584,
+        1024,
+        640
+      ]
+    },
+    "relGdom": -0.21,
+    "relDeltaE": 7.34
+  },
+  "seamContinuity": {
+    "seams": [
+      {
+        "name": "seam_up",
+        "axis": "horizontal",
+        "boundary": 640,
+        "srcMeanRgb": [
+          115.58,
+          103.86,
+          96.98
+        ],
+        "genMeanRgb": [
+          115.5,
+          103.62,
+          96.66
+        ],
+        "lumaDelta": 0.21,
+        "rgbDelta": 0.41,
+        "gradPeak": 0.72
+      }
+    ],
+    "worst": {
+      "name": "seam_up",
+      "lumaDelta": 0.21,
+      "rgbDelta": 0.41,
+      "gradPeak": 0.72
+    }
+  },
+  "sha256": "c1ec71ec7454ae273b0571ca788f4bca9bf82587f1b6307f866b1246fcfefb51",
+  "provisional": "METRIC_FAIL",
+  "provisionalReasons": [
+    "protectedCoreDiff>=0.05",
+    "protectedCoreDiff>0.02"
+  ],
+  "qaReportPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424243-wf1/qa-report.json",
+  "qaCropsDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424243-wf1/qa-crops",
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17"
+}

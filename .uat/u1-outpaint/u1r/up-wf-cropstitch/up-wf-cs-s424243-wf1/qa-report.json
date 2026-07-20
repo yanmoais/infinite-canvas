@@ -1,0 +1,275 @@
+{
+  "schemaVersion": "u1-qa-v1",
+  "qaProfileVersion": "u1-qa-profile-v1",
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17",
+  "runId": "u1qa-up-r0-1784296661",
+  "direction": "up",
+  "round": 0,
+  "parentRunId": null,
+  "caseDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424243-wf1",
+  "sourceSha256": "af823f64d07e30e09711ff57da0c902f350aa440caeade2d693d4cc7625db4ae",
+  "resultSha256": "c1ec71ec7454ae273b0571ca788f4bca9bf82587f1b6307f866b1246fcfefb51",
+  "requestSha256": "7ea61c6e0ed696bbeb4690aeaaae34fe00d096d057bffa5ead6672d7301394c6",
+  "seed": 424243,
+  "promptId": "d212a117-f149-4692-b4a6-a8ff52a0ac4c",
+  "workflowHash": "eed3161add63103d07c01a5dde7298a4fbe79a4ee04f43bf96a0097e2c670073",
+  "operationProfile": null,
+  "actualAssets": [
+    {
+      "assetId": "models/checkpoints/illustriousxlMmmix_v80.safetensors",
+      "sha256": "",
+      "hashStatus": "unregistered"
+    },
+    {
+      "assetId": "models/loras/illustrious_masterpieces_v3.safetensors",
+      "sha256": "",
+      "hashStatus": "unregistered"
+    },
+    {
+      "assetId": "models/loras/bss_detail_enhancer_v3.safetensors",
+      "sha256": "",
+      "hashStatus": "unregistered"
+    },
+    {
+      "assetId": "models/loras/bss_skin_texture_v2.safetensors",
+      "sha256": "",
+      "hashStatus": "unregistered"
+    },
+    {
+      "assetId": "models/loras/eyes_for_illustrious.safetensors",
+      "sha256": "",
+      "hashStatus": "unregistered"
+    }
+  ],
+  "recoveredFromServer": null,
+  "readerModel": null,
+  "readerPromptVersion": null,
+  "evaluatedAt": "2026-07-17T21:57:41+0800",
+  "metrics": {
+    "provisional": "METRIC_FAIL",
+    "provisionalReasons": [
+      "protectedCoreDiff>=0.05",
+      "protectedCoreDiff>0.02"
+    ],
+    "protectedCoreDiffRatio": 0.998182,
+    "darkPct": 28.9,
+    "gdom": -0.59,
+    "whitePct": 28.6,
+    "farDarkPct": 13.7,
+    "relGdom": -0.21,
+    "relDeltaE": 7.34,
+    "seamWorst": {
+      "name": "seam_up",
+      "lumaDelta": 0.21,
+      "rgbDelta": 0.41,
+      "gradPeak": 0.72
+    }
+  },
+  "thresholds": {
+    "darkPctFail": 70.0,
+    "darkPctWarn": 40.0,
+    "absGdomWarn": 15.0,
+    "protectedCoreDiffWarn": 0.02,
+    "protectedCoreDiffFail": 0.05,
+    "seamLumaDeltaWarn": 28.0,
+    "seamLumaDeltaFail": 48.0,
+    "seamRgbDeltaWarn": 36.0,
+    "seamRgbDeltaFail": 60.0,
+    "seamGradPeakWarn": 55.0,
+    "seamGradPeakFail": 85.0,
+    "farDarkPctWarn": 45.0,
+    "farDarkPctFail": 70.0,
+    "relGdomWarn": 18.0,
+    "relGdomFail": 30.0,
+    "relDeltaEWarn": 22.0,
+    "relDeltaEFail": 35.0
+  },
+  "crops": [
+    {
+      "name": "seam.png",
+      "path": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424243-wf1/qa-crops/seam.png",
+      "box": [
+        0,
+        584,
+        1024,
+        696
+      ],
+      "size": [
+        1024,
+        112
+      ],
+      "sha256": "a05b9ecc714342ae604909ad578895df411b6b8162aea9f0c7b1d5c22f54a507",
+      "kind": "seam",
+      "lossless": true
+    },
+    {
+      "name": "extension.png",
+      "path": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424243-wf1/qa-crops/extension.png",
+      "box": [
+        0,
+        0,
+        1024,
+        640
+      ],
+      "size": [
+        1024,
+        640
+      ],
+      "sha256": "ead2f5fff4e741344c2d40bd5f8153908f72505c32bed08cf2348fa969ad6ecc",
+      "kind": "extension",
+      "lossless": true
+    },
+    {
+      "name": "far_extension.png",
+      "path": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424243-wf1/qa-crops/far_extension.png",
+      "box": [
+        0,
+        0,
+        1024,
+        320
+      ],
+      "size": [
+        1024,
+        320
+      ],
+      "sha256": "f907a725f21e6d1ec0df7a480c186f973b49bd7ee4f358c06954ca9b2cb0e2e7",
+      "kind": "far_extension",
+      "lossless": true
+    },
+    {
+      "name": "corner_tl.png",
+      "path": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424243-wf1/qa-crops/corner_tl.png",
+      "box": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "sha256": "12c988a0ba0f2945cf3b276ed309f7e385ee2a05b9322c380187e97185957bc6",
+      "kind": "corner",
+      "lossless": true
+    },
+    {
+      "name": "corner_tr.png",
+      "path": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424243-wf1/qa-crops/corner_tr.png",
+      "box": [
+        768,
+        0,
+        1024,
+        256
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "sha256": "2a76630619a265fb2ec4976b3d774c799e77ceb722efbfeebb87aa8d3ab42ee4",
+      "kind": "corner",
+      "lossless": true
+    },
+    {
+      "name": "overview.png",
+      "path": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424243-wf1/qa-crops/overview.png",
+      "box": [
+        0,
+        0,
+        2752,
+        1024
+      ],
+      "size": [
+        1024,
+        381
+      ],
+      "sha256": "7a66f9076589bf727ef46632db060e2da3a10dad031900d740bc4d872715edb4",
+      "kind": "overview",
+      "lossless": true,
+      "downscaled": true
+    }
+  ],
+  "findings": [
+    {
+      "label": "protect_violation",
+      "severity": "FAIL",
+      "region": [
+        0,
+        752,
+        1024,
+        1664
+      ],
+      "cropPath": null,
+      "cropName": null,
+      "evaluator": "metric.protectedCoreDiff",
+      "confidence": 1.0,
+      "note": "core diff ratio 0.998182",
+      "humanReviewRequired": false
+    },
+    {
+      "label": "second_subject",
+      "severity": "PENDING_VISUAL",
+      "region": null,
+      "cropPath": null,
+      "cropName": null,
+      "evaluator": "human_or_vlm",
+      "confidence": 0.0,
+      "note": "No automatic detector in U1-QA v1; must be filled by visual reader with region+crop.",
+      "humanReviewRequired": true
+    },
+    {
+      "label": "camera_prop",
+      "severity": "PENDING_VISUAL",
+      "region": null,
+      "cropPath": null,
+      "cropName": null,
+      "evaluator": "human_or_vlm",
+      "confidence": 0.0,
+      "note": "No automatic detector in U1-QA v1; must be filled by visual reader with region+crop.",
+      "humanReviewRequired": true
+    },
+    {
+      "label": "anatomy_break",
+      "severity": "PENDING_VISUAL",
+      "region": null,
+      "cropPath": null,
+      "cropName": null,
+      "evaluator": "human_or_vlm",
+      "confidence": 0.0,
+      "note": "No automatic detector in U1-QA v1; must be filled by visual reader with region+crop.",
+      "humanReviewRequired": true
+    },
+    {
+      "label": "identity_drift",
+      "severity": "PENDING_VISUAL",
+      "region": null,
+      "cropPath": null,
+      "cropName": null,
+      "evaluator": "human_or_vlm",
+      "confidence": 0.0,
+      "note": "No automatic detector in U1-QA v1; must be filled by visual reader with region+crop.",
+      "humanReviewRequired": true
+    },
+    {
+      "label": "bg_incoherent",
+      "severity": "PENDING_VISUAL",
+      "region": null,
+      "cropPath": null,
+      "cropName": null,
+      "evaluator": "human_or_vlm",
+      "confidence": 0.0,
+      "note": "No automatic detector in U1-QA v1; must be filled by visual reader with region+crop.",
+      "humanReviewRequired": true
+    }
+  ],
+  "deterministicVerdict": "METRIC_FAIL",
+  "visualVerdict": "PENDING_VISUAL",
+  "humanVerdict": null,
+  "finalDisposition": "METRIC_FAIL_OPEN_REPAIR",
+  "notes": [
+    "Auto metric findings only for protect/hard_seam/void_dark/green_cast.",
+    "second_subject/camera_prop/anatomy_break/identity_drift/bg_incoherent require human or VLM with region+crop.",
+    "METRIC_PASS is coarse filter only; never product acceptance."
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "caseId": "U1-A2R2-B-down-bare-control",
+  "stage": "U1-A2R2",
+  "verdict": "FAIL_CONTROL_CONFIRMS_NON_LORA_ROOT_CAUSE",
+  "input": {
+    "baseline": ".uat/u1-outpaint/baseline/u1-character-baseline.png",
+    "baselineSha256": "e42321da229f440ffe100df64a4080dbba719ba9b7e2b4813fa7d9d01ab36b80",
+    "seed": 424242,
+    "size": "1024x1664",
+    "seamOverlapPixels": 96
+  },
+  "variant": {
+    "operationProfileId": "illustrious-mmmix-v8-outpaint-bare",
+    "loras": [],
+    "managedDenoise": 0.74
+  },
+  "execution": {
+    "receiptId": "50d55cc8-d4ee-42e1-819c-e84ea8463e3a",
+    "promptId": "50d55cc8-d4ee-42e1-819c-e84ea8463e3a",
+    "comfyExecutionSeconds": 28.8,
+    "mutators": [
+      "canvas_inpaint",
+      "operation_profile:illustrious-mmmix-v8-outpaint-bare"
+    ],
+    "assetVersions": [
+      {
+        "assetId": "models/checkpoints/illustriousxlMmmix_v80.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      }
+    ]
+  },
+  "result": {
+    "file": ".uat/u1-outpaint/a2r2-down-profile-b-bare/a2r2-down-result.png",
+    "resultSha256": "45ef78f055d82c2b641eac2d8a44c304aa546f1ab2a6857f909a8697333745ad",
+    "metrics": {
+      "protectedRegionDiff": {
+        "differentPixels": 95230,
+        "totalPixels": 1048576,
+        "ratio": 0.090818,
+        "changedYRange": [
+          929,
+          1023
+        ],
+        "changedRows": 95
+      },
+      "generatedRegionMeanRgb": [
+        45.98,
+        197.71,
+        16.28
+      ],
+      "generatedRegionGreenDominance": 166.58
+    },
+    "findings": [
+      "回执仅包含 checkpoint，确认 0 个 LoRA",
+      "绿色服装突变比 4-LoRA 组更严重",
+      "保护区变化仍保持在 95 行 seam 范围",
+      "A/B 排除 LoRA 为主因；主因转向新增区边缘条带铺底 latent 与 denoise 的组合"
+    ]
+  },
+  "nextHypothesis": {
+    "id": "U1-A2R3",
+    "action": "新增区改用方向感知的中性/分区铺底，只在近 seam 保留窄边缘结构，远区不再携带人物发色/衣纹"
+  }
+}

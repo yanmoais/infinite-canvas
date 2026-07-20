@@ -1,0 +1,9 @@
+[
+  {
+    "pid": 24212,
+    "direction": "left",
+    "denoise": 0.7,
+    "seam": 112,
+    "size": "1664x1024"
+  }
+]

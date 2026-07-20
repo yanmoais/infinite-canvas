@@ -64,7 +64,7 @@ function planValue(value: CanvasExecutionPlanValue["value"] | undefined, source:
 
 export function buildManagedImageExecution(baseConfig: AiConfig, sourceMetadata: CanvasNodeMetadata | undefined, operationProfile: CanvasOperationProfile): { config: AiConfig; plan: CanvasExecutionPlan; recipe: CanvasSourceGenerationRecipe } {
     const recipe = sourceGenerationRecipeFromMetadata(sourceMetadata);
-    const model = recipe.model || sourceMetadata?.model || baseConfig.imageModel || baseConfig.model;
+    const model = operationProfile.modelOverride || recipe.model || sourceMetadata?.model || baseConfig.imageModel || baseConfig.model;
     const promptModel = recipe.promptModel || sourceMetadata?.promptModel || baseConfig.textModel;
     const size = operationProfile.targetWidth && operationProfile.targetHeight ? `${operationProfile.targetWidth}x${operationProfile.targetHeight}` : recipe.size || sourceMetadata?.size || baseConfig.size;
     const quality = recipe.quality || sourceMetadata?.quality || baseConfig.quality;
@@ -79,7 +79,8 @@ export function buildManagedImageExecution(baseConfig: AiConfig, sourceMetadata:
     const faceDetailer = operationProfile.faceProtection ? false : recipe.faceDetailer;
     // full_body 关闭 latent denoise，避免近景参考被当成 img2img latent 钉死构图
     const denoise = isFullBodyOutpaint ? false : (operationProfile.denoise ?? recipe.denoise);
-    const loras = copyLoras(recipe.loras);
+    // 跨模型续接时，源图 LoRA 可能属于不兼容架构；显式清空，避免错误加载或画风污染。
+    const loras = operationProfile.modelOverride ? [] : copyLoras(recipe.loras);
     const comfyExtra: ComfyExtraConfig = {
         ...(referenceMode && referenceMode !== "none" ? { reference_mode: referenceMode } : {}),
         ...(loras !== undefined ? { lora_keys: loras } : {}),
@@ -100,13 +101,13 @@ export function buildManagedImageExecution(baseConfig: AiConfig, sourceMetadata:
     };
     const sourceFor = (value: unknown, fallback: CanvasGenerationValueSource = "source_recipe") => (value !== undefined ? fallback : "preset_default");
     const values: CanvasExecutionPlan["values"] = {
-        model: planValue(model, sourceFor(recipe.model)),
+        model: planValue(model, operationProfile.modelOverride ? "operation_profile" : sourceFor(recipe.model)),
         promptModel: planValue(promptModel, sourceFor(recipe.promptModel)),
         size: planValue(size, operationProfile.targetWidth && operationProfile.targetHeight ? "operation_profile" : sourceFor(recipe.size)),
         quality: planValue(quality, sourceFor(recipe.quality)),
         count: planValue(1, "operation_profile"),
         referenceMode: planValue(referenceMode || "none", operationProfile.kind === "inpaint" || operationProfile.kind === "outpaint" ? "operation_profile" : sourceFor(recipe.referenceMode)),
-        loras: planValue(loras, recipe.loras !== undefined ? "source_recipe" : "preset_default"),
+        loras: planValue(loras, operationProfile.modelOverride ? "operation_profile" : recipe.loras !== undefined ? "source_recipe" : "preset_default"),
         faceDetailer: planValue(faceDetailer ?? false, operationProfile.faceProtection ? "operation_profile" : sourceFor(recipe.faceDetailer)),
         denoise: planValue(denoise ?? null, isFullBodyOutpaint || operationProfile.denoise !== undefined ? "operation_profile" : sourceFor(recipe.denoise)),
     };
@@ -123,6 +124,7 @@ export function buildManagedImageExecution(baseConfig: AiConfig, sourceMetadata:
                 ...(operationProfile.originalPixelLock && !isFullBodyOutpaint ? ["原图非接缝区域像素锁定"] : []),
                 ...(isMaskedOutpaint ? ["蒙版局部重绘 + 像素回贴"] : []),
                 ...(operationProfile.faceProtection ? ["关闭全图 FaceDetailer"] : []),
+                ...(operationProfile.modelOverride ? ["使用指定续接模型，不继承源图 LoRA"] : []),
                 ...(operationProfile.inheritSourceRecipe ? ["继承源图模型与 LoRA 配方"] : []),
             ],
         },

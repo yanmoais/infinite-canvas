@@ -1,0 +1,18 @@
+{
+  "protectedRegionDiff": {
+    "differentPixels": 95246,
+    "totalPixels": 1048576,
+    "ratio": 0.090834,
+    "changedYRange": [
+      929,
+      1023
+    ],
+    "changedRows": 95
+  },
+  "generatedRegionMeanRgb": [
+    43.86,
+    107.03,
+    20.74
+  ],
+  "generatedRegionGreenDominance": 74.73
+}

@@ -1,0 +1,682 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "u1-r0-manifest-v1",
+  "title": "U1-R0 experiment manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "manifestId",
+    "status",
+    "requestHashSpec",
+    "matrix",
+    "model",
+    "groupA",
+    "groupB",
+    "promptsByDirection",
+    "sampling",
+    "geometryDefaults",
+    "workflow",
+    "mutators",
+    "codeFingerprint",
+    "qa",
+    "plannedCells",
+    "emptyLoraProofPolicy"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "u1-r0-manifest-v1" },
+    "manifestId": { "type": "string", "minLength": 1 },
+    "status": {
+      "enum": ["TEMPLATE", "PRE_REG_INCOMPLETE", "FROZEN", "RUNNING", "COMPLETED", "ABORTED"]
+    },
+    "requestHashSpec": { "const": "u1-r0-request-v1" },
+    "createdAt": { "type": ["string", "null"] },
+    "notes": { "type": "array", "items": { "type": "string" } },
+    "matrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["directions", "seeds", "groups", "plannedCells", "plannedPairs"],
+      "properties": {
+        "directions": {
+          "type": "array",
+          "items": { "enum": ["up", "down", "outward", "left", "right"] }
+        },
+        "seeds": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "groups": {
+          "type": "array",
+          "items": { "enum": ["A", "B"] }
+        },
+        "plannedCells": { "type": "integer", "const": 18 },
+        "plannedPairs": { "type": "integer", "const": 9 }
+      }
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" },
+        "sha256": { "type": ["string", "null"], "pattern": "^([a-f0-9]{64})?$" },
+        "width": { "type": "integer" },
+        "height": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+    "model": {
+      "type": "object",
+      "required": ["capabilityId", "checkpointId"],
+      "properties": {
+        "capabilityId": { "type": "string" },
+        "checkpointId": { "type": "string" },
+        "checkpointFile": { "type": ["string", "null"] },
+        "sha256": { "type": ["string", "null"], "pattern": "^([a-f0-9]{64})?$" }
+      },
+      "additionalProperties": true
+    },
+    "groupA": {
+      "type": "object",
+      "required": ["loras"],
+      "properties": {
+        "profileId": { "type": ["string", "null"] },
+        "profileVersion": { "type": ["string", "null"] },
+        "profileHash": { "type": ["string", "null"] },
+        "loras": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "required": ["key"],
+            "properties": {
+              "key": { "type": "string" },
+              "modelStrength": { "type": ["number", "null"] },
+              "clipStrength": { "type": ["number", "null"] },
+              "sha256": { "type": ["string", "null"] }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "groupB": {
+      "type": "object",
+      "required": ["loras"],
+      "properties": {
+        "loras": {
+          "type": "array",
+          "maxItems": 0,
+          "items": { "type": "object" }
+        },
+        "requestLoraKeys": {
+          "type": "array",
+          "maxItems": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "promptsByDirection": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["positive", "negative"],
+        "properties": {
+          "positive": {
+            "type": "object",
+            "required": ["text"],
+            "properties": {
+              "text": { "type": "string" },
+              "sha256": { "type": ["string", "null"] }
+            }
+          },
+          "negative": {
+            "type": "object",
+            "required": ["text"],
+            "properties": {
+              "text": { "type": "string" },
+              "sha256": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "sampling": {
+      "type": "object",
+      "properties": {
+        "sampler": { "type": ["string", "null"] },
+        "scheduler": { "type": ["string", "null"] },
+        "steps": { "type": ["integer", "null"] },
+        "cfg": { "type": ["number", "null"] },
+        "denoiseByDirection": { "type": "object" },
+        "seamByDirection": { "type": "object" },
+        "extensionRatioByDirection": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "geometryDefaults": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "artifactsByDirection": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "base": { "type": "object" },
+          "pad": { "type": "object" },
+          "mask": { "type": "object" }
+        }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "required": ["bindingId"],
+      "properties": {
+        "bindingId": { "type": "string" },
+        "version": { "type": ["string", "null"] },
+        "sha256": { "type": ["string", "null"] },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "mutators": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string" },
+          "version": { "type": ["string", "null"] }
+        },
+        "additionalProperties": true
+      }
+    },
+    "codeFingerprint": {
+      "type": "object",
+      "properties": {
+        "commit": { "type": ["string", "null"] },
+        "worktreeDiffSha256": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "qa": {
+      "type": "object",
+      "required": [
+        "qaProfileVersion",
+        "thresholdProfileVersion",
+        "taxonomyId",
+        "taxonomyVersion",
+        "pairReportSchemaVersion"
+      ],
+      "properties": {
+        "qaProfileVersion": { "type": "string" },
+        "thresholdProfileVersion": { "type": "string" },
+        "taxonomyId": { "type": "string" },
+        "taxonomyVersion": { "type": "string" },
+        "pairReportSchemaVersion": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "emptyLoraProofPolicy": {
+      "type": "object",
+      "required": ["requireActualLorasEmpty", "requireLoraEvidenceComplete", "forbidIncompleteOrUnknownAsBare"],
+      "properties": {
+        "requireRequestLoraKeysEmpty": { "type": "boolean" },
+        "requireExecutionPlanLorasEmpty": { "type": "boolean" },
+        "requireActualLorasEmpty": { "const": true },
+        "requireLoraEvidenceComplete": { "const": true },
+        "forbidIncompleteOrUnknownAsBare": { "const": true },
+        "c0_3BareEvidenceReceiptId": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "triggerWordPolicy": {
+      "type": "object",
+      "properties": {
+        "abShareCompiledPrompts": { "type": "boolean" },
+        "forbidProfileAutoTriggerInjection": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "plannedCells": {
+      "type": "array",
+      "minItems": 18,
+      "maxItems": 18,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cellId", "direction", "seed", "group"],
+        "properties": {
+          "cellId": { "type": "string", "minLength": 1 },
+          "direction": { "enum": ["up", "down", "outward", "left", "right"] },
+          "seed": { "type": "integer", "minimum": 0 },
+          "group": { "enum": ["A", "B"] },
+          "requestSha256": {
+            "type": ["string", "null"],
+            "pattern": "^([a-f0-9]{64})?$"
+          },
+          "requestHashInput": { "type": ["object", "null"] },
+          "requestHashInputJcsUtf8Base64": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "pairSlots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["pairId", "direction", "seed", "aCellId", "bCellId"],
+        "properties": {
+          "pairId": { "type": "string" },
+          "direction": { "type": "string" },
+          "seed": { "type": "integer" },
+          "aCellId": { "type": "string" },
+          "bCellId": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "FROZEN" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": [
+          "createdAt",
+          "source",
+          "model",
+          "groupA",
+          "groupB",
+          "promptsByDirection",
+          "sampling",
+          "artifactsByDirection",
+          "workflow",
+          "mutators",
+          "codeFingerprint",
+          "plannedCells",
+          "emptyLoraProofPolicy"
+        ],
+        "properties": {
+          "createdAt": { "type": "string", "minLength": 1 },
+          "source": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["path", "sha256", "width", "height"],
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "width": { "type": "integer", "minimum": 1 },
+              "height": { "type": "integer", "minimum": 1 }
+            }
+          },
+          "model": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["capabilityId", "checkpointId", "sha256"],
+            "properties": {
+              "capabilityId": { "type": "string", "minLength": 1 },
+              "checkpointId": { "type": "string", "minLength": 1 },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
+          },
+          "groupA": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["loras"],
+            "properties": {
+              "loras": {
+                "type": "array",
+                "minItems": 6,
+                "maxItems": 6,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "required": ["key", "modelStrength", "clipStrength", "sha256"],
+                  "properties": {
+                    "key": { "type": "string", "minLength": 1 },
+                    "modelStrength": { "type": "number" },
+                    "clipStrength": { "type": "number" },
+                    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+                  }
+                }
+              }
+            }
+          },
+          "groupB": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["loras"],
+            "properties": {
+              "loras": { "type": "array", "maxItems": 0 },
+              "requestLoraKeys": { "type": "array", "maxItems": 0 }
+            }
+          },
+          "promptsByDirection": {
+            "type": "object",
+            "required": ["up", "down", "outward"],
+            "properties": {
+              "up": { "$ref": "#/$defs/frozenPromptPair" },
+              "down": { "$ref": "#/$defs/frozenPromptPair" },
+              "outward": { "$ref": "#/$defs/frozenPromptPair" }
+            },
+            "additionalProperties": { "$ref": "#/$defs/frozenPromptPair" }
+          },
+          "sampling": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["sampler", "scheduler", "steps", "cfg", "denoiseByDirection", "seamByDirection", "extensionRatioByDirection"],
+            "properties": {
+              "sampler": { "type": "string", "minLength": 1 },
+              "scheduler": { "type": "string", "minLength": 1 },
+              "steps": { "type": "integer", "minimum": 1 },
+              "cfg": { "type": "number" },
+              "denoiseByDirection": { "$ref": "#/$defs/directionNumberMap" },
+              "seamByDirection": { "$ref": "#/$defs/directionNumberMap" },
+              "extensionRatioByDirection": { "$ref": "#/$defs/directionNumberMap" }
+            }
+          },
+          "artifactsByDirection": {
+            "type": "object",
+            "required": ["up", "down", "outward"],
+            "properties": {
+              "up": { "$ref": "#/$defs/frozenArtifacts" },
+              "down": { "$ref": "#/$defs/frozenArtifacts" },
+              "outward": { "$ref": "#/$defs/frozenArtifacts" }
+            },
+            "additionalProperties": { "$ref": "#/$defs/frozenArtifacts" }
+          },
+          "workflow": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["bindingId", "version", "sha256"],
+            "properties": {
+              "bindingId": { "type": "string", "minLength": 1 },
+              "version": { "type": "string", "minLength": 1 },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
+          },
+          "mutators": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": ["id", "version"],
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "version": { "type": "string", "minLength": 1 }
+              }
+            }
+          },
+          "codeFingerprint": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["commit", "worktreeDiffSha256"],
+            "properties": {
+              "commit": { "type": "string", "minLength": 1 },
+              "worktreeDiffSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
+          },
+          "plannedCells": {
+            "type": "array",
+            "minItems": 18,
+            "maxItems": 18,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "cellId",
+                "direction",
+                "seed",
+                "group",
+                "requestSha256",
+                "requestHashInput",
+                "requestHashInputJcsUtf8Base64"
+              ],
+              "properties": {
+                "cellId": { "type": "string", "minLength": 1 },
+                "direction": { "enum": ["up", "down", "outward", "left", "right"] },
+                "seed": { "type": "integer", "minimum": 0 },
+                "group": { "enum": ["A", "B"] },
+                "requestSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                "requestHashInput": { "$ref": "#/$defs/frozenRequestHashInput" },
+                "requestHashInputJcsUtf8Base64": { "type": "string", "minLength": 1 }
+              }
+            }
+          },
+          "emptyLoraProofPolicy": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["requireActualLorasEmpty", "requireLoraEvidenceComplete", "forbidIncompleteOrUnknownAsBare"],
+            "properties": {
+              "requireActualLorasEmpty": { "const": true },
+              "requireLoraEvidenceComplete": { "const": true },
+              "forbidIncompleteOrUnknownAsBare": { "const": true }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "frozenPromptPair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["positive", "negative"],
+      "properties": {
+        "positive": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["text", "sha256"],
+          "properties": {
+            "text": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        },
+        "negative": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["text", "sha256"],
+          "properties": {
+            "text": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        }
+      }
+    },
+    "directionNumberMap": {
+      "type": "object",
+      "required": ["up", "down", "outward"],
+      "properties": {
+        "up": { "type": "number" },
+        "down": { "type": "number" },
+        "outward": { "type": "number" },
+        "left": { "type": "number" },
+        "right": { "type": "number" }
+      },
+      "additionalProperties": { "type": "number" }
+    },
+    "frozenArtifacts": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["base", "pad", "mask", "targetWidth", "targetHeight"],
+      "properties": {
+        "base": {
+          "type": "object",
+          "required": ["sha256"],
+          "properties": {
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          },
+          "additionalProperties": true
+        },
+        "pad": {
+          "type": "object",
+          "required": ["sha256"],
+          "properties": {
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          },
+          "additionalProperties": true
+        },
+        "mask": {
+          "type": "object",
+          "required": ["sha256"],
+          "properties": {
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          },
+          "additionalProperties": true
+        },
+        "targetWidth": { "type": "integer", "minimum": 1 },
+        "targetHeight": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "frozenRequestHashInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spec", "execution", "inputs"],
+      "properties": {
+        "spec": { "const": "u1-r0-request-v1" },
+        "execution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "model",
+            "loras",
+            "sampler",
+            "scheduler",
+            "steps",
+            "cfg",
+            "direction",
+            "seed",
+            "denoise",
+            "seam",
+            "extensionRatio",
+            "dimensions",
+            "workflow",
+            "mutators",
+            "referenceMode"
+          ],
+          "properties": {
+            "model": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["capabilityId", "checkpointId", "sha256"],
+              "properties": {
+                "capabilityId": { "type": "string", "minLength": 1 },
+                "checkpointId": { "type": "string", "minLength": 1 },
+                "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+              }
+            },
+            "loras": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["key", "modelStrength", "clipStrength", "sha256"],
+                "properties": {
+                  "key": { "type": "string", "minLength": 1 },
+                  "modelStrength": { "type": "number" },
+                  "clipStrength": { "type": "number" },
+                  "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+                }
+              }
+            },
+            "sampler": { "type": "string", "minLength": 1 },
+            "scheduler": { "type": "string", "minLength": 1 },
+            "steps": { "type": "integer", "minimum": 1 },
+            "cfg": { "type": "number" },
+            "direction": { "enum": ["up", "down", "left", "right", "outward"] },
+            "seed": { "type": "integer", "minimum": 0 },
+            "denoise": { "type": "number", "minimum": 0, "maximum": 1 },
+            "seam": { "type": "integer", "minimum": 0 },
+            "extensionRatio": { "type": "number", "minimum": 0 },
+            "dimensions": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["width", "height"],
+              "properties": {
+                "width": { "type": "integer", "minimum": 1 },
+                "height": { "type": "integer", "minimum": 1 }
+              }
+            },
+            "workflow": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["bindingId", "version", "sha256"],
+              "properties": {
+                "bindingId": { "type": "string", "minLength": 1 },
+                "version": { "type": "string", "minLength": 1 },
+                "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+              }
+            },
+            "mutators": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "version"],
+                "properties": {
+                  "id": { "type": "string", "minLength": 1 },
+                  "version": { "type": "string", "minLength": 1 }
+                }
+              }
+            },
+            "referenceMode": { "const": "none" }
+          }
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["positive", "negative", "base", "pad", "mask"],
+          "properties": {
+            "positive": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["text", "sha256"],
+              "properties": {
+                "text": { "type": "string", "minLength": 1 },
+                "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+              }
+            },
+            "negative": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["text", "sha256"],
+              "properties": {
+                "text": { "type": "string", "minLength": 1 },
+                "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+              }
+            },
+            "base": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sha256"],
+              "properties": {
+                "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+              }
+            },
+            "pad": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sha256"],
+              "properties": {
+                "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+              }
+            },
+            "mask": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sha256"],
+              "properties": {
+                "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

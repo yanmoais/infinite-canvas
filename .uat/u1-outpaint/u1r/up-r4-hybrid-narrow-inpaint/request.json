@@ -1,0 +1,46 @@
+{
+  "endpoint": "http://127.0.0.1:8080/v1/images/edits",
+  "model": "comfy/illustrious-mmmix-v8",
+  "size": "1024x1664",
+  "prompt": "soft warm out-of-focus indoor wall bokeh only above the hairline, match source room light and color temperature, seamless hairline transition, background only, no face, no second person, no extra hair mass",
+  "image": "u1r-up-r4-base-1024x1664.png",
+  "mask": "u1r-up-r4-mask-band128-seam80-1024x1664.png",
+  "extra": {
+    "lora_keys": [
+      "illustrious-masterpiece-v3",
+      "bss-detail-enhancer-v3",
+      "bss-visual-enhancer-v3",
+      "bss-skin-texture-v2",
+      "eyes-for-illustrious"
+    ],
+    "face_detailer": false,
+    "denoise": 0.55,
+    "seam_feather": 80,
+    "outpaint_direction": "up",
+    "prompt_optimize": false,
+    "seed": 424242
+  },
+  "geometry": {
+    "mode": "extend",
+    "direction": "up",
+    "sourceWidth": 1024,
+    "sourceHeight": 1024,
+    "targetWidth": 1024,
+    "targetHeight": 1664,
+    "extensionPixels": 640,
+    "seamOverlapPixels": 80,
+    "sourceScale": 1,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 640,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "case": "U1-R-up-r4-hybrid-narrow-inpaint",
+  "hypothesis": "Far extension = pure soft pad (no model). Model only in 128px band above hairline. Prevent second-face invention in full 640px canvas.",
+  "bandInpaint": 128,
+  "meanBg": [
+    227,
+    210,
+    198
+  ]
+}

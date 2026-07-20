@@ -1,0 +1,41 @@
+{
+  "endpoint": "http://127.0.0.1:8080/v1/images/edits",
+  "model": "comfy/illustrious-mmmix-v8",
+  "size": "1024x1664",
+  "prompt": "seamless upward continuation of the same portrait frame, preserve the original character face hair and upper body exactly as locked in the source region, naturally continue only the existing warm indoor background above the head: soft wall bokeh and ambient light, match the source color temperature and exposure, no dark void, no green cast, no second face, no extra person, no hands above the head, no new hair accessories, seamless soft join at the top edge",
+  "image": "u1r-up-r1-base-1024x1664.png",
+  "mask": "u1r-up-r1-mask-softseam-112-1024x1664.png",
+  "extra": {
+    "lora_keys": [
+      "illustrious-masterpiece-v3",
+      "bss-detail-enhancer-v3",
+      "bss-visual-enhancer-v3",
+      "bss-skin-texture-v2",
+      "eyes-for-illustrious",
+      "dramatic-lighting-slider"
+    ],
+    "face_detailer": false,
+    "denoise": 0.78,
+    "seam_feather": 112,
+    "outpaint_direction": "up",
+    "prompt_optimize": false,
+    "seed": 424242
+  },
+  "geometry": {
+    "mode": "extend",
+    "direction": "up",
+    "sourceWidth": 1024,
+    "sourceHeight": 1024,
+    "targetWidth": 1024,
+    "targetHeight": 1664,
+    "extensionPixels": 640,
+    "seamOverlapPixels": 112,
+    "sourceScale": 1,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 640,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "case": "U1-R-up-r1-promptfix",
+  "hypothesis": "Remove open-empty-space void phrasing; emphasize warm indoor bg continuity and anti-void/anti-green"
+}

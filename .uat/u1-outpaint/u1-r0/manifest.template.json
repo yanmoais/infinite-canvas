@@ -1,0 +1,460 @@
+{
+  "schemaVersion": "u1-r0-manifest-v1",
+  "manifestId": "u1-r0-template",
+  "status": "TEMPLATE",
+  "requestHashSpec": "u1-r0-request-v1",
+  "createdAt": null,
+  "notes": [
+    "TEMPLATE only. Does not freeze real asset SHAs, compiled prompts, pad/mask, workflow hash, or code fingerprint.",
+    "Do not submit GPU cells from this file. Copy to manifest.json and complete all null SHA fields before FROZEN.",
+    "A/B may only differ in loras / actual LoRA assets. Shared compiled positive/negative per direction.",
+    "C0-3 bare receipt 5d440fec-1ab0-49da-941e-1d694a43069d proves protocol-level empty actualLoras+complete; each B cell still needs its own complete empty receipt at runtime.",
+    "Denoise/seam/extensionRatio below are historical U1-A starting points, not frozen experiment values until PRE_REG completes."
+  ],
+  "matrix": {
+    "directions": [
+      "up",
+      "down",
+      "outward"
+    ],
+    "seeds": [
+      424242,
+      424243,
+      777001
+    ],
+    "groups": [
+      "A",
+      "B"
+    ],
+    "plannedCells": 18,
+    "plannedPairs": 9
+  },
+  "source": {
+    "path": ".uat/u1-outpaint/baseline/u1-character-baseline.png",
+    "sha256": null,
+    "width": 1024,
+    "height": 1024
+  },
+  "model": {
+    "capabilityId": "comfy.image.illustrious-mmmix-v8",
+    "checkpointId": "comfy/illustrious-mmmix-v8",
+    "checkpointFile": "models/checkpoints/illustriousxlMmmix_v80.safetensors",
+    "sha256": null
+  },
+  "groupA": {
+    "profileId": null,
+    "profileVersion": null,
+    "profileHash": null,
+    "loras": [
+      {
+        "key": "illustrious-masterpiece-v3",
+        "modelStrength": null,
+        "clipStrength": null,
+        "sha256": null
+      },
+      {
+        "key": "bss-detail-enhancer-v3",
+        "modelStrength": null,
+        "clipStrength": null,
+        "sha256": null
+      },
+      {
+        "key": "bss-visual-enhancer-v3",
+        "modelStrength": null,
+        "clipStrength": null,
+        "sha256": null
+      },
+      {
+        "key": "bss-skin-texture-v2",
+        "modelStrength": null,
+        "clipStrength": null,
+        "sha256": null
+      },
+      {
+        "key": "eyes-for-illustrious",
+        "modelStrength": null,
+        "clipStrength": null,
+        "sha256": null
+      },
+      {
+        "key": "dramatic-lighting-slider",
+        "modelStrength": null,
+        "clipStrength": null,
+        "sha256": null
+      }
+    ]
+  },
+  "groupB": {
+    "loras": [],
+    "requestLoraKeys": []
+  },
+  "promptsByDirection": {
+    "up": {
+      "positive": {
+        "text": "",
+        "sha256": null
+      },
+      "negative": {
+        "text": "",
+        "sha256": null
+      }
+    },
+    "down": {
+      "positive": {
+        "text": "",
+        "sha256": null
+      },
+      "negative": {
+        "text": "",
+        "sha256": null
+      }
+    },
+    "outward": {
+      "positive": {
+        "text": "",
+        "sha256": null
+      },
+      "negative": {
+        "text": "",
+        "sha256": null
+      }
+    }
+  },
+  "sampling": {
+    "sampler": null,
+    "scheduler": null,
+    "steps": null,
+    "cfg": null,
+    "denoiseByDirection": {
+      "up": 0.78,
+      "down": 0.6,
+      "outward": 0.78,
+      "left": 0.7,
+      "right": 0.7
+    },
+    "seamByDirection": {
+      "up": 112,
+      "down": 96,
+      "outward": 104,
+      "left": 112,
+      "right": 112
+    },
+    "extensionRatioByDirection": {
+      "up": 0.625,
+      "down": 0.625,
+      "outward": 0.625,
+      "left": 0.625,
+      "right": 0.625
+    }
+  },
+  "geometryDefaults": {
+    "sourceWidth": 1024,
+    "sourceHeight": 1024,
+    "referenceMode": "none"
+  },
+  "artifactsByDirection": {
+    "up": {
+      "base": {
+        "sha256": null
+      },
+      "pad": {
+        "sha256": null
+      },
+      "mask": {
+        "sha256": null
+      },
+      "targetWidth": null,
+      "targetHeight": null
+    },
+    "down": {
+      "base": {
+        "sha256": null
+      },
+      "pad": {
+        "sha256": null
+      },
+      "mask": {
+        "sha256": null
+      },
+      "targetWidth": null,
+      "targetHeight": null
+    },
+    "outward": {
+      "base": {
+        "sha256": null
+      },
+      "pad": {
+        "sha256": null
+      },
+      "mask": {
+        "sha256": null
+      },
+      "targetWidth": null,
+      "targetHeight": null
+    }
+  },
+  "workflow": {
+    "bindingId": "txt2img_template",
+    "version": null,
+    "sha256": null,
+    "notes": "Masked outpaint mutator chain must be listed in mutators; binding id is a placeholder until PRE_REG freezes."
+  },
+  "mutators": [
+    {
+      "id": "canvas_inpaint",
+      "version": null
+    }
+  ],
+  "codeFingerprint": {
+    "commit": null,
+    "worktreeDiffSha256": null
+  },
+  "qa": {
+    "qaProfileVersion": "u1-qa-profile-v1",
+    "thresholdProfileVersion": "u1-qa-threshold-v1",
+    "taxonomyId": "u1-r0-taxonomy",
+    "taxonomyVersion": "u1-r0-taxonomy-v1",
+    "pairReportSchemaVersion": "u1-r0-pair-report-v1"
+  },
+  "emptyLoraProofPolicy": {
+    "requireRequestLoraKeysEmpty": true,
+    "requireExecutionPlanLorasEmpty": true,
+    "requireActualLorasEmpty": true,
+    "requireLoraEvidenceComplete": true,
+    "forbidIncompleteOrUnknownAsBare": true,
+    "c0_3BareEvidenceReceiptId": "5d440fec-1ab0-49da-941e-1d694a43069d"
+  },
+  "triggerWordPolicy": {
+    "abShareCompiledPrompts": true,
+    "forbidProfileAutoTriggerInjection": true
+  },
+  "plannedCells": [
+    {
+      "cellId": "u1r0-up-424242-A",
+      "direction": "up",
+      "seed": 424242,
+      "group": "A",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-up-424242-B",
+      "direction": "up",
+      "seed": 424242,
+      "group": "B",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-up-424243-A",
+      "direction": "up",
+      "seed": 424243,
+      "group": "A",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-up-424243-B",
+      "direction": "up",
+      "seed": 424243,
+      "group": "B",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-up-777001-A",
+      "direction": "up",
+      "seed": 777001,
+      "group": "A",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-up-777001-B",
+      "direction": "up",
+      "seed": 777001,
+      "group": "B",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-down-424242-A",
+      "direction": "down",
+      "seed": 424242,
+      "group": "A",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-down-424242-B",
+      "direction": "down",
+      "seed": 424242,
+      "group": "B",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-down-424243-A",
+      "direction": "down",
+      "seed": 424243,
+      "group": "A",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-down-424243-B",
+      "direction": "down",
+      "seed": 424243,
+      "group": "B",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-down-777001-A",
+      "direction": "down",
+      "seed": 777001,
+      "group": "A",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-down-777001-B",
+      "direction": "down",
+      "seed": 777001,
+      "group": "B",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-outward-424242-A",
+      "direction": "outward",
+      "seed": 424242,
+      "group": "A",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-outward-424242-B",
+      "direction": "outward",
+      "seed": 424242,
+      "group": "B",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-outward-424243-A",
+      "direction": "outward",
+      "seed": 424243,
+      "group": "A",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-outward-424243-B",
+      "direction": "outward",
+      "seed": 424243,
+      "group": "B",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-outward-777001-A",
+      "direction": "outward",
+      "seed": 777001,
+      "group": "A",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    },
+    {
+      "cellId": "u1r0-outward-777001-B",
+      "direction": "outward",
+      "seed": 777001,
+      "group": "B",
+      "requestSha256": null,
+      "requestHashInput": null,
+      "requestHashInputJcsUtf8Base64": null
+    }
+  ],
+  "pairSlots": [
+    {
+      "pairId": "u1r0-pair-up-424242",
+      "direction": "up",
+      "seed": 424242,
+      "aCellId": "u1r0-up-424242-A",
+      "bCellId": "u1r0-up-424242-B"
+    },
+    {
+      "pairId": "u1r0-pair-up-424243",
+      "direction": "up",
+      "seed": 424243,
+      "aCellId": "u1r0-up-424243-A",
+      "bCellId": "u1r0-up-424243-B"
+    },
+    {
+      "pairId": "u1r0-pair-up-777001",
+      "direction": "up",
+      "seed": 777001,
+      "aCellId": "u1r0-up-777001-A",
+      "bCellId": "u1r0-up-777001-B"
+    },
+    {
+      "pairId": "u1r0-pair-down-424242",
+      "direction": "down",
+      "seed": 424242,
+      "aCellId": "u1r0-down-424242-A",
+      "bCellId": "u1r0-down-424242-B"
+    },
+    {
+      "pairId": "u1r0-pair-down-424243",
+      "direction": "down",
+      "seed": 424243,
+      "aCellId": "u1r0-down-424243-A",
+      "bCellId": "u1r0-down-424243-B"
+    },
+    {
+      "pairId": "u1r0-pair-down-777001",
+      "direction": "down",
+      "seed": 777001,
+      "aCellId": "u1r0-down-777001-A",
+      "bCellId": "u1r0-down-777001-B"
+    },
+    {
+      "pairId": "u1r0-pair-outward-424242",
+      "direction": "outward",
+      "seed": 424242,
+      "aCellId": "u1r0-outward-424242-A",
+      "bCellId": "u1r0-outward-424242-B"
+    },
+    {
+      "pairId": "u1r0-pair-outward-424243",
+      "direction": "outward",
+      "seed": 424243,
+      "aCellId": "u1r0-outward-424243-A",
+      "bCellId": "u1r0-outward-424243-B"
+    },
+    {
+      "pairId": "u1r0-pair-outward-777001",
+      "direction": "outward",
+      "seed": 777001,
+      "aCellId": "u1r0-outward-777001-A",
+      "bCellId": "u1r0-outward-777001-B"
+    }
+  ]
+}

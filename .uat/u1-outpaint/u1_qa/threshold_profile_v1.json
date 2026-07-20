@@ -1,0 +1,38 @@
+{
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "schemaVersion": "u1-qa-v1",
+  "notes": [
+    "Temporary explicit thresholds promoted from finalize_u1a.py + dual-review consensus.",
+    "Direction overrides may be added later without renaming the profile key.",
+    "protectedCoreDiffRatio is soft-seam-core only; seam continuity is separate."
+  ],
+  "global": {
+    "darkPctFail": 70.0,
+    "darkPctWarn": 40.0,
+    "absGdomWarn": 15.0,
+    "protectedCoreDiffWarn": 0.02,
+    "protectedCoreDiffFail": 0.05,
+    "seamLumaDeltaWarn": 28.0,
+    "seamLumaDeltaFail": 48.0,
+    "seamRgbDeltaWarn": 36.0,
+    "seamRgbDeltaFail": 60.0,
+    "seamGradPeakWarn": 55.0,
+    "seamGradPeakFail": 85.0,
+    "farDarkPctWarn": 45.0,
+    "farDarkPctFail": 70.0,
+    "relGdomWarn": 18.0,
+    "relGdomFail": 30.0,
+    "relDeltaEWarn": 22.0,
+    "relDeltaEFail": 35.0
+  },
+  "directions": {
+    "up": {},
+    "down": {},
+    "left": {},
+    "right": {},
+    "outward": {
+      "absGdomWarn": 15.0,
+      "absGdomFail": 40.0
+    }
+  }
+}

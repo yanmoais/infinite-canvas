@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "2",
+  "receiptId": "7603dcac-adea-4910-a507-a0a4af6ca15c",
+  "planned": {
+    "baseCapabilityId": "comfy.image.zimage-union-controlnet",
+    "baseModelId": null,
+    "requestedReferenceMode": "none",
+    "workflowBindingId": null,
+    "templateField": "txt2img_template"
+  },
+  "primaryStageId": "primary",
+  "finalStageId": "primary",
+  "stages": [
+    {
+      "stageId": "primary",
+      "stageKind": "primary",
+      "taskResult": "failed",
+      "promptId": null,
+      "baseCapabilityId": "comfy.image.zimage-union-controlnet",
+      "workflowBindingId": null,
+      "workflowHash": null,
+      "workflowFile": null,
+      "templateField": "txt2img_template",
+      "effectiveReferenceMode": "none",
+      "adapterKind": null,
+      "mutators": [],
+      "fallback": {
+        "used": false,
+        "requestedReferenceMode": "none",
+        "effectiveReferenceMode": "none",
+        "preset": null
+      },
+      "assetVersions": [],
+      "actualLoras": [],
+      "loraEvidence": {
+        "status": "unknown",
+        "opaqueSources": [
+          {
+            "nodeId": null,
+            "loaderClass": null,
+            "reason": "final_workflow_not_observed"
+          }
+        ]
+      },
+      "comfyExecutionSeconds": null,
+      "error": "Image preset has no txt2img template: zimage-union-controlnet"
+    }
+  ],
+  "actual": {
+    "stageId": "primary",
+    "stageKind": "primary",
+    "taskResult": "failed",
+    "promptId": null,
+    "baseCapabilityId": "comfy.image.zimage-union-controlnet",
+    "workflowBindingId": null,
+    "workflowHash": null,
+    "workflowFile": null,
+    "templateField": "txt2img_template",
+    "effectiveReferenceMode": "none",
+    "adapterKind": null,
+    "mutators": [],
+    "fallback": {
+      "used": false,
+      "requestedReferenceMode": "none",
+      "effectiveReferenceMode": "none",
+      "preset": null
+    },
+    "assetVersions": [],
+    "actualLoras": [],
+    "loraEvidence": {
+      "status": "unknown",
+      "opaqueSources": [
+        {
+          "nodeId": null,
+          "loaderClass": null,
+          "reason": "final_workflow_not_observed",
+          "stageId": "primary"
+        }
+      ]
+    },
+    "comfyExecutionSeconds": null,
+    "error": "Image preset has no txt2img template: zimage-union-controlnet",
+    "totalComfyExecutionSeconds": 0.0
+  }
+}

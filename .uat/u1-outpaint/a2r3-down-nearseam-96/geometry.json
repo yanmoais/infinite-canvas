@@ -1,0 +1,11 @@
+{
+  "mode": "extend",
+  "direction": "down",
+  "sourceWidth": 1024,
+  "sourceHeight": 1024,
+  "targetWidth": 1024,
+  "targetHeight": 1664,
+  "extensionPixels": 640,
+  "seamOverlapPixels": 96,
+  "nearEdgeStructurePixels": 96
+}

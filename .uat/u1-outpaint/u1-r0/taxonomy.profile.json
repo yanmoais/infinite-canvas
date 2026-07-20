@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "u1-r0-taxonomy-v1",
+  "taxonomyId": "u1-r0-taxonomy",
+  "taxonomyVersion": "u1-r0-taxonomy-v1",
+  "labels": [
+    "second_subject",
+    "camera_prop",
+    "anatomy_break",
+    "protect_violation",
+    "hard_seam",
+    "bg_incoherent",
+    "unexpected_object"
+  ],
+  "dedupePriority": [
+    "second_subject",
+    "camera_prop",
+    "anatomy_break",
+    "unexpected_object"
+  ],
+  "severityWeights": {
+    "block": 3,
+    "error": 2,
+    "warn": 1
+  },
+  "unexpectedObjectSubtypes": [
+    "extra_face",
+    "extra_limb",
+    "unexpected_accessory",
+    "other"
+  ],
+  "notes": [
+    "Camera entities always canonical camera_prop; never unexpected_object.subtype=camera.",
+    "Extra face that forms a second person: second_subject + subtype=extra_face.",
+    "Each physical finding recorded once; conflict uses dedupePriority."
+  ]
+}

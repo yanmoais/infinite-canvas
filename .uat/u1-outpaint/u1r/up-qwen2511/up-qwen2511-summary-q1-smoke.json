@@ -1,0 +1,36 @@
+{
+  "stage": "U1-R-up-qwen2511-outpaint",
+  "tag": "q1-smoke",
+  "params": {
+    "ext": 320,
+    "steps": 28,
+    "blend": 72,
+    "preset": "the-witness-qwen-edit2511-fidelity",
+    "engine": "qwen-image-edit-2511 + force-stitch"
+  },
+  "finishedAt": "2026-07-17T22:53:52+0800",
+  "matrix": [
+    {
+      "seed": 424242,
+      "caseDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-qwen2511/up-qwen2511-s424242-q1-smoke",
+      "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-qwen2511/up-qwen2511-s424242-q1-smoke/u1r-up-qwen2511-s424242-result.png",
+      "elapsedSec": 467.1,
+      "promptId": "a25c5ad3-d7b5-4663-b330-5f895181e768",
+      "executionSeconds": 466.2,
+      "provisional": "METRIC_PASS_PENDING_VISUAL",
+      "darkPct": 29.7,
+      "farDarkPct": 5.0,
+      "gdom": -4.47,
+      "protectedCoreDiffRatio": 0.0,
+      "seamWorst": {
+        "name": "seam_up",
+        "lumaDelta": 0.49,
+        "rgbDelta": 0.74,
+        "gradPeak": 1.17
+      },
+      "autoFindings": []
+    }
+  ],
+  "releaseRule": "UP released only if all seeds pass BOSS visual multi-sample gate.",
+  "note": "Phase A1 per GPT research ranking adapted for commercial self-host (Qwen Apache 2.0)."
+}

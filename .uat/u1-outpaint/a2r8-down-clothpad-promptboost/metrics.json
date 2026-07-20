@@ -1,0 +1,21 @@
+{
+  "protectedRegionDiff": {
+    "differentPixels": 94100,
+    "totalPixels": 1048576,
+    "ratio": 0.089741,
+    "changedYRange": [
+      929,
+      1023
+    ],
+    "changedRows": 95
+  },
+  "generatedRegionMeanRgb": [
+    89.48,
+    75.81,
+    41.44
+  ],
+  "generatedRegionGreenDominance": 10.35,
+  "run": "a2r8b-rgba-mask",
+  "sourcePromptId": "17658de9-915e-49c4-9001-fdc76716d5c0",
+  "sourceFile": "/Users/zhenbao/ComfyUI/output/llama_bridge\\canvas/illustrious-mmmix-v8-inpaint_00055_.png"
+}

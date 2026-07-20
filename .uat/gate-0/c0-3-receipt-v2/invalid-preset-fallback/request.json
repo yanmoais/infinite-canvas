@@ -1,0 +1,13 @@
+{
+  "model": "comfy/not-a-real-preset",
+  "prompt": "masterpiece, best quality, simple portrait of one woman, neutral studio background",
+  "n": 1,
+  "size": "512x512",
+  "extra": {
+    "prompt_optimize": false,
+    "reference_mode": "none",
+    "face_detailer": false,
+    "seed": 424245,
+    "lora_keys": []
+  }
+}

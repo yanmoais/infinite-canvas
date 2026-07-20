@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "image_name": "llama_upload_1784300356_3b697756.png",
+  "media": [
+    "/nannan/comfy-view?filename=concept_00004_.png&subfolder=the_witness%5Cqwen_edit2511_fidelity&type=output"
+  ],
+  "preset": "the-witness-qwen-edit2511-fidelity",
+  "prompt_id": "9e025ce5-8a78-4ea9-8ef1-e7635ace5cfd",
+  "execution_seconds": 309.1
+}

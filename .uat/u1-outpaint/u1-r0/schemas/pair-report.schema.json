@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "u1-r0-pair-report-v1",
+  "title": "U1-R0 pair comparison report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "pairReportSchemaVersion",
+    "pairId",
+    "direction",
+    "seed",
+    "a",
+    "b",
+    "pairDisposition",
+    "comparisonReasons"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "u1-r0-pair-report-v1" },
+    "pairReportSchemaVersion": { "const": "u1-r0-pair-report-v1" },
+    "pairId": { "type": "string", "minLength": 1 },
+    "direction": { "enum": ["up", "down", "left", "right", "outward"] },
+    "seed": { "type": "integer", "minimum": 0 },
+    "a": { "$ref": "#/$defs/sideEvidence" },
+    "b": { "$ref": "#/$defs/sideEvidence" },
+    "pairDisposition": { "enum": ["B_WIN", "A_WIN", "TIE", "INVALID"] },
+    "comparisonReasons": {
+      "type": "object",
+      "required": ["ruleIndex", "summary"],
+      "additionalProperties": true,
+      "properties": {
+        "ruleIndex": { "type": "integer", "minimum": 0, "maximum": 11 },
+        "summary": { "type": "string" }
+      }
+    },
+    "qaProfileVersion": { "type": "string" },
+    "thresholdProfileVersion": { "type": "string" },
+    "taxonomyVersion": { "type": "string" }
+  },
+  "$defs": {
+    "sideEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cellId", "group", "selectedAttemptId", "readable", "protectedHardGateFail", "otherHardFail", "findings", "severityScore", "guardNonWorse"],
+      "properties": {
+        "cellId": { "type": "string" },
+        "group": { "enum": ["A", "B"] },
+        "selectedAttemptId": { "type": ["string", "null"] },
+        "readable": { "type": "boolean" },
+        "protectedHardGateFail": { "type": "boolean" },
+        "otherHardFail": { "type": "boolean" },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "severity"],
+            "properties": {
+              "label": {
+                "enum": [
+                  "second_subject",
+                  "camera_prop",
+                  "anatomy_break",
+                  "protect_violation",
+                  "hard_seam",
+                  "bg_incoherent",
+                  "unexpected_object"
+                ]
+              },
+              "subtype": {
+                "enum": ["extra_face", "extra_limb", "unexpected_accessory", "other"]
+              },
+              "severity": { "enum": ["block", "error", "warn"] },
+              "region": { "type": "string" },
+              "cropName": { "type": "string" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "severityScore": { "type": "number", "minimum": 0 },
+        "guardNonWorse": { "type": "boolean" },
+        "qaReportPath": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

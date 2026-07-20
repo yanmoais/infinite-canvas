@@ -2,8 +2,15 @@
 
 ## Unreleased
 
-+ [调整] 同步官方 v0.9.0，接入画布插件系统、可调侧栏与资产管理、提示词图片引用、透明背景和运行时统计配置，同时保留本地 Comfy、画面扩图、生成契约与 Agent 工具桥二开。
-- [调整] 文档/开发计划：将统一总控压缩为 Gate 0→G 单一队列，新增主线/PoC/Gateway 逐文件合流与运行环境隔离规则，并把 U1-R0 manifest、实际 LoRA 完整性证明和 18 cells 裸模 A/B 设为 Gate A 前置
+- [新增] 无限画布接入「几乎原图复刻」独立参考模式 `identity_clone`：Mission_manager 模板 `sdxl-identity-clone-api.json`（FaceID PLUS V2 + IPAdapter 风格构图 + Canny/Tile + denoise 0.22），`illustrious-mmmix-v8` 支持该模式，画布 Comfy 设置下拉可直接选择。
+- [调整] Gate 0 / C0-Z 独立验收通过：约定测试 7/7、diff check 与五轮独立 review 终轮 PASS；加固 U1-R0 FROZEN schema/语义门（固定矩阵身份、顶层对齐、A/B 仅 LoRA 差异、目标尺寸冻结）；Gate 0 = DONE，真实 U1-R0 manifest 与 18 cells 仍未开跑。
+- [调整] Gate 0 / C0-6 测试与文档：U1-R0 执行合同与 schema 落盘至主线（manifest 模板 / request hash / attempts / pairs / taxonomy）；新增离线合同测试；真实实验 manifest 与 18 cells 仍未开跑。
+- [调整] Gate 0 / C0-5 UI 调用链合流：Outpaint 支持续接模型选择、source lock 与跨模型显式空 LoRA；提交前走 `preflightComfyOutpaint`，主线提示词编译后写入 Shared ExecutionPlan。
+- [调整] Gate 0 / C0-4 Shared Core 合流：`OperationProfile.modelOverride` 跨模型续接显式清空 LoRA；source node provenance、`ipadapter_template` 选择、`preflightComfyOutpaint` 与资产 ID 规范化已合入；资产诊断后缀识别 Gateway 中文 `(ComfyUI 未扫到)` / `(Loader 无枚举)`，不可执行 binding 不再写入 ExecutionPlan；仅 lib/service，未接 UI。
+- [调整] 同步官方 v0.9.0，接入画布插件系统、可调侧栏与资产管理、提示词图片引用、透明背景和运行时统计配置，同时保留本地 Comfy、画面扩图、生成契约与 Agent 工具桥二开。
+- [修复] Outpaint 已停用 LoRA profile 不再出现在前端推荐列表，也不能通过显式 profile ID 继续执行；历史 A/B 备注收敛为请求级观察，不再把缺少 `actualLoras` 完整性的旧回执写成 LoRA 因果结论。
+- [新增] 生成回执 v2 已加载共享 Gateway：最终 ComfyUI 执行图的逐阶段实际 LoRA、完整性与 opaque loader 记录支持跨阶段聚合；planned/actual preset 分离与 `fallback.preset` 可表达请求侧回退；bare、动态 LoRA、pre-submit `unknown` 与 invalid-preset 回退的可复算在线证据见 `.uat/gate-0/c0-3-receipt-v2/`，FaceID/多阶段 live 验证留 Gate B。
+- [调整] 文档/开发计划：将统一总控压缩为 Gate 0→G 单一队列，新增主线/PoC/Gateway 逐文件合流与运行环境隔离规则，并把 U1-R0 manifest、实际 LoRA 完整性证明和 18 cells 裸模 A/B 设为 Gate A 内 U1-R0 开跑前置。
 
 - [调整] Gate A / U1 从“等 BOSS 瞟一眼终验”改为 U1-QA 结构化视觉验收 + U1-R 定向回修 + U1-Z 终验；经 Claude Fable / GPT Sol 对抗审查回写 seamContinuity 硬门、qa-report 契约、止损与出口定义
 
@@ -32,11 +39,11 @@
 
 - [修复] 修正 Windows CLIP Vision 物理资产的 Comfy-Org 溯源，披露 InsightFace 非商用许可边界，补齐回执 `hashStatus` 类型与 stage 深校验，并修复 Mission_manager 全仓两个存量红测
 
-- [调整] 统一开发计划改为 Gate A→G 单一执行队列：先做 U1 Outpaint 五方向实图验收，再做 U2-E Windows 编辑 smoke、U2-D 自动引用、U3/U4 Pose、Character Atelier 与 Story
+- [调整] 历史总计划曾采用 Gate A→G 队列；该入口已被当前 Gate 0 收敛门取代，U1 Outpaint、U2-E Windows 编辑 smoke、U2-D 自动引用、U3/U4 Pose、Character Atelier 与 Story 均须按 Gate 0→G 顺序推进。
 
 - [修复] 根据 U2-E 独立复审将资产哈希状态从误导性的 `verified` 改为 `registered`，把 InsightFace 许可元数据透传到 Capability/回执，并补齐回执边界负例和旧回执降级说明
 
-- [调整] U2-E 修复复审无 Blocking/P0 并允许进入 U1；代码与契约冻结，Windows 真实编辑 smoke 仍保留为 U1 后的独立视觉验收门
+- [调整] U2-E 修复复审当时无 Blocking/P0；“允许进入 U1”的旧放行结论已被当前 Gate 0 收敛门取代。Windows 真实编辑 smoke 保留为 Gate B 独立视觉验收门。
 
 - [新增] 接入 `/api/v1/capabilities`、WorkflowBinding 与 RuntimeAssetRequirement；普通画布生图和图片重试现已执行 ComfyUI Preflight，不可用时阻断、降级时展示原因
 

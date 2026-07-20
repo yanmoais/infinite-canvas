@@ -1,0 +1,179 @@
+{
+  "schemaVersion": "u1-qa-v1",
+  "qaProfileVersion": "u1-qa-profile-v1",
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17",
+  "direction": "up",
+  "denoise": 0.55,
+  "seam": 80,
+  "size": "1024x1664",
+  "geometry": {
+    "targetWidth": 1024,
+    "targetHeight": 1664,
+    "extensionPixels": 640,
+    "seamOverlapPixels": 80,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 640,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "sizeMismatch": null,
+  "protectedCoreDiff": {
+    "box": [
+      0,
+      720,
+      1024,
+      1664
+    ],
+    "differentPixels": 0,
+    "totalPixels": 966656,
+    "ratio": 0.0,
+    "metricName": "protectedCoreDiffRatio"
+  },
+  "protectedRegionDiff": {
+    "differentPixels": 0,
+    "totalPixels": 966656,
+    "ratio": 0.0
+  },
+  "generatedRegionMeanRgb": [
+    160.13,
+    155.51,
+    149.97
+  ],
+  "generatedRegionGreenDominance": 0.46,
+  "generatedRegionGreenishPct": 0.0,
+  "generatedRegionWhiteishPct": 49.0,
+  "generatedRegionDarkPct": 3.9,
+  "extensionStats": {
+    "sampleCount": 163840,
+    "meanRgb": [
+      160.13,
+      155.51,
+      149.97
+    ],
+    "gdom": 0.46,
+    "darkPct": 3.9,
+    "greenishPct": 0.0,
+    "whiteishPct": 49.0,
+    "box": [
+      0,
+      0,
+      1024,
+      640
+    ]
+  },
+  "voidDarkSpatial": {
+    "farDarkPct": 6.7,
+    "farDarkPctAvg": 6.7,
+    "worstRegion": "far_extension",
+    "regions": [
+      {
+        "sampleCount": 81920,
+        "meanRgb": [
+          144.43,
+          141.54,
+          136.75
+        ],
+        "gdom": 0.95,
+        "darkPct": 6.7,
+        "greenishPct": 0.0,
+        "whiteishPct": 37.8,
+        "box": [
+          0,
+          0,
+          1024,
+          320
+        ],
+        "name": "far_extension"
+      }
+    ]
+  },
+  "relativeColor": {
+    "sourceBand": {
+      "sampleCount": 10240,
+      "meanRgb": [
+        105.89,
+        95.99,
+        91.27
+      ],
+      "gdom": -2.59,
+      "darkPct": 47.8,
+      "greenishPct": 0.0,
+      "whiteishPct": 23.7,
+      "box": [
+        0,
+        640,
+        1024,
+        680
+      ]
+    },
+    "generatedBand": {
+      "sampleCount": 10240,
+      "meanRgb": [
+        174.39,
+        158.2,
+        149.12
+      ],
+      "gdom": -3.55,
+      "darkPct": 4.4,
+      "greenishPct": 0.0,
+      "whiteishPct": 55.9,
+      "box": [
+        0,
+        600,
+        1024,
+        640
+      ]
+    },
+    "relGdom": -0.96,
+    "relDeltaE": 66.58
+  },
+  "seamContinuity": {
+    "seams": [
+      {
+        "name": "seam_up",
+        "axis": "horizontal",
+        "boundary": 640,
+        "srcMeanRgb": [
+          174.67,
+          159.27,
+          150.95
+        ],
+        "genMeanRgb": [
+          107.14,
+          98.3,
+          95.04
+        ],
+        "lumaDelta": 62.0,
+        "rgbDelta": 106.79,
+        "gradPeak": 62.0
+      }
+    ],
+    "worst": {
+      "name": "seam_up",
+      "lumaDelta": 62.0,
+      "rgbDelta": 106.79,
+      "gradPeak": 62.0
+    }
+  },
+  "sha256": "724b6edf7bc44ae6187502478f646c77712151700ec83fff1167865f4d0c3990",
+  "sourcePromptId": "57fc34f0-610b-492c-a46a-93d32399515c",
+  "windowsOutput": null,
+  "recoveredFromServer": null,
+  "provisional": "METRIC_FAIL",
+  "provisionalReasons": [
+    "seamLumaDeltaFail",
+    "seamLumaDeltaWarn",
+    "seamRgbDeltaFail",
+    "seamRgbDeltaWarn",
+    "seamGradPeakWarn",
+    "relDeltaE>=35.0",
+    "relDeltaE>=22.0"
+  ],
+  "seed": 424242,
+  "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-r4-hybrid-narrow-inpaint/u1r-up-r4-result.png",
+  "basePath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-r4-hybrid-narrow-inpaint/u1r-up-r4-base-1024x1664.png",
+  "resultSha256": "724b6edf7bc44ae6187502478f646c77712151700ec83fff1167865f4d0c3990",
+  "baseSha256": "33084ab6c75389843308556708ad35d5abb695b8c3c2ceb49e099ca4a990cf04",
+  "requestSha256": "e7e4d79fa17feb1517236e1b92f92da145eb9306d9e0c4716c3d300d30dece1d"
+}

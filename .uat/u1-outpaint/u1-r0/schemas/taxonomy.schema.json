@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "u1-r0-taxonomy-v1",
+  "title": "U1-R0 Taxonomy Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "taxonomyId", "taxonomyVersion", "labels", "dedupePriority", "severityWeights", "unexpectedObjectSubtypes"],
+  "properties": {
+    "schemaVersion": { "const": "u1-r0-taxonomy-v1" },
+    "taxonomyId": { "const": "u1-r0-taxonomy" },
+    "taxonomyVersion": { "type": "string", "minLength": 1 },
+    "labels": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "second_subject",
+          "camera_prop",
+          "anatomy_break",
+          "protect_violation",
+          "hard_seam",
+          "bg_incoherent",
+          "unexpected_object"
+        ]
+      }
+    },
+    "dedupePriority": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "enum": ["second_subject", "camera_prop", "anatomy_break", "unexpected_object"]
+      }
+    },
+    "severityWeights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["block", "error", "warn"],
+      "properties": {
+        "block": { "const": 3 },
+        "error": { "const": 2 },
+        "warn": { "const": 1 }
+      }
+    },
+    "unexpectedObjectSubtypes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["extra_face", "extra_limb", "unexpected_accessory", "other"]
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

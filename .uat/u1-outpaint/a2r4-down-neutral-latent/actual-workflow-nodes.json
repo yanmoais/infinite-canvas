@@ -1,0 +1,204 @@
+[
+  {
+    "nodeId": "1",
+    "classType": "CheckpointLoaderSimple",
+    "title": "Load Illustrious XL Checkpoint",
+    "inputs": {
+      "ckpt_name": "illustriousxlMmmix_v80.safetensors"
+    }
+  },
+  {
+    "nodeId": "7",
+    "classType": "KSampler",
+    "title": "Sampler",
+    "inputs": {
+      "model": [
+        "15",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "21",
+        0
+      ],
+      "seed": 424242,
+      "steps": 28,
+      "cfg": 7.5,
+      "sampler_name": "euler_ancestral",
+      "scheduler": "normal",
+      "denoise": 0.8
+    }
+  },
+  {
+    "nodeId": "10",
+    "classType": "LoraLoader",
+    "title": "LoRA - Illustrious Masterpiece v3",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "clip": [
+        "1",
+        1
+      ],
+      "lora_name": "illustrious_masterpieces_v3.safetensors",
+      "strength_model": 0.65,
+      "strength_clip": 0.65
+    }
+  },
+  {
+    "nodeId": "11",
+    "classType": "LoraLoader",
+    "title": "LoRA - BSS Detail Enhancer v3",
+    "inputs": {
+      "model": [
+        "10",
+        0
+      ],
+      "clip": [
+        "10",
+        1
+      ],
+      "lora_name": "bss_detail_enhancer_v3.safetensors",
+      "strength_model": 0.7,
+      "strength_clip": 0.7
+    }
+  },
+  {
+    "nodeId": "12",
+    "classType": "LoraLoader",
+    "title": "LoRA - BSS Visual Enhancer v3",
+    "inputs": {
+      "model": [
+        "11",
+        0
+      ],
+      "clip": [
+        "11",
+        1
+      ],
+      "lora_name": "bss_visual_enhancer_v3.safetensors",
+      "strength_model": 1.0,
+      "strength_clip": 1.0
+    }
+  },
+  {
+    "nodeId": "13",
+    "classType": "LoraLoader",
+    "title": "LoRA - BSS Skin Texture v2",
+    "inputs": {
+      "model": [
+        "12",
+        0
+      ],
+      "clip": [
+        "12",
+        1
+      ],
+      "lora_name": "bss_skin_texture_v2.safetensors",
+      "strength_model": 0.6,
+      "strength_clip": 0.6
+    }
+  },
+  {
+    "nodeId": "14",
+    "classType": "LoraLoader",
+    "title": "LoRA - Eyes for Illustrious",
+    "inputs": {
+      "model": [
+        "13",
+        0
+      ],
+      "clip": [
+        "13",
+        1
+      ],
+      "lora_name": "eyes_for_illustrious.safetensors",
+      "strength_model": 0.6,
+      "strength_clip": 0.6
+    }
+  },
+  {
+    "nodeId": "15",
+    "classType": "LoraLoader",
+    "title": "LoRA - Dramatic Lighting Slider",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "clip": [
+        "14",
+        1
+      ],
+      "lora_name": "dramatic_lighting_slider.safetensors",
+      "strength_model": 1.5,
+      "strength_clip": 1.5
+    }
+  },
+  {
+    "nodeId": "20",
+    "classType": "VAEEncodeForInpaint",
+    "title": "Canvas Inpaint Neutral Encode",
+    "inputs": {
+      "pixels": [
+        "16",
+        0
+      ],
+      "vae": [
+        "2",
+        0
+      ],
+      "mask": [
+        "19",
+        0
+      ],
+      "grow_mask_by": 0
+    }
+  },
+  {
+    "nodeId": "21",
+    "classType": "SetLatentNoiseMask",
+    "title": "Canvas Inpaint Latent",
+    "inputs": {
+      "samples": [
+        "20",
+        0
+      ],
+      "mask": [
+        "19",
+        0
+      ]
+    }
+  },
+  {
+    "nodeId": "25",
+    "classType": "ImageCompositeMasked",
+    "title": "Canvas Inpaint Composite",
+    "inputs": {
+      "destination": [
+        "16",
+        0
+      ],
+      "source": [
+        "8",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "resize_source": true,
+      "mask": [
+        "24",
+        0
+      ]
+    }
+  }
+]

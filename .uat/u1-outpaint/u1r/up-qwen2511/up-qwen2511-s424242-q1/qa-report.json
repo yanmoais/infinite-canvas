@@ -1,0 +1,230 @@
+{
+  "schemaVersion": "u1-qa-v1",
+  "qaProfileVersion": "u1-qa-profile-v1",
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17",
+  "runId": "u1qa-up-r0-1784300356",
+  "direction": "up",
+  "round": 0,
+  "parentRunId": null,
+  "caseDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-qwen2511/up-qwen2511-s424242-q1",
+  "sourceSha256": "298c68780c41bb0f0e70c103563ecee2ec3f1132ce06f75dfa5de73433ee1fbe",
+  "resultSha256": "bf919b3fa736b783865575da9c5155f2b1523675a3a799b339f92b3b1f8d6460",
+  "requestSha256": "e682b2d50c9ad1d846d0e843437a7566853a07bb28d5471a5da9e6db1ebd788c",
+  "seed": 424242,
+  "promptId": null,
+  "workflowHash": null,
+  "operationProfile": null,
+  "actualAssets": null,
+  "recoveredFromServer": null,
+  "readerModel": null,
+  "readerPromptVersion": null,
+  "evaluatedAt": "2026-07-17T22:59:16+0800",
+  "metrics": {
+    "provisional": "METRIC_PASS_PENDING_VISUAL",
+    "provisionalReasons": [],
+    "protectedCoreDiffRatio": 0.0,
+    "darkPct": 29.7,
+    "gdom": -4.47,
+    "whitePct": 6.1,
+    "farDarkPct": 5.0,
+    "relGdom": 1.01,
+    "relDeltaE": 2.56,
+    "seamWorst": {
+      "name": "seam_up",
+      "lumaDelta": 0.49,
+      "rgbDelta": 0.74,
+      "gradPeak": 1.17
+    }
+  },
+  "thresholds": {
+    "darkPctFail": 70.0,
+    "darkPctWarn": 40.0,
+    "absGdomWarn": 15.0,
+    "protectedCoreDiffWarn": 0.02,
+    "protectedCoreDiffFail": 0.05,
+    "seamLumaDeltaWarn": 28.0,
+    "seamLumaDeltaFail": 48.0,
+    "seamRgbDeltaWarn": 36.0,
+    "seamRgbDeltaFail": 60.0,
+    "seamGradPeakWarn": 55.0,
+    "seamGradPeakFail": 85.0,
+    "farDarkPctWarn": 45.0,
+    "farDarkPctFail": 70.0,
+    "relGdomWarn": 18.0,
+    "relGdomFail": 30.0,
+    "relDeltaEWarn": 22.0,
+    "relDeltaEFail": 35.0
+  },
+  "crops": [
+    {
+      "name": "seam.png",
+      "path": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-qwen2511/up-qwen2511-s424242-q1/qa-crops/seam.png",
+      "box": [
+        0,
+        284,
+        1024,
+        356
+      ],
+      "size": [
+        1024,
+        72
+      ],
+      "sha256": "6ae19ab2eec7b8f297e8733656e574b6870736e697f218a7cf5dbe958f6159cc",
+      "kind": "seam",
+      "lossless": true
+    },
+    {
+      "name": "extension.png",
+      "path": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-qwen2511/up-qwen2511-s424242-q1/qa-crops/extension.png",
+      "box": [
+        0,
+        0,
+        1024,
+        320
+      ],
+      "size": [
+        1024,
+        320
+      ],
+      "sha256": "cc2e1255bb2924bf88a8142b31a5763d43f63c068f6c6888d449cc634cd4fc22",
+      "kind": "extension",
+      "lossless": true
+    },
+    {
+      "name": "far_extension.png",
+      "path": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-qwen2511/up-qwen2511-s424242-q1/qa-crops/far_extension.png",
+      "box": [
+        0,
+        0,
+        1024,
+        160
+      ],
+      "size": [
+        1024,
+        160
+      ],
+      "sha256": "a0eac5e83acbfb9fd901bd5c6297748f9acb73f623d4a077b3d8ba8b84843d1b",
+      "kind": "far_extension",
+      "lossless": true
+    },
+    {
+      "name": "corner_tl.png",
+      "path": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-qwen2511/up-qwen2511-s424242-q1/qa-crops/corner_tl.png",
+      "box": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "sha256": "fe9a41eb503a453747f31efe931a4697691c7ee978423306965bb0900fcf178a",
+      "kind": "corner",
+      "lossless": true
+    },
+    {
+      "name": "corner_tr.png",
+      "path": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-qwen2511/up-qwen2511-s424242-q1/qa-crops/corner_tr.png",
+      "box": [
+        768,
+        0,
+        1024,
+        256
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "sha256": "a73c3a3cf4012fae613793ff53db7060bbca2093e0362fa261b321fe8bbeed0b",
+      "kind": "corner",
+      "lossless": true
+    },
+    {
+      "name": "overview.png",
+      "path": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-qwen2511/up-qwen2511-s424242-q1/qa-crops/overview.png",
+      "box": [
+        0,
+        0,
+        1024,
+        1344
+      ],
+      "size": [
+        780,
+        1024
+      ],
+      "sha256": "d489e9c89529eca359ce29d72cff5b58272fdce4c35c5dd789014f07cf6a4b85",
+      "kind": "overview",
+      "lossless": true,
+      "downscaled": true
+    }
+  ],
+  "findings": [
+    {
+      "label": "second_subject",
+      "severity": "PENDING_VISUAL",
+      "region": null,
+      "cropPath": null,
+      "cropName": null,
+      "evaluator": "human_or_vlm",
+      "confidence": 0.0,
+      "note": "No automatic detector in U1-QA v1; must be filled by visual reader with region+crop.",
+      "humanReviewRequired": true
+    },
+    {
+      "label": "camera_prop",
+      "severity": "PENDING_VISUAL",
+      "region": null,
+      "cropPath": null,
+      "cropName": null,
+      "evaluator": "human_or_vlm",
+      "confidence": 0.0,
+      "note": "No automatic detector in U1-QA v1; must be filled by visual reader with region+crop.",
+      "humanReviewRequired": true
+    },
+    {
+      "label": "anatomy_break",
+      "severity": "PENDING_VISUAL",
+      "region": null,
+      "cropPath": null,
+      "cropName": null,
+      "evaluator": "human_or_vlm",
+      "confidence": 0.0,
+      "note": "No automatic detector in U1-QA v1; must be filled by visual reader with region+crop.",
+      "humanReviewRequired": true
+    },
+    {
+      "label": "identity_drift",
+      "severity": "PENDING_VISUAL",
+      "region": null,
+      "cropPath": null,
+      "cropName": null,
+      "evaluator": "human_or_vlm",
+      "confidence": 0.0,
+      "note": "No automatic detector in U1-QA v1; must be filled by visual reader with region+crop.",
+      "humanReviewRequired": true
+    },
+    {
+      "label": "bg_incoherent",
+      "severity": "PENDING_VISUAL",
+      "region": null,
+      "cropPath": null,
+      "cropName": null,
+      "evaluator": "human_or_vlm",
+      "confidence": 0.0,
+      "note": "No automatic detector in U1-QA v1; must be filled by visual reader with region+crop.",
+      "humanReviewRequired": true
+    }
+  ],
+  "deterministicVerdict": "METRIC_PASS_PENDING_VISUAL",
+  "visualVerdict": "PENDING_VISUAL",
+  "humanVerdict": null,
+  "finalDisposition": "NEEDS_VISUAL",
+  "notes": [
+    "Auto metric findings only for protect/hard_seam/void_dark/green_cast.",
+    "second_subject/camera_prop/anatomy_break/identity_drift/bg_incoherent require human or VLM with region+crop.",
+    "METRIC_PASS is coarse filter only; never product acceptance."
+  ]
+}

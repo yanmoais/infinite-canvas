@@ -1,0 +1,175 @@
+{
+  "schemaVersion": "u1-qa-v1",
+  "qaProfileVersion": "u1-qa-profile-v1",
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17",
+  "direction": "up",
+  "denoise": 0.58,
+  "seam": 112,
+  "size": "1024x1664",
+  "geometry": {
+    "targetWidth": 1024,
+    "targetHeight": 1664,
+    "extensionPixels": 640,
+    "seamOverlapPixels": 112,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 640,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "sizeMismatch": null,
+  "protectedCoreDiff": {
+    "box": [
+      0,
+      752,
+      1024,
+      1664
+    ],
+    "differentPixels": 0,
+    "totalPixels": 933888,
+    "ratio": 0.0,
+    "metricName": "protectedCoreDiffRatio"
+  },
+  "protectedRegionDiff": {
+    "differentPixels": 0,
+    "totalPixels": 933888,
+    "ratio": 0.0
+  },
+  "generatedRegionMeanRgb": [
+    160.75,
+    155.56,
+    150.04
+  ],
+  "generatedRegionGreenDominance": 0.16,
+  "generatedRegionGreenishPct": 0.0,
+  "generatedRegionWhiteishPct": 48.6,
+  "generatedRegionDarkPct": 3.9,
+  "extensionStats": {
+    "sampleCount": 163840,
+    "meanRgb": [
+      160.75,
+      155.56,
+      150.04
+    ],
+    "gdom": 0.16,
+    "darkPct": 3.9,
+    "greenishPct": 0.0,
+    "whiteishPct": 48.6,
+    "box": [
+      0,
+      0,
+      1024,
+      640
+    ]
+  },
+  "voidDarkSpatial": {
+    "farDarkPct": 6.7,
+    "farDarkPctAvg": 6.7,
+    "worstRegion": "far_extension",
+    "regions": [
+      {
+        "sampleCount": 81920,
+        "meanRgb": [
+          144.43,
+          141.54,
+          136.75
+        ],
+        "gdom": 0.95,
+        "darkPct": 6.7,
+        "greenishPct": 0.0,
+        "whiteishPct": 37.8,
+        "box": [
+          0,
+          0,
+          1024,
+          320
+        ],
+        "name": "far_extension"
+      }
+    ]
+  },
+  "relativeColor": {
+    "sourceBand": {
+      "sampleCount": 14336,
+      "meanRgb": [
+        106.6,
+        96.09,
+        91.04
+      ],
+      "gdom": -2.73,
+      "darkPct": 46.0,
+      "greenishPct": 0.0,
+      "whiteishPct": 22.9,
+      "box": [
+        0,
+        640,
+        1024,
+        696
+      ]
+    },
+    "generatedBand": {
+      "sampleCount": 14336,
+      "meanRgb": [
+        177.48,
+        157.86,
+        148.37
+      ],
+      "gdom": -5.06,
+      "darkPct": 4.2,
+      "greenishPct": 0.0,
+      "whiteishPct": 53.5,
+      "box": [
+        0,
+        584,
+        1024,
+        640
+      ]
+    },
+    "relGdom": -2.33,
+    "relDeltaE": 66.55
+  },
+  "seamContinuity": {
+    "seams": [
+      {
+        "name": "seam_up",
+        "axis": "horizontal",
+        "boundary": 640,
+        "srcMeanRgb": [
+          163.45,
+          146.66,
+          138.96
+        ],
+        "genMeanRgb": [
+          137.66,
+          125.45,
+          120.77
+        ],
+        "lumaDelta": 21.97,
+        "rgbDelta": 38.02,
+        "gradPeak": 26.52
+      }
+    ],
+    "worst": {
+      "name": "seam_up",
+      "lumaDelta": 21.97,
+      "rgbDelta": 38.02,
+      "gradPeak": 26.52
+    }
+  },
+  "sha256": "823bfcf9215397d12fa906b2e403f093d4789bb493fc8f7784572a81cfed893c",
+  "sourcePromptId": "a3b79667-7685-4505-b378-b82dcb7640a3",
+  "windowsOutput": null,
+  "recoveredFromServer": null,
+  "provisional": "METRIC_FAIL",
+  "provisionalReasons": [
+    "seamRgbDeltaWarn",
+    "relDeltaE>=35.0",
+    "relDeltaE>=22.0"
+  ],
+  "seed": 424243,
+  "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-hybrid-matrix/up-hybrid-s424243-gate2/u1r-up-hybrid-s424243-result.png",
+  "basePath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-hybrid-matrix/up-hybrid-s424243-gate2/up-hybrid-base-1024x1664.png",
+  "resultSha256": "823bfcf9215397d12fa906b2e403f093d4789bb493fc8f7784572a81cfed893c",
+  "baseSha256": "33084ab6c75389843308556708ad35d5abb695b8c3c2ceb49e099ca4a990cf04",
+  "requestSha256": "5bd7ac29a23e09f45fcc608d55f847861f216f940af441fe2bba519cd9fcb61f"
+}

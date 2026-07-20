@@ -78,4 +78,31 @@ assert.equal(fullBodyExecution.config.comfyExtra?.denoise, false, "full_body mus
 assert.equal(fullBodyExecution.config.size, "1024x1792");
 assert.ok(fullBodyExecution.plan.protections?.some((item) => item.includes("不保证像素锁脸") || item.includes("EmptyLatent")));
 
+const qwenSource = {
+    sourceGenerationRecipe: {
+        generationType: "edit" as const,
+        model: "comfy/qwen-image-edit-2511",
+        promptModel: "gpt-text",
+        size: "1024x1536",
+        quality: "auto",
+        loras: ["qwen-lightning"],
+    },
+};
+const modelOverrideExecution = buildManagedImageExecution(baseConfig, qwenSource, {
+    kind: "outpaint",
+    managed: true,
+    modelOverride: "comfy/wai",
+    originalPixelLock: true,
+    inheritSourceRecipe: false,
+    faceProtection: true,
+    denoise: 0.6,
+    targetWidth: 1024,
+    targetHeight: 1792,
+});
+assert.equal(modelOverrideExecution.config.model, "comfy/wai", "operation model override should replace the source model");
+assert.deepEqual(modelOverrideExecution.config.comfyExtra?.lora_keys, [], "cross-model outpaint must clear incompatible source LoRAs");
+assert.equal(modelOverrideExecution.plan.values.model?.source, "operation_profile");
+assert.equal(modelOverrideExecution.plan.values.loras?.source, "operation_profile");
+assert.ok(modelOverrideExecution.plan.protections?.some((item) => item.includes("不继承源图 LoRA")));
+
 console.log("generation plan tests passed");

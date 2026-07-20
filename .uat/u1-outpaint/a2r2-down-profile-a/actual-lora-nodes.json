@@ -1,0 +1,26 @@
+[
+  {
+    "node_id": "10",
+    "lora_name": "illustrious_masterpieces_v3.safetensors",
+    "strength_model": 0.65,
+    "strength_clip": 0.65
+  },
+  {
+    "node_id": "11",
+    "lora_name": "bss_detail_enhancer_v3.safetensors",
+    "strength_model": 0.7,
+    "strength_clip": 0.7
+  },
+  {
+    "node_id": "12",
+    "lora_name": "bss_skin_texture_v2.safetensors",
+    "strength_model": 0.6,
+    "strength_clip": 0.6
+  },
+  {
+    "node_id": "13",
+    "lora_name": "eyes_for_illustrious.safetensors",
+    "strength_model": 0.6,
+    "strength_clip": 0.6
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "model": "comfy/illustrious",
+  "prompt": "masterpiece, best quality, simple portrait of one woman, neutral studio background",
+  "n": 1,
+  "size": "512x512",
+  "extra": {
+    "prompt_optimize": false,
+    "reference_mode": "none",
+    "face_detailer": false,
+    "seed": 424243,
+    "lora_keys": [
+      "bss-detail-enhancer-v3"
+    ]
+  }
+}

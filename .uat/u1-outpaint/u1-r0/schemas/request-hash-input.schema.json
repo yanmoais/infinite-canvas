@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "u1-r0-request-hash-input-v1",
+  "title": "U1-R0 requestHashInput",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["spec", "execution", "inputs"],
+  "properties": {
+    "spec": { "const": "u1-r0-request-v1" },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "loras",
+        "sampler",
+        "scheduler",
+        "steps",
+        "cfg",
+        "direction",
+        "seed",
+        "denoise",
+        "seam",
+        "extensionRatio",
+        "dimensions",
+        "workflow",
+        "mutators",
+        "referenceMode"
+      ],
+      "properties": {
+        "model": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["capabilityId", "checkpointId", "sha256"],
+          "properties": {
+            "capabilityId": { "type": "string", "minLength": 1 },
+            "checkpointId": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        },
+        "loras": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "modelStrength", "clipStrength", "sha256"],
+            "properties": {
+              "key": { "type": "string", "minLength": 1 },
+              "modelStrength": { "type": "number" },
+              "clipStrength": { "type": "number" },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
+          }
+        },
+        "sampler": { "type": "string", "minLength": 1 },
+        "scheduler": { "type": "string", "minLength": 1 },
+        "steps": { "type": "integer", "minimum": 1 },
+        "cfg": { "type": "number" },
+        "direction": { "enum": ["up", "down", "left", "right", "outward"] },
+        "seed": { "type": "integer", "minimum": 0 },
+        "denoise": { "type": "number", "minimum": 0, "maximum": 1 },
+        "seam": { "type": "integer", "minimum": 0 },
+        "extensionRatio": { "type": "number", "minimum": 0 },
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "workflow": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["bindingId", "version", "sha256"],
+          "properties": {
+            "bindingId": { "type": "string", "minLength": 1 },
+            "version": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        },
+        "mutators": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "version"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "version": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "referenceMode": { "const": "none" }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["positive", "negative", "base", "pad", "mask"],
+      "properties": {
+        "positive": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text", "sha256"],
+          "properties": {
+            "text": { "type": "string" },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        },
+        "negative": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text", "sha256"],
+          "properties": {
+            "text": { "type": "string" },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        },
+        "base": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sha256"],
+          "properties": {
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        },
+        "pad": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sha256"],
+          "properties": {
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        },
+        "mask": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sha256"],
+          "properties": {
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        }
+      }
+    }
+  }
+}

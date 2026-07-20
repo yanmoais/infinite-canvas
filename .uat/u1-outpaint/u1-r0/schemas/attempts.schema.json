@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "u1-r0-attempts-v1",
+  "title": "U1-R0 attempts array",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["attemptId", "cellId", "requestSha256", "status", "selected"],
+    "properties": {
+      "attemptId": { "type": "string", "minLength": 1 },
+      "cellId": { "type": "string", "minLength": 1 },
+      "requestSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+      "status": { "enum": ["SUCCEEDED", "FAILED", "CANCELLED"] },
+      "failureClass": {
+        "enum": [
+          "gateway_unavailable",
+          "gateway_internal_error",
+          "artifact_storage_error",
+          "model_or_quality_reject",
+          "timeout_unknown_cause",
+          "request_or_workflow_validation_error",
+          "asset_or_receipt_proof_missing",
+          "user_cancelled",
+          "protocol_deviation"
+        ]
+      },
+      "replacesAttemptId": { "type": ["string", "null"] },
+      "selected": { "type": "boolean" },
+      "receiptId": { "type": ["string", "null"] },
+      "promptId": { "type": ["string", "null"] },
+      "resultSha256": {
+        "type": ["string", "null"],
+        "pattern": "^([a-f0-9]{64})?$"
+      },
+      "notes": { "type": "string" }
+    },
+    "allOf": [
+      {
+        "if": { "properties": { "status": { "const": "SUCCEEDED" } } },
+        "then": {
+          "not": { "required": ["failureClass"] },
+          "properties": { "replacesAttemptId": { "type": "null" } }
+        }
+      },
+      {
+        "if": { "properties": { "status": { "const": "FAILED" } } },
+        "then": { "required": ["failureClass"] }
+      },
+      {
+        "if": { "properties": { "status": { "const": "CANCELLED" } } },
+        "then": {
+          "required": ["failureClass"],
+          "properties": {
+            "failureClass": { "const": "user_cancelled" },
+            "replacesAttemptId": { "type": "null" }
+          }
+        }
+      }
+    ]
+  }
+}

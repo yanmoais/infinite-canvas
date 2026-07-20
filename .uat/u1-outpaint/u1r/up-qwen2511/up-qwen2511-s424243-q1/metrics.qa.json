@@ -1,0 +1,175 @@
+{
+  "schemaVersion": "u1-qa-v1",
+  "qaProfileVersion": "u1-qa-profile-v1",
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17",
+  "direction": "up",
+  "denoise": null,
+  "seam": 72,
+  "size": "1024x1344",
+  "geometry": {
+    "targetWidth": 1024,
+    "targetHeight": 1344,
+    "extensionPixels": 320,
+    "seamOverlapPixels": 72,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 320,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "sizeMismatch": null,
+  "protectedCoreDiff": {
+    "box": [
+      0,
+      392,
+      1024,
+      1344
+    ],
+    "differentPixels": 0,
+    "totalPixels": 974848,
+    "ratio": 0.0,
+    "metricName": "protectedCoreDiffRatio"
+  },
+  "protectedRegionDiff": {
+    "differentPixels": 0,
+    "totalPixels": 974848,
+    "ratio": 0.0
+  },
+  "generatedRegionMeanRgb": [
+    158.14,
+    156.94,
+    148.35
+  ],
+  "generatedRegionGreenDominance": 3.7,
+  "generatedRegionGreenishPct": 7.1,
+  "generatedRegionWhiteishPct": 48.1,
+  "generatedRegionDarkPct": 13.8,
+  "extensionStats": {
+    "sampleCount": 81920,
+    "meanRgb": [
+      158.14,
+      156.94,
+      148.35
+    ],
+    "gdom": 3.7,
+    "darkPct": 13.8,
+    "greenishPct": 7.1,
+    "whiteishPct": 48.1,
+    "box": [
+      0,
+      0,
+      1024,
+      320
+    ]
+  },
+  "voidDarkSpatial": {
+    "farDarkPct": 21.7,
+    "farDarkPctAvg": 21.7,
+    "worstRegion": "far_extension",
+    "regions": [
+      {
+        "sampleCount": 40960,
+        "meanRgb": [
+          135.67,
+          136.44,
+          129.26
+        ],
+        "gdom": 3.97,
+        "darkPct": 21.7,
+        "greenishPct": 7.9,
+        "whiteishPct": 39.3,
+        "box": [
+          0,
+          0,
+          1024,
+          160
+        ],
+        "name": "far_extension"
+      }
+    ]
+  },
+  "relativeColor": {
+    "sourceBand": {
+      "sampleCount": 9216,
+      "meanRgb": [
+        109.28,
+        91.34,
+        83.06
+      ],
+      "gdom": -4.83,
+      "darkPct": 53.5,
+      "greenishPct": 1.4,
+      "whiteishPct": 23.4,
+      "box": [
+        0,
+        320,
+        1024,
+        356
+      ]
+    },
+    "generatedBand": {
+      "sampleCount": 9216,
+      "meanRgb": [
+        195.82,
+        174.12,
+        160.21
+      ],
+      "gdom": -3.89,
+      "darkPct": 1.3,
+      "greenishPct": 0.0,
+      "whiteishPct": 61.4,
+      "box": [
+        0,
+        284,
+        1024,
+        320
+      ]
+    },
+    "relGdom": 0.94,
+    "relDeltaE": 87.9
+  },
+  "seamContinuity": {
+    "seams": [
+      {
+        "name": "seam_up",
+        "axis": "horizontal",
+        "boundary": 320,
+        "srcMeanRgb": [
+          189.82,
+          167.66,
+          155.13
+        ],
+        "genMeanRgb": [
+          211.58,
+          187.32,
+          175.63
+        ],
+        "lumaDelta": 20.16,
+        "rgbDelta": 35.78,
+        "gradPeak": 75.56
+      }
+    ],
+    "worst": {
+      "name": "seam_up",
+      "lumaDelta": 20.16,
+      "rgbDelta": 35.78,
+      "gradPeak": 75.56
+    }
+  },
+  "sha256": "980c970a86ebf453086565e1be17fed297b83642b0773728032f21badd4af540",
+  "sourcePromptId": null,
+  "windowsOutput": null,
+  "recoveredFromServer": null,
+  "provisional": "METRIC_FAIL",
+  "provisionalReasons": [
+    "seamGradPeakWarn",
+    "relDeltaE>=35.0",
+    "relDeltaE>=22.0"
+  ],
+  "seed": 424243,
+  "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-qwen2511/up-qwen2511-s424243-q1/u1r-up-qwen2511-s424243-result.png",
+  "basePath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-qwen2511/up-qwen2511-s424243-q1/padded.png",
+  "resultSha256": "980c970a86ebf453086565e1be17fed297b83642b0773728032f21badd4af540",
+  "baseSha256": "298c68780c41bb0f0e70c103563ecee2ec3f1132ce06f75dfa5de73433ee1fbe",
+  "requestSha256": "f6314d1e5d31f5af1b2f1bdabaa19d00983eea8f8744d9db904c79267f09f117"
+}

@@ -1,0 +1,184 @@
+{
+  "schemaVersion": "1",
+  "title": "Gate 0 / C0-3 receipt v2 reproducible evidence",
+  "canonicalJson": {
+    "encoding": "UTF-8",
+    "ensureAscii": false,
+    "sortKeys": true,
+    "separators": [
+      ",",
+      ":"
+    ],
+    "trailingNewlineExcludedFromCanonicalHash": true,
+    "algorithm": "json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode('utf-8') then SHA-256"
+  },
+  "gateway": {
+    "endpoint": "http://127.0.0.1:8080/v1/images/generations",
+    "pidAtCollection": 98863,
+    "sourcePath": "/Users/zhenbao/work/Mission_manager/scripts/local-agent/llama_ui_gateway.py",
+    "sourceSha256": "83a76738797d8a2f55eab349deeab02f3c2e5501e81966dc505b6d9fd5c8659c"
+  },
+  "persistedReceiptRoot": "/Users/zhenbao/work/Mission_manager/logs/local-agent/generation-receipts",
+  "samples": [
+    {
+      "name": "bare-no-lora-keys",
+      "requestPath": "bare-no-lora-keys/request.json",
+      "responsePath": "bare-no-lora-keys/response.json",
+      "statusPath": "bare-no-lora-keys/status.json",
+      "persistedReceiptCopyPath": "bare-no-lora-keys/persisted-receipt.json",
+      "persistedReceiptSourcePath": "/Users/zhenbao/work/Mission_manager/logs/local-agent/generation-receipts/5d440fec-1ab0-49da-941e-1d694a43069d.json",
+      "httpStatus": 200,
+      "expectedHttpStatus": 200,
+      "receiptId": "5d440fec-1ab0-49da-941e-1d694a43069d",
+      "requestCanonicalSha256": "8b87937080b30e3cca02164b6e0bcc9cc991d9081003f0485fc935d034d850da",
+      "responseCanonicalSha256": "00107e1ba48e5e0e58b70e20a7aead40f759908b4e20d3161bb24defcc73b175",
+      "responseExecutionReceiptCanonicalSha256": "b83c1759fd93dc3454f5ce3ad196616abcc8020a398668fbbe963194ed83ca16",
+      "persistedReceiptCanonicalSha256": "b83c1759fd93dc3454f5ce3ad196616abcc8020a398668fbbe963194ed83ca16",
+      "responseReceiptEqualsPersistedReceipt": true,
+      "plannedBaseCapabilityId": "comfy.image.illustrious",
+      "stageBaseCapabilityIds": [
+        "comfy.image.illustrious"
+      ],
+      "actualBaseCapabilityId": "comfy.image.illustrious",
+      "fallback": {
+        "used": false,
+        "requestedReferenceMode": "none",
+        "effectiveReferenceMode": "none",
+        "preset": null
+      },
+      "taskResult": "succeeded",
+      "promptId": "5d440fec-1ab0-49da-941e-1d694a43069d",
+      "actualLoras": [],
+      "loraEvidence": {
+        "status": "complete",
+        "opaqueSources": []
+      },
+      "requestExtraContainsLoraKeys": false
+    },
+    {
+      "name": "dynamic-lora",
+      "requestPath": "dynamic-lora/request.json",
+      "responsePath": "dynamic-lora/response.json",
+      "statusPath": "dynamic-lora/status.json",
+      "persistedReceiptCopyPath": "dynamic-lora/persisted-receipt.json",
+      "persistedReceiptSourcePath": "/Users/zhenbao/work/Mission_manager/logs/local-agent/generation-receipts/759df4cb-3eb0-4e8a-9bfd-d590699abc6c.json",
+      "httpStatus": 200,
+      "expectedHttpStatus": 200,
+      "receiptId": "759df4cb-3eb0-4e8a-9bfd-d590699abc6c",
+      "requestCanonicalSha256": "987513522602e3fffd153d6da4a17e9b3ee709c293d4236a2ef10da30c0b9eb5",
+      "responseCanonicalSha256": "86bb25428b4e8f2fb19af86ec061c3491f9222803c83d14d97fae28044143090",
+      "responseExecutionReceiptCanonicalSha256": "51e8d490c513511cdaa369bcd595c4616cebc7c5c4cb27fd08ae7ffcadbb9de8",
+      "persistedReceiptCanonicalSha256": "51e8d490c513511cdaa369bcd595c4616cebc7c5c4cb27fd08ae7ffcadbb9de8",
+      "responseReceiptEqualsPersistedReceipt": true,
+      "plannedBaseCapabilityId": "comfy.image.illustrious",
+      "stageBaseCapabilityIds": [
+        "comfy.image.illustrious"
+      ],
+      "actualBaseCapabilityId": "comfy.image.illustrious",
+      "fallback": {
+        "used": false,
+        "requestedReferenceMode": "none",
+        "effectiveReferenceMode": "none",
+        "preset": null
+      },
+      "taskResult": "succeeded",
+      "promptId": "759df4cb-3eb0-4e8a-9bfd-d590699abc6c",
+      "actualLoras": [
+        {
+          "file": "bss_detail_enhancer_v3.safetensors",
+          "nodeId": "10",
+          "loaderClass": "LoraLoader",
+          "source": "gateway_dynamic",
+          "strengthModel": 0.7,
+          "strengthClip": 0.7,
+          "stageIds": [
+            "primary"
+          ]
+        }
+      ],
+      "loraEvidence": {
+        "status": "complete",
+        "opaqueSources": []
+      }
+    },
+    {
+      "name": "pre-submit-unknown",
+      "requestPath": "pre-submit-unknown/request.json",
+      "responsePath": "pre-submit-unknown/response.json",
+      "statusPath": "pre-submit-unknown/status.json",
+      "persistedReceiptCopyPath": "pre-submit-unknown/persisted-receipt.json",
+      "persistedReceiptSourcePath": "/Users/zhenbao/work/Mission_manager/logs/local-agent/generation-receipts/7603dcac-adea-4910-a507-a0a4af6ca15c.json",
+      "httpStatus": 500,
+      "expectedHttpStatus": 500,
+      "receiptId": "7603dcac-adea-4910-a507-a0a4af6ca15c",
+      "requestCanonicalSha256": "51a3a6430aadbc0538cc4bdd190507049ea9ed30d6204908084520f88618372a",
+      "responseCanonicalSha256": "e367eddb1a249ea01dc83298d891a2027080e09b4e45c627e466af41db43f6f0",
+      "responseExecutionReceiptCanonicalSha256": "44b2457846d40b844f25e3dd355baff3a051c7fd21d40579c9d49cfef281fb99",
+      "persistedReceiptCanonicalSha256": "44b2457846d40b844f25e3dd355baff3a051c7fd21d40579c9d49cfef281fb99",
+      "responseReceiptEqualsPersistedReceipt": true,
+      "plannedBaseCapabilityId": "comfy.image.zimage-union-controlnet",
+      "stageBaseCapabilityIds": [
+        "comfy.image.zimage-union-controlnet"
+      ],
+      "actualBaseCapabilityId": "comfy.image.zimage-union-controlnet",
+      "fallback": {
+        "used": false,
+        "requestedReferenceMode": "none",
+        "effectiveReferenceMode": "none",
+        "preset": null
+      },
+      "taskResult": "failed",
+      "promptId": null,
+      "actualLoras": [],
+      "loraEvidence": {
+        "status": "unknown",
+        "opaqueSources": [
+          {
+            "nodeId": null,
+            "loaderClass": null,
+            "reason": "final_workflow_not_observed",
+            "stageId": "primary"
+          }
+        ]
+      }
+    },
+    {
+      "name": "invalid-preset-fallback",
+      "requestPath": "invalid-preset-fallback/request.json",
+      "responsePath": "invalid-preset-fallback/response.json",
+      "statusPath": "invalid-preset-fallback/status.json",
+      "persistedReceiptCopyPath": "invalid-preset-fallback/persisted-receipt.json",
+      "persistedReceiptSourcePath": "/Users/zhenbao/work/Mission_manager/logs/local-agent/generation-receipts/ad748509-de69-40eb-9e1f-b46bbae8efe4.json",
+      "httpStatus": 200,
+      "expectedHttpStatus": 200,
+      "receiptId": "ad748509-de69-40eb-9e1f-b46bbae8efe4",
+      "requestCanonicalSha256": "e7e82372b16ec3ab5dd8ba3c33d3e2f5a5d55d95fb5458dc135f5472fb2c2dd4",
+      "responseCanonicalSha256": "4279787229bb01764c06ffa4f4db5c28440ebbd5557461761bff5c48df784128",
+      "responseExecutionReceiptCanonicalSha256": "fab318a6b3091491294c08e649f4ceb3c2972e52f4d2fe39ace325ac40648547",
+      "persistedReceiptCanonicalSha256": "fab318a6b3091491294c08e649f4ceb3c2972e52f4d2fe39ace325ac40648547",
+      "responseReceiptEqualsPersistedReceipt": true,
+      "plannedBaseCapabilityId": "comfy.image.not-a-real-preset",
+      "stageBaseCapabilityIds": [
+        "comfy.image.wai"
+      ],
+      "actualBaseCapabilityId": "comfy.image.wai",
+      "fallback": {
+        "used": true,
+        "requestedReferenceMode": "none",
+        "effectiveReferenceMode": "none",
+        "preset": {
+          "from": "not-a-real-preset",
+          "to": "wai",
+          "reason": "requested_preset_unavailable"
+        }
+      },
+      "taskResult": "succeeded",
+      "promptId": "ad748509-de69-40eb-9e1f-b46bbae8efe4",
+      "actualLoras": [],
+      "loraEvidence": {
+        "status": "complete",
+        "opaqueSources": []
+      }
+    }
+  ]
+}

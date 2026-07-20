@@ -1,0 +1,125 @@
+{
+  "schemaVersion": "2",
+  "receiptId": "759df4cb-3eb0-4e8a-9bfd-d590699abc6c",
+  "planned": {
+    "baseCapabilityId": "comfy.image.illustrious",
+    "baseModelId": null,
+    "requestedReferenceMode": "none",
+    "workflowBindingId": "comfy.image.illustrious:txt2img_template",
+    "templateField": "txt2img_template"
+  },
+  "primaryStageId": "primary",
+  "finalStageId": "primary",
+  "stages": [
+    {
+      "stageId": "primary",
+      "stageKind": "primary",
+      "taskResult": "succeeded",
+      "promptId": "759df4cb-3eb0-4e8a-9bfd-d590699abc6c",
+      "baseCapabilityId": "comfy.image.illustrious",
+      "workflowBindingId": "comfy.image.illustrious:txt2img_template",
+      "workflowHash": "eed3161add63103d07c01a5dde7298a4fbe79a4ee04f43bf96a0097e2c670073",
+      "workflowFile": "illustrious-simple-api.json",
+      "templateField": "txt2img_template",
+      "effectiveReferenceMode": "none",
+      "adapterKind": null,
+      "mutators": [],
+      "fallback": {
+        "used": false,
+        "requestedReferenceMode": "none",
+        "effectiveReferenceMode": "none",
+        "preset": null
+      },
+      "assetVersions": [
+        {
+          "assetId": "models/checkpoints/illustriousXL_v01.safetensors",
+          "sha256": "",
+          "hashStatus": "unregistered"
+        },
+        {
+          "assetId": "models/vae/sdxl_vae.safetensors",
+          "sha256": "",
+          "hashStatus": "unregistered"
+        },
+        {
+          "assetId": "models/loras/bss_detail_enhancer_v3.safetensors",
+          "sha256": "",
+          "hashStatus": "unregistered"
+        }
+      ],
+      "actualLoras": [
+        {
+          "file": "bss_detail_enhancer_v3.safetensors",
+          "nodeId": "10",
+          "loaderClass": "LoraLoader",
+          "source": "gateway_dynamic",
+          "strengthModel": 0.7,
+          "strengthClip": 0.7
+        }
+      ],
+      "loraEvidence": {
+        "status": "complete",
+        "opaqueSources": []
+      },
+      "comfyExecutionSeconds": 11.3,
+      "error": null
+    }
+  ],
+  "actual": {
+    "stageId": "primary",
+    "stageKind": "primary",
+    "taskResult": "succeeded",
+    "promptId": "759df4cb-3eb0-4e8a-9bfd-d590699abc6c",
+    "baseCapabilityId": "comfy.image.illustrious",
+    "workflowBindingId": "comfy.image.illustrious:txt2img_template",
+    "workflowHash": "eed3161add63103d07c01a5dde7298a4fbe79a4ee04f43bf96a0097e2c670073",
+    "workflowFile": "illustrious-simple-api.json",
+    "templateField": "txt2img_template",
+    "effectiveReferenceMode": "none",
+    "adapterKind": null,
+    "mutators": [],
+    "fallback": {
+      "used": false,
+      "requestedReferenceMode": "none",
+      "effectiveReferenceMode": "none",
+      "preset": null
+    },
+    "assetVersions": [
+      {
+        "assetId": "models/checkpoints/illustriousXL_v01.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/vae/sdxl_vae.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/bss_detail_enhancer_v3.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      }
+    ],
+    "actualLoras": [
+      {
+        "file": "bss_detail_enhancer_v3.safetensors",
+        "nodeId": "10",
+        "loaderClass": "LoraLoader",
+        "source": "gateway_dynamic",
+        "strengthModel": 0.7,
+        "strengthClip": 0.7,
+        "stageIds": [
+          "primary"
+        ]
+      }
+    ],
+    "loraEvidence": {
+      "status": "complete",
+      "opaqueSources": []
+    },
+    "comfyExecutionSeconds": 11.3,
+    "error": null,
+    "totalComfyExecutionSeconds": 11.3
+  }
+}

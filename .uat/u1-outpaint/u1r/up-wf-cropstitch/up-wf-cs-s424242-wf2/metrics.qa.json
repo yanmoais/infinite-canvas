@@ -1,0 +1,148 @@
+{
+  "schemaVersion": "u1-qa-v1",
+  "qaProfileVersion": "u1-qa-profile-v1",
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17",
+  "direction": "up",
+  "denoise": 0.52,
+  "seam": 96,
+  "size": "1024x320",
+  "geometry": {
+    "targetWidth": 1024,
+    "targetHeight": 1664,
+    "extensionPixels": 640,
+    "seamOverlapPixels": 96,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 640,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "sizeMismatch": {
+    "expected": [
+      1024,
+      1664
+    ],
+    "actual": [
+      1024,
+      320
+    ]
+  },
+  "protectedCoreDiff": {
+    "box": [
+      0,
+      736,
+      1024,
+      1664
+    ],
+    "differentPixels": 950272,
+    "totalPixels": 950272,
+    "ratio": 1.0,
+    "metricName": "protectedCoreDiffRatio"
+  },
+  "protectedRegionDiff": {
+    "differentPixels": 950272,
+    "totalPixels": 950272,
+    "ratio": 1.0
+  },
+  "generatedRegionMeanRgb": [
+    67.29,
+    60.13,
+    57.47
+  ],
+  "generatedRegionGreenDominance": -2.25,
+  "generatedRegionGreenishPct": 0.7,
+  "generatedRegionWhiteishPct": 16.7,
+  "generatedRegionDarkPct": 63.9,
+  "extensionStats": {
+    "sampleCount": 163840,
+    "meanRgb": [
+      67.29,
+      60.13,
+      57.47
+    ],
+    "gdom": -2.25,
+    "darkPct": 63.9,
+    "greenishPct": 0.7,
+    "whiteishPct": 16.7,
+    "box": [
+      0,
+      0,
+      1024,
+      640
+    ]
+  },
+  "voidDarkSpatial": {
+    "farDarkPct": 27.8,
+    "farDarkPctAvg": 27.8,
+    "worstRegion": "far_extension",
+    "regions": [
+      {
+        "sampleCount": 81920,
+        "meanRgb": [
+          134.59,
+          120.26,
+          114.94
+        ],
+        "gdom": -4.5,
+        "darkPct": 27.8,
+        "greenishPct": 1.4,
+        "whiteishPct": 33.5,
+        "box": [
+          0,
+          0,
+          1024,
+          320
+        ],
+        "name": "far_extension"
+      }
+    ]
+  },
+  "relativeColor": {
+    "relGdom": 0.0,
+    "relDeltaE": 0.0
+  },
+  "seamContinuity": {
+    "seams": [
+      {
+        "name": "seam_up",
+        "axis": "horizontal",
+        "boundary": 640,
+        "srcMeanRgb": [
+          96.5,
+          83.62,
+          77.68
+        ],
+        "genMeanRgb": [
+          96.5,
+          83.62,
+          77.68
+        ],
+        "lumaDelta": 0.0,
+        "rgbDelta": 0.0,
+        "gradPeak": 0.0
+      }
+    ],
+    "worst": {
+      "name": "seam_up",
+      "lumaDelta": 0.0,
+      "rgbDelta": 0.0,
+      "gradPeak": 0.0
+    }
+  },
+  "sha256": "728cf8295cd449484ef9d73bcd4c410e5e9a37261e1cabca78dcdae78389d990",
+  "sourcePromptId": "11707de9-1ada-413d-8fef-ffcff6e82be3",
+  "windowsOutput": null,
+  "recoveredFromServer": null,
+  "provisional": "METRIC_FAIL",
+  "provisionalReasons": [
+    "darkPct>=40.0",
+    "protectedCoreDiff>=0.05",
+    "protectedCoreDiff>0.02"
+  ],
+  "seed": 424242,
+  "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424242-wf2/crop-result.png",
+  "basePath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424242-wf2/full-canvas-before.png",
+  "resultSha256": "728cf8295cd449484ef9d73bcd4c410e5e9a37261e1cabca78dcdae78389d990",
+  "baseSha256": "af823f64d07e30e09711ff57da0c902f350aa440caeade2d693d4cc7625db4ae",
+  "requestSha256": "32392b616dfea40618978cfb11d0de4066847420f58483a8a9a29e8f4e8101f7"
+}

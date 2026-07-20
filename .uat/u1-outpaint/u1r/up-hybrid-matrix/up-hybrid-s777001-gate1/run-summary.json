@@ -1,0 +1,29 @@
+{
+  "seed": 777001,
+  "caseDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-hybrid-matrix/up-hybrid-s777001-gate1",
+  "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-hybrid-matrix/up-hybrid-s777001-gate1/u1r-up-hybrid-s777001-result.png",
+  "httpStatus": 200,
+  "elapsedSec": 25.6,
+  "provisional": "METRIC_FAIL",
+  "darkPct": 3.8,
+  "farDarkPct": 6.7,
+  "gdom": 0.37,
+  "relDeltaE": 75.65,
+  "protectedCoreDiffRatio": 0.0,
+  "seamWorst": {
+    "name": "seam_up",
+    "lumaDelta": 67.45,
+    "rgbDelta": 115.75,
+    "gradPeak": 67.45
+  },
+  "autoFindings": [
+    [
+      "hard_seam",
+      "FAIL"
+    ],
+    [
+      "green_cast",
+      "FAIL"
+    ]
+  ]
+}

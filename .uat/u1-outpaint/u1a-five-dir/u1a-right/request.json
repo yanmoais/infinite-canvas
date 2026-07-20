@@ -1,0 +1,40 @@
+{
+  "endpoint": "http://127.0.0.1:8080/v1/images/edits",
+  "model": "comfy/illustrious-mmmix-v8",
+  "size": "1664x1024",
+  "prompt": "seamless rightward continuation, preserve the original character and composition, naturally continue body and background to the right of the source image, consistent lighting, fabric, anatomy, perspective and color",
+  "image": "u1a-right-base-1664x1024.png",
+  "mask": "u1a-right-mask-softseam-112-1664x1024.png",
+  "extra": {
+    "lora_keys": [
+      "illustrious-masterpiece-v3",
+      "bss-detail-enhancer-v3",
+      "bss-visual-enhancer-v3",
+      "bss-skin-texture-v2",
+      "eyes-for-illustrious",
+      "dramatic-lighting-slider"
+    ],
+    "face_detailer": false,
+    "denoise": 0.7,
+    "seam_feather": 112,
+    "outpaint_direction": "right",
+    "prompt_optimize": false,
+    "seed": 424242
+  },
+  "geometry": {
+    "mode": "extend",
+    "direction": "right",
+    "sourceWidth": 1024,
+    "sourceHeight": 1024,
+    "targetWidth": 1664,
+    "targetHeight": 1024,
+    "extensionPixels": 640,
+    "seamOverlapPixels": 112,
+    "sourceScale": 1,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 0,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "case": "U1-A-right"
+}

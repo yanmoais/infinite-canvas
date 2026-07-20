@@ -1,0 +1,24 @@
+{
+  "protectedRegionDiff": {
+    "differentPixels": 92722,
+    "totalPixels": 1048576,
+    "ratio": 0.088427,
+    "changedYRange": [
+      929,
+      1023
+    ],
+    "changedRows": 95
+  },
+  "generatedRegionMeanRgb": [
+    146.75,
+    113.39,
+    79.38
+  ],
+  "generatedRegionGreenDominance": 0.33,
+  "generatedRegionGreenishPct": 10.0,
+  "generatedRegionWhiteishPct": 16.1,
+  "generatedRegionDarkPct": 24.6,
+  "run": "a2r9-voidneg-denoise060",
+  "sourcePromptId": "ef75dff7-346b-4621-8b45-0bcaa6d2a6d3",
+  "denoise": 0.6
+}

@@ -1,0 +1,32 @@
+{
+  "seed": 424242,
+  "caseDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424242-wf1",
+  "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424242-wf1/u1r-up-wf-cs-s424242-result.png",
+  "httpStatus": 200,
+  "elapsedSec": 53.9,
+  "cropWindow": [
+    0,
+    432,
+    1024,
+    816
+  ],
+  "use_dd": true,
+  "provisional": "METRIC_FAIL",
+  "darkPct": 31.1,
+  "farDarkPct": 14.6,
+  "gdom": 1.17,
+  "relDeltaE": 2.46,
+  "protectedCoreDiffRatio": 0.997954,
+  "seamWorst": {
+    "name": "seam_up",
+    "lumaDelta": 0.09,
+    "rgbDelta": 0.16,
+    "gradPeak": 0.42
+  },
+  "autoFindings": [
+    [
+      "protect_violation",
+      "FAIL"
+    ]
+  ]
+}

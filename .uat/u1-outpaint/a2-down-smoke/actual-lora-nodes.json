@@ -1,0 +1,50 @@
+[
+  {
+    "node_id": "10",
+    "class_type": "LoraLoader",
+    "title": "LoRA - Illustrious Masterpiece v3",
+    "lora_name": "illustrious_masterpieces_v3.safetensors",
+    "strength_model": 0.65,
+    "strength_clip": 0.65
+  },
+  {
+    "node_id": "11",
+    "class_type": "LoraLoader",
+    "title": "LoRA - BSS Detail Enhancer v3",
+    "lora_name": "bss_detail_enhancer_v3.safetensors",
+    "strength_model": 0.7,
+    "strength_clip": 0.7
+  },
+  {
+    "node_id": "12",
+    "class_type": "LoraLoader",
+    "title": "LoRA - BSS Visual Enhancer v3",
+    "lora_name": "bss_visual_enhancer_v3.safetensors",
+    "strength_model": 1.0,
+    "strength_clip": 1.0
+  },
+  {
+    "node_id": "13",
+    "class_type": "LoraLoader",
+    "title": "LoRA - BSS Skin Texture v2",
+    "lora_name": "bss_skin_texture_v2.safetensors",
+    "strength_model": 0.6,
+    "strength_clip": 0.6
+  },
+  {
+    "node_id": "14",
+    "class_type": "LoraLoader",
+    "title": "LoRA - Eyes for Illustrious",
+    "lora_name": "eyes_for_illustrious.safetensors",
+    "strength_model": 0.6,
+    "strength_clip": 0.6
+  },
+  {
+    "node_id": "15",
+    "class_type": "LoraLoader",
+    "title": "LoRA - Dramatic Lighting Slider",
+    "lora_name": "dramatic_lighting_slider.safetensors",
+    "strength_model": 1.5,
+    "strength_clip": 1.5
+  }
+]

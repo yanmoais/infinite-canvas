@@ -44,7 +44,7 @@ import { AssetPickerModal, type InsertAssetPayload } from "@/components/canvas/a
 import { CanvasSidePanel } from "@/components/canvas/canvas-side-panel";
 import { CanvasZoomControls } from "@/components/canvas/canvas-zoom-controls";
 import { CanvasLocalAgentPanel } from "@/components/canvas/canvas-local-agent-panel";
-import { fetchComfyCapabilities, findComfyGatewayBase, isComfyModel, preflightComfyModel, requestSuperResolve } from "@/services/api/comfy";
+import { fetchComfyCapabilities, findComfyGatewayBase, isComfyModel, preflightComfyModel, preflightComfyOutpaint, requestSuperResolve } from "@/services/api/comfy";
 import { useAgentStore } from "@/stores/use-agent-store";
 import { useCanvasStore } from "@/stores/canvas/use-canvas-store";
 import { useAgentBridge } from "@/pages/canvas/hooks/use-agent-bridge";
@@ -239,6 +239,7 @@ function InfiniteCanvasPage() {
     const [cropNodeId, setCropNodeId] = useState<string | null>(null);
     const [maskEditNodeId, setMaskEditNodeId] = useState<string | null>(null);
     const [outpaintNodeId, setOutpaintNodeId] = useState<string | null>(null);
+    const outpaintSourceLocksRef = useRef(new Set<string>());
     const [splitNodeId, setSplitNodeId] = useState<string | null>(null);
     const [upscaleNodeId, setUpscaleNodeId] = useState<string | null>(null);
     const [superResolveNodeId, setSuperResolveNodeId] = useState<string | null>(null);
@@ -1838,249 +1839,289 @@ function InfiniteCanvasPage() {
     const outpaintImageNode = useCallback(
         async (node: CanvasNodeData, payload: CanvasImageOutpaintPayload) => {
             if (!node.metadata?.content) return;
-            const sourceRecipe = sourceGenerationRecipeFromMetadata(node.metadata);
-            const sourceModel = sourceRecipe.model || node.metadata.model || effectiveConfig.imageModel || effectiveConfig.model;
-            if (!isComfyModel(sourceModel)) {
-                message.warning("托管向下扩图目前只走本地 ComfyUI 工作流，请先让源图使用本地 comfy/ 模型生成");
+            if (outpaintSourceLocksRef.current.has(node.id)) {
+                message.warning("该图片已有扩图任务正在运行，请等待完成后再试");
                 return;
             }
-            setOutpaintNodeId(null);
-            const isFullBody = payload.mode === "full_body";
+            outpaintSourceLocksRef.current.add(node.id);
             try {
-                const sourceDataUrl = await imageToDataUrl({
-                    dataUrl: node.metadata.content,
-                    storageKey: node.metadata.storageKey,
-                });
-                // full_body 只需要目标尺寸；extend 才做垫图+蒙版续接
-                let prepared: DownwardOutpaintPrepared | null = null;
-                let geometry: DownwardOutpaintGeometry;
-                if (isFullBody) {
-                    const probe = await new Promise<{ w: number; h: number }>((resolve, reject) => {
-                        const img = new Image();
-                        const timer = window.setTimeout(() => reject(new Error("读取扩图源图片超时")), 15000);
-                        img.onload = () => {
-                            window.clearTimeout(timer);
-                            resolve({ w: img.naturalWidth || img.width, h: img.naturalHeight || img.height });
-                        };
-                        img.onerror = () => {
-                            window.clearTimeout(timer);
-                            reject(new Error("读取扩图源图片失败"));
-                        };
-                        img.src = sourceDataUrl;
-                    });
-                    const w = node.metadata.naturalWidth || probe.w;
-                    const h = node.metadata.naturalHeight || probe.h;
-                    geometry = calculateDownwardOutpaintGeometry(w, h, payload);
-                } else {
-                    prepared = await prepareDownwardOutpaint(sourceDataUrl, payload);
-                    geometry = prepared;
-                }
-                const targetWidth = geometry.targetWidth;
-                const targetHeight = geometry.targetHeight;
-
-                let baseImage: Awaited<ReturnType<typeof uploadImage>> | null = null;
-                let maskImage: Awaited<ReturnType<typeof uploadImage>> | null = null;
-                let originalUpload: Awaited<ReturnType<typeof uploadImage>> | null = null;
-
-                if (isFullBody) {
-                    originalUpload = await uploadImage(sourceDataUrl);
-                } else {
-                    const pair = await Promise.all([uploadImage(prepared!.baseDataUrl), uploadImage(prepared!.maskDataUrl)]);
-                    baseImage = pair[0];
-                    maskImage = pair[1];
-                }
-
-                const operationProfile: CanvasOperationProfile = {
-                    kind: "outpaint",
-                    managed: true,
-                    sourceNodeId: node.id,
-                    direction: isFullBody ? "down" : (payload.direction || "down"),
-                    outpaintMode: payload.mode,
-                    originalPixelLock: !isFullBody,
-                    inheritSourceRecipe: true,
-                    faceProtection: true,
-                    denoise: isFullBody ? undefined : payload.denoise,
-                    seamOverlapPixels: geometry.seamOverlapPixels,
-                    extensionPixels: geometry.extensionPixels,
-                    sourceScale: geometry.sourceScale,
-                    sourceOffsetX: geometry.sourceOffsetX,
-                    sourceOffsetY: geometry.sourceOffsetY,
-                    sourceDrawWidth: geometry.sourceDrawWidth,
-                    sourceDrawHeight: geometry.sourceDrawHeight,
-                    sourceWidth: geometry.sourceWidth,
-                    sourceHeight: geometry.sourceHeight,
-                    targetWidth,
-                    targetHeight,
-                    ...(baseImage ? { baseStorageKey: baseImage.storageKey } : {}),
-                    ...(maskImage ? { maskStorageKey: maskImage.storageKey } : {}),
-                };
-                const execution = buildManagedImageExecution(effectiveConfig, node.metadata, operationProfile);
-                // full_body：把身份原文塞进 extra，供网关 densify；并显式 denoise=false
-                if (isFullBody) {
-                    const identitySeedForExtra = node.metadata.originalIdentityPrompt || node.metadata.originalPrompt || node.metadata.prompt || "";
-                    execution.config = {
-                        ...execution.config,
-                        comfyExtra: {
-                            ...execution.config.comfyExtra,
-                            // soft IPAdapter：借脸/发色/服装气质；denoise=false 走 EmptyLatent，构图不吃近景
-                            reference_mode: "ipadapter",
-                            denoise: false,
-                            face_detailer: false,
-                            prompt_optimize: false,
-                            full_body_rebuild: true,
-                            character_lock: true,
-                            // 关闭换姿分部位流水线；full_body 专用 face refine 仍由网关在主图后执行
-                            part_refine: 0,
-                            face_refine: 0,
-                            skirt_refine: 0,
-                            ...(identitySeedForExtra ? { identity_prompt: identitySeedForExtra, reference_prompt: identitySeedForExtra } : {}),
-                        },
-                    };
-                }
-                const generationConfig = execution.config;
-                if (!isAiConfigReady(generationConfig, generationConfig.model)) {
-                    openConfigDialog(true);
+                const sourceRecipe = sourceGenerationRecipeFromMetadata(node.metadata);
+                const sourceModel = sourceRecipe.model || node.metadata.model || effectiveConfig.imageModel || effectiveConfig.model;
+                const selectedModel = payload.model;
+                if (!isComfyModel(selectedModel)) {
+                    message.warning("托管扩图必须选择本地 ComfyUI 续接模型");
                     return;
                 }
-                const identitySeed = node.metadata.originalIdentityPrompt || node.metadata.originalPrompt || node.metadata.prompt || "";
-                const identityPack = extractIdentityPack(identitySeed, { hasReferenceImages: true, includeLocks: true, includePoseChange: false });
-                const childId = nanoid();
-                const source = isFullBody
-                    ? {
-                          id: `${node.id}-outpaint-identity`,
-                          name: `${node.title || node.id}-identity.png`,
-                          type: originalUpload!.mimeType || "image/png",
-                          dataUrl: originalUpload!.url || sourceDataUrl,
-                          storageKey: originalUpload!.storageKey,
-                      }
-                    : {
-                          id: `${node.id}-outpaint-base`,
-                          name: `${node.title || node.id}-outpaint-base.png`,
-                          type: baseImage!.mimeType || "image/png",
-                          dataUrl: baseImage!.url,
-                          storageKey: baseImage!.storageKey,
-                      };
-                const mask = !isFullBody
-                    ? {
-                          id: `${node.id}-outpaint-mask`,
-                          name: "outpaint-mask.png",
-                          type: "image/png",
-                          dataUrl: prepared!.maskDataUrl,
-                          storageKey: maskImage!.storageKey,
-                      }
-                    : undefined;
-                const outpaintDirection = payload.direction || "down";
-                // 身份词只在延伸区确实包含人物身体时有用(向下补身体/外扩含下方);
-                // up/left/right 纯背景延伸拼身份词反而诱导模型在背景区再画一个人/头发/手。
-                const identityTagsForDirection = isFullBody || outpaintDirection === "down" || outpaintDirection === "outward" ? identityPack.tags : [];
-                // 未改面板默认词：严格走规范默认词，不调用任何优化器；用户确实改过默认词时才轻量直译用户这段话，
-                // 不整体改写、不新增人物/场景/饰品（BOSS 2026-07-15：默认词严格规范，用户自己改的内容才需要生效）。
-                const userCustomizedPrompt = !isDefaultOutpaintPrompt(payload.prompt, payload.mode, outpaintDirection);
-                const fallbackPrompt = buildEnglishOutpaintFallback(payload.mode, payload.prompt, identityTagsForDirection, outpaintDirection);
-                const generationMetadata = buildImageGenerationMetadata("edit", generationConfig, 1, [source], operationProfile, execution.plan);
-                const previewSize = fitNodeSize(targetWidth, targetHeight, Math.max(node.width, 420), 720);
-                setRunningNodeId(childId);
-                setNodes((prev) => [
-                    ...prev,
-                    {
-                        id: childId,
-                        type: CanvasNodeType.Image,
-                        title: isFullBody ? "完整全身补全结果" : `${directionLabel(payload.direction || "down")}结果`,
-                        position: { x: node.position.x + node.width + 96, y: node.position.y },
-                        width: previewSize.width,
-                        height: previewSize.height,
-                        metadata: {
-                            prompt: fallbackPrompt,
-                            composerContent: payload.prompt,
-                            originalIdentityPrompt: identitySeed || fallbackPrompt,
-                            originalPrompt: node.metadata?.originalPrompt || node.metadata?.prompt || fallbackPrompt,
-                            status: NODE_STATUS_LOADING,
-                            ...generationMetadata,
-                        },
-                    },
-                ]);
-                setConnections((prev) => [...prev, { id: nanoid(), fromNodeId: node.id, toNodeId: childId }]);
-                setSelectedNodeIds(new Set([childId]));
-                setSelectedConnectionId(null);
-                setDialogNodeId(childId);
-                const controller = startGenerationRequest(childId, node.id, childId);
+                let outpaintPreflight: CapabilityPreflightDecision;
                 try {
-                    let prompt: string;
-                    if (isFullBody) {
-                        // full_body 禁止走通用优化器：其 system 词默认“不要输出 standing”，会把站立全身洗崩成畸形姿势
-                        const framingSource = await resolveOutpaintPromptWithUserCustomization(
-                            generationConfig,
-                            payload.prompt,
-                            payload.mode,
-                            identityTagsForDirection,
-                            outpaintDirection,
-                            fallbackPrompt,
-                            userCustomizedPrompt,
-                            controller.signal,
-                        );
-                        prompt = ensureFullBodyFramingPrompt(framingSource, fallbackPrompt);
-                        prompt = ensureFullBodyStandingPose(prompt);
-                    } else {
-                        // 原图续接禁止走通用优化器：它会把“向上补背景”改写成完整人物站姿描述，
-                        // 已实测导致延伸区再长出第二个人/光环角色（b6f434bc / inpaint_00039）。
-                        // 未改默认词：只用方向化英文默认词；用户改过默认词时轻量直译用户这段话，不整体改写。
-                        const extendSource = await resolveOutpaintPromptWithUserCustomization(
-                            generationConfig,
-                            payload.prompt,
-                            payload.mode,
-                            identityTagsForDirection,
-                            outpaintDirection,
-                            fallbackPrompt,
-                            userCustomizedPrompt,
-                            controller.signal,
-                        );
-                        prompt = normalizeEnglishOutpaintPrompt(extendSource, fallbackPrompt);
+                    outpaintPreflight = preflightComfyOutpaint(await fetchComfyCapabilities(effectiveConfig, selectedModel), selectedModel, payload.mode);
+                    if (outpaintPreflight.status === "unavailable") {
+                        message.error(`ComfyUI 续接模型不可用：${outpaintPreflight.reasons.join("；") || "运行时预检未通过"}`, 6);
+                        return;
                     }
-                    setNodes((prev) =>
-                        prev.map((item) =>
-                            item.id === childId
-                                ? {
-                                      ...item,
-                                      metadata: { ...item.metadata, prompt },
-                                  }
-                                : item,
-                        ),
-                    );
-                    const image = await requestEdit(generationConfig, prompt, [source], mask, { signal: controller.signal }).then((items) => items[0]);
-                    const uploaded = await uploadImage(image.dataUrl);
-                    const size = fitNodeSize(uploaded.width, uploaded.height, Math.max(node.width, 420), 720);
-                    setNodes((prev) =>
-                        prev.map((item) =>
-                            item.id === childId
-                                ? {
-                                      ...item,
-                                      width: size.width,
-                                      height: size.height,
-                                      metadata: {
-                                          ...item.metadata,
-                                          ...generationMetadata,
-                                          ...imageMetadata(uploaded),
-                                          gatewayExecutionReceipt: image.executionReceipt,
-                                          prompt,
-                                          status: NODE_STATUS_SUCCESS,
-                                          errorDetails: undefined,
-                                      },
-                                  }
-                                : item,
-                        ),
-                    );
-                    message.success(isFullBody ? "完整全身补全完成：soft 角色参考锁身份 + 构图优先，脸部已二次精修" : `${directionLabel(payload.direction || "down")}完成，原图非接缝区域已像素锁定`);
+                    if (outpaintPreflight.status === "degraded") {
+                        message.warning(`ComfyUI 续接模型将以降级状态执行：${outpaintPreflight.reasons.join("；")}`, 6);
+                    }
                 } catch (error) {
-                    const errorDetails = isGenerationCanceled(error) ? "生成已取消，可点重试继续。" : error instanceof Error ? error.message : "画面扩图失败";
-                    if (!isGenerationCanceled(error)) message.error(errorDetails);
-                    setNodes((prev) => prev.map((item) => (item.id === childId ? { ...item, metadata: { ...item.metadata, status: NODE_STATUS_ERROR, errorDetails } } : item)));
-                } finally {
-                    finishGenerationRequest(childId, controller);
-                    setRunningNodeId((current) => (current === childId ? null : current));
+                    message.error(error instanceof Error ? error.message : "ComfyUI 续接模型预检失败", 6);
+                    return;
                 }
-            } catch (error) {
-                const errorDetails = error instanceof Error ? error.message : "准备向下扩图失败";
-                message.error(errorDetails);
+                setOutpaintNodeId(null);
+                const isFullBody = payload.mode === "full_body";
+                try {
+                    const sourceDataUrl = await imageToDataUrl({
+                        dataUrl: node.metadata.content,
+                        storageKey: node.metadata.storageKey,
+                    });
+                    // full_body 只需要目标尺寸；extend 才做垫图+蒙版续接
+                    let prepared: DownwardOutpaintPrepared | null = null;
+                    let geometry: DownwardOutpaintGeometry;
+                    if (isFullBody) {
+                        const probe = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+                            const img = new Image();
+                            const timer = window.setTimeout(() => reject(new Error("读取扩图源图片超时")), 15000);
+                            img.onload = () => {
+                                window.clearTimeout(timer);
+                                resolve({ w: img.naturalWidth || img.width, h: img.naturalHeight || img.height });
+                            };
+                            img.onerror = () => {
+                                window.clearTimeout(timer);
+                                reject(new Error("读取扩图源图片失败"));
+                            };
+                            img.src = sourceDataUrl;
+                        });
+                        const w = node.metadata.naturalWidth || probe.w;
+                        const h = node.metadata.naturalHeight || probe.h;
+                        geometry = calculateDownwardOutpaintGeometry(w, h, payload);
+                    } else {
+                        prepared = await prepareDownwardOutpaint(sourceDataUrl, payload);
+                        geometry = prepared;
+                    }
+                    const targetWidth = geometry.targetWidth;
+                    const targetHeight = geometry.targetHeight;
+
+                    let baseImage: Awaited<ReturnType<typeof uploadImage>> | null = null;
+                    let maskImage: Awaited<ReturnType<typeof uploadImage>> | null = null;
+                    let originalUpload: Awaited<ReturnType<typeof uploadImage>> | null = null;
+
+                    if (isFullBody) {
+                        originalUpload = await uploadImage(sourceDataUrl);
+                    } else {
+                        const pair = await Promise.all([uploadImage(prepared!.baseDataUrl), uploadImage(prepared!.maskDataUrl)]);
+                        baseImage = pair[0];
+                        maskImage = pair[1];
+                    }
+
+                    const usesSourceModel = selectedModel === sourceModel;
+                    const operationProfile: CanvasOperationProfile = {
+                        kind: "outpaint",
+                        managed: true,
+                        sourceNodeId: node.id,
+                        ...(!usesSourceModel ? { modelOverride: selectedModel } : {}),
+                        direction: isFullBody ? "down" : (payload.direction || "down"),
+                        outpaintMode: payload.mode,
+                        originalPixelLock: !isFullBody,
+                        inheritSourceRecipe: usesSourceModel,
+                        faceProtection: true,
+                        denoise: isFullBody ? undefined : payload.denoise,
+                        seamOverlapPixels: geometry.seamOverlapPixels,
+                        extensionPixels: geometry.extensionPixels,
+                        sourceScale: geometry.sourceScale,
+                        sourceOffsetX: geometry.sourceOffsetX,
+                        sourceOffsetY: geometry.sourceOffsetY,
+                        sourceDrawWidth: geometry.sourceDrawWidth,
+                        sourceDrawHeight: geometry.sourceDrawHeight,
+                        sourceWidth: geometry.sourceWidth,
+                        sourceHeight: geometry.sourceHeight,
+                        targetWidth,
+                        targetHeight,
+                        ...(baseImage ? { baseStorageKey: baseImage.storageKey } : {}),
+                        ...(maskImage ? { maskStorageKey: maskImage.storageKey } : {}),
+                    };
+                    const execution = buildManagedImageExecution(effectiveConfig, node.metadata, operationProfile);
+                    // full_body：把身份原文塞进 extra，供网关 densify；并显式 denoise=false
+                    if (isFullBody) {
+                        const identitySeedForExtra = node.metadata.originalIdentityPrompt || node.metadata.originalPrompt || node.metadata.prompt || "";
+                        execution.config = {
+                            ...execution.config,
+                            comfyExtra: {
+                                ...execution.config.comfyExtra,
+                                // soft IPAdapter：借脸/发色/服装气质；denoise=false 走 EmptyLatent，构图不吃近景
+                                reference_mode: "ipadapter",
+                                denoise: false,
+                                face_detailer: false,
+                                prompt_optimize: false,
+                                full_body_rebuild: true,
+                                character_lock: true,
+                                // 关闭换姿分部位流水线；full_body 专用 face refine 仍由网关在主图后执行
+                                part_refine: 0,
+                                face_refine: 0,
+                                skirt_refine: 0,
+                                ...(identitySeedForExtra ? { identity_prompt: identitySeedForExtra, reference_prompt: identitySeedForExtra } : {}),
+                            },
+                        };
+                    }
+                    const generationConfig = execution.config;
+                    if (!isAiConfigReady(generationConfig, generationConfig.model)) {
+                        openConfigDialog(true);
+                        return;
+                    }
+                    const identitySeed = node.metadata.originalIdentityPrompt || node.metadata.originalPrompt || node.metadata.prompt || "";
+                    const identityPack = extractIdentityPack(identitySeed, { hasReferenceImages: true, includeLocks: true, includePoseChange: false });
+                    const childId = nanoid();
+                    const source = isFullBody
+                        ? {
+                              id: `${node.id}-outpaint-identity`,
+                              name: `${node.title || node.id}-identity.png`,
+                              type: originalUpload!.mimeType || "image/png",
+                              dataUrl: originalUpload!.url || sourceDataUrl,
+                              storageKey: originalUpload!.storageKey,
+                          }
+                        : {
+                              id: `${node.id}-outpaint-base`,
+                              name: `${node.title || node.id}-outpaint-base.png`,
+                              type: baseImage!.mimeType || "image/png",
+                              dataUrl: baseImage!.url,
+                              storageKey: baseImage!.storageKey,
+                          };
+                    const mask = !isFullBody
+                        ? {
+                              id: `${node.id}-outpaint-mask`,
+                              name: "outpaint-mask.png",
+                              type: "image/png",
+                              dataUrl: prepared!.maskDataUrl,
+                              storageKey: maskImage!.storageKey,
+                          }
+                        : undefined;
+                    const outpaintDirection = payload.direction || "down";
+                    // 身份词只在延伸区确实包含人物身体时有用(向下补身体/外扩含下方);
+                    // up/left/right 纯背景延伸拼身份词反而诱导模型在背景区再画一个人/头发/手。
+                    const identityTagsForDirection = isFullBody || outpaintDirection === "down" || outpaintDirection === "outward" ? identityPack.tags : [];
+                    // 未改面板默认词：严格走规范默认词，不调用任何优化器；用户确实改过默认词时才轻量直译用户这段话，
+                    // 不整体改写、不新增人物/场景/饰品（BOSS 2026-07-15：默认词严格规范，用户自己改的内容才需要生效）。
+                    const userCustomizedPrompt = !isDefaultOutpaintPrompt(payload.prompt, payload.mode, outpaintDirection);
+                    const fallbackPrompt = buildEnglishOutpaintFallback(payload.mode, payload.prompt, identityTagsForDirection, outpaintDirection);
+                    let generationMetadata = buildImageGenerationMetadata("edit", generationConfig, 1, [source], operationProfile, execution.plan);
+                    const previewSize = fitNodeSize(targetWidth, targetHeight, Math.max(node.width, 420), 720);
+                    setRunningNodeId(childId);
+                    setNodes((prev) => [
+                        ...prev,
+                        {
+                            id: childId,
+                            type: CanvasNodeType.Image,
+                            title: isFullBody ? "完整全身补全结果" : `${directionLabel(payload.direction || "down")}结果`,
+                            position: { x: node.position.x + node.width + 96, y: node.position.y },
+                            width: previewSize.width,
+                            height: previewSize.height,
+                            metadata: {
+                                prompt: fallbackPrompt,
+                                composerContent: payload.prompt,
+                                originalIdentityPrompt: identitySeed || fallbackPrompt,
+                                originalPrompt: node.metadata?.originalPrompt || node.metadata?.prompt || fallbackPrompt,
+                                status: NODE_STATUS_LOADING,
+                                ...generationMetadata,
+                            },
+                        },
+                    ]);
+                    setConnections((prev) => [...prev, { id: nanoid(), fromNodeId: node.id, toNodeId: childId }]);
+                    setSelectedNodeIds(new Set([childId]));
+                    setSelectedConnectionId(null);
+                    setDialogNodeId(childId);
+                    const controller = startGenerationRequest(childId, node.id, childId);
+                    try {
+                        let prompt: string;
+                        if (isFullBody) {
+                            // full_body 禁止走通用优化器：其 system 词默认“不要输出 standing”，会把站立全身洗崩成畸形姿势
+                            const framingSource = await resolveOutpaintPromptWithUserCustomization(
+                                generationConfig,
+                                payload.prompt,
+                                payload.mode,
+                                identityTagsForDirection,
+                                outpaintDirection,
+                                fallbackPrompt,
+                                userCustomizedPrompt,
+                                controller.signal,
+                            );
+                            prompt = ensureFullBodyFramingPrompt(framingSource, fallbackPrompt);
+                            prompt = ensureFullBodyStandingPose(prompt);
+                        } else {
+                            // 原图续接禁止走通用优化器：它会把“向上补背景”改写成完整人物站姿描述，
+                            // 已实测导致延伸区再长出第二个人/光环角色（b6f434bc / inpaint_00039）。
+                            // 未改默认词：只用方向化英文默认词；用户改过默认词时轻量直译用户这段话，不整体改写。
+                            const extendSource = await resolveOutpaintPromptWithUserCustomization(
+                                generationConfig,
+                                payload.prompt,
+                                payload.mode,
+                                identityTagsForDirection,
+                                outpaintDirection,
+                                fallbackPrompt,
+                                userCustomizedPrompt,
+                                controller.signal,
+                            );
+                            prompt = normalizeEnglishOutpaintPrompt(extendSource, fallbackPrompt);
+                        }
+                        // 在主线提示词编译完成后写入 Shared ExecutionPlan；保留 outpaint 既有直译/默认词路径，不接通用优化器。
+                        const sharedExecutionPlan = buildComfyExecutionPlan({
+                            model: generationConfig.model,
+                            prompt,
+                            mediaType: "image_edit",
+                            operation: "outpaint",
+                            count: 1,
+                            references: [source],
+                            nodes: nodesRef.current,
+                            sourceNodeId: node.id,
+                            referenceMode: isFullBody ? "ipadapter" : "none",
+                            decision: outpaintPreflight,
+                        });
+                        generationMetadata = buildImageGenerationMetadata("edit", generationConfig, 1, [source], operationProfile, execution.plan, sharedExecutionPlan);
+                        setNodes((prev) =>
+                            prev.map((item) =>
+                                item.id === childId
+                                    ? {
+                                          ...item,
+                                          metadata: { ...item.metadata, ...generationMetadata, prompt },
+                                      }
+                                    : item,
+                            ),
+                        );
+                        const image = await requestEdit(generationConfig, prompt, [source], mask, { signal: controller.signal }).then((items) => items[0]);
+                        const uploaded = await uploadImage(image.dataUrl);
+                        const size = fitNodeSize(uploaded.width, uploaded.height, Math.max(node.width, 420), 720);
+                        setNodes((prev) =>
+                            prev.map((item) =>
+                                item.id === childId
+                                    ? {
+                                          ...item,
+                                          width: size.width,
+                                          height: size.height,
+                                          metadata: {
+                                              ...item.metadata,
+                                              ...generationMetadata,
+                                              ...imageMetadata(uploaded),
+                                              gatewayExecutionReceipt: image.executionReceipt,
+                                              prompt,
+                                              status: NODE_STATUS_SUCCESS,
+                                              errorDetails: undefined,
+                                          },
+                                      }
+                                    : item,
+                            ),
+                        );
+                        message.success(isFullBody ? "完整全身补全完成：soft 角色参考锁身份 + 构图优先，脸部已二次精修" : `${directionLabel(payload.direction || "down")}完成，原图非接缝区域已像素锁定`);
+                    } catch (error) {
+                        const errorDetails = isGenerationCanceled(error) ? "生成已取消，可点重试继续。" : error instanceof Error ? error.message : "画面扩图失败";
+                        if (!isGenerationCanceled(error)) message.error(errorDetails);
+                        setNodes((prev) => prev.map((item) => (item.id === childId ? { ...item, metadata: { ...item.metadata, status: NODE_STATUS_ERROR, errorDetails } } : item)));
+                    } finally {
+                        finishGenerationRequest(childId, controller);
+                        setRunningNodeId((current) => (current === childId ? null : current));
+                    }
+                } catch (error) {
+                    const errorDetails = error instanceof Error ? error.message : "准备向下扩图失败";
+                    message.error(errorDetails);
+                }
+            } finally {
+                outpaintSourceLocksRef.current.delete(node.id);
             }
         },
         [effectiveConfig, finishGenerationRequest, isAiConfigReady, message, openConfigDialog, startGenerationRequest],
@@ -3555,7 +3596,7 @@ function InfiniteCanvasPage() {
                     <CanvasNodeMaskEditDialog dataUrl={maskEditNode.metadata.content} open={Boolean(maskEditNode)} onClose={() => setMaskEditNodeId(null)} onConfirm={(payload) => void maskEditImageNode(maskEditNode!, payload)} />
                 ) : null}
 
-                <CanvasNodeOutpaintDialog node={outpaintNode} open={Boolean(outpaintNode)} onClose={() => setOutpaintNodeId(null)} onConfirm={(payload) => void outpaintImageNode(outpaintNode!, payload)} />
+                <CanvasNodeOutpaintDialog node={outpaintNode} config={effectiveConfig} open={Boolean(outpaintNode)} onClose={() => setOutpaintNodeId(null)} onConfirm={(payload) => outpaintImageNode(outpaintNode!, payload)} />
 
                 {splitNode?.metadata?.content ? <CanvasNodeSplitDialog dataUrl={splitNode.metadata.content} open={Boolean(splitNode)} onClose={() => setSplitNodeId(null)} onConfirm={(params) => void splitImageNode(splitNode!, params)} /> : null}
 

@@ -1,0 +1,27 @@
+{
+  "endpoint": "http://127.0.0.1:8080/v1/images/edits",
+  "model": "comfy/illustrious-mmmix-v8",
+  "prompt": "1girl, solo, adult woman, same character identity, black bob haircut with vivid teal cyan ombre tips, aqua green eyes, white sleeveless top, seamless downward continuation within the available frame, preserve the original character and composition, naturally continue the visible white sleeveless garment, upper torso and background below the source image, consistent warm lighting, fabric, anatomy, perspective and color, subject centered, preserve the same hairstyle, hair color and clothing design, no outfit change, no corset, no green clothing, no lacing",
+  "n": 1,
+  "size": "1024x1664",
+  "response_format": "b64_json",
+  "output_format": "png",
+  "extra": {
+    "lora_keys": [
+      "illustrious-masterpiece-v3",
+      "bss-detail-enhancer-v3",
+      "bss-visual-enhancer-v3",
+      "bss-skin-texture-v2",
+      "eyes-for-illustrious",
+      "dramatic-lighting-slider"
+    ],
+    "face_detailer": false,
+    "denoise": 0.68,
+    "seam_feather": 96,
+    "outpaint_direction": "down",
+    "prompt_optimize": false,
+    "seed": 424242
+  },
+  "image": "a2r-down-base-1024x1664.png",
+  "mask": "a2r-down-mask-softseam-96-1024x1664.png"
+}

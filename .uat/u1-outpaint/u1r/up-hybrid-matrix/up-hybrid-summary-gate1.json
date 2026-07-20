@@ -1,0 +1,127 @@
+{
+  "stage": "U1-R-up-hybrid-matrix",
+  "tag": "gate1",
+  "params": {
+    "band": 144,
+    "denoise": 0.55,
+    "seam": 96,
+    "ratio": 0.625,
+    "loras": [
+      "illustrious-masterpiece-v3",
+      "bss-detail-enhancer-v3",
+      "bss-skin-texture-v2",
+      "eyes-for-illustrious"
+    ]
+  },
+  "baseline": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/baseline/u1-character-baseline.png",
+  "finishedAt": "2026-07-17T21:42:50+0800",
+  "matrix": [
+    {
+      "seed": 424242,
+      "caseDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-hybrid-matrix/up-hybrid-s424242-gate1",
+      "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-hybrid-matrix/up-hybrid-s424242-gate1/u1r-up-hybrid-s424242-result.png",
+      "httpStatus": 200,
+      "elapsedSec": 37.8,
+      "provisional": "METRIC_FAIL",
+      "darkPct": 3.6,
+      "farDarkPct": 6.7,
+      "gdom": 0.11,
+      "relDeltaE": 68.76,
+      "protectedCoreDiffRatio": 0.0,
+      "seamWorst": {
+        "name": "seam_up",
+        "lumaDelta": 64.97,
+        "rgbDelta": 112.62,
+        "gradPeak": 64.97
+      },
+      "autoFindings": [
+        [
+          "hard_seam",
+          "FAIL"
+        ],
+        [
+          "green_cast",
+          "FAIL"
+        ]
+      ],
+      "gate": {
+        "deterministicPreGate": "PASS_PENDING_VISUAL",
+        "reasons": [
+          "visual_review_required"
+        ]
+      }
+    },
+    {
+      "seed": 424243,
+      "caseDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-hybrid-matrix/up-hybrid-s424243-gate1",
+      "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-hybrid-matrix/up-hybrid-s424243-gate1/u1r-up-hybrid-s424243-result.png",
+      "httpStatus": 200,
+      "elapsedSec": 25.3,
+      "provisional": "METRIC_FAIL",
+      "darkPct": 3.8,
+      "farDarkPct": 6.7,
+      "gdom": 0.13,
+      "relDeltaE": 67.09,
+      "protectedCoreDiffRatio": 0.0,
+      "seamWorst": {
+        "name": "seam_up",
+        "lumaDelta": 65.18,
+        "rgbDelta": 112.92,
+        "gradPeak": 65.18
+      },
+      "autoFindings": [
+        [
+          "hard_seam",
+          "FAIL"
+        ],
+        [
+          "green_cast",
+          "FAIL"
+        ]
+      ],
+      "gate": {
+        "deterministicPreGate": "PASS_PENDING_VISUAL",
+        "reasons": [
+          "visual_review_required"
+        ]
+      }
+    },
+    {
+      "seed": 777001,
+      "caseDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-hybrid-matrix/up-hybrid-s777001-gate1",
+      "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-hybrid-matrix/up-hybrid-s777001-gate1/u1r-up-hybrid-s777001-result.png",
+      "httpStatus": 200,
+      "elapsedSec": 25.6,
+      "provisional": "METRIC_FAIL",
+      "darkPct": 3.8,
+      "farDarkPct": 6.7,
+      "gdom": 0.37,
+      "relDeltaE": 75.65,
+      "protectedCoreDiffRatio": 0.0,
+      "seamWorst": {
+        "name": "seam_up",
+        "lumaDelta": 67.45,
+        "rgbDelta": 115.75,
+        "gradPeak": 67.45
+      },
+      "autoFindings": [
+        [
+          "hard_seam",
+          "FAIL"
+        ],
+        [
+          "green_cast",
+          "FAIL"
+        ]
+      ],
+      "gate": {
+        "deterministicPreGate": "PASS_PENDING_VISUAL",
+        "reasons": [
+          "visual_review_required"
+        ]
+      }
+    }
+  ],
+  "releaseRule": "Direction UP is released only if: (1) all seeds deterministicPreGate != FAIL; (2) BOSS visual OK on every seed (no hands/second face/hard seam/color break); (3) then and only then proceed to next direction.",
+  "note": "Automated metrics cannot certify hands/second-face; BOSS multi-sample visual is mandatory."
+}

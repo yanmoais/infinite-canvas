@@ -287,8 +287,44 @@ function isGenerationAssetVersion(value: unknown) {
         && (value.licenseUrl === undefined || typeof value.licenseUrl === "string");
 }
 
+function isGenerationActualLora(value: unknown) {
+    if (!isRecord(value)) return false;
+    return typeof value.file === "string"
+        && typeof value.nodeId === "string"
+        && typeof value.loaderClass === "string"
+        && ["workflow_template", "gateway_dynamic"].includes(String(value.source))
+        && (value.strengthModel === null || typeof value.strengthModel === "number")
+        && (value.strengthClip === null || typeof value.strengthClip === "number")
+        && (value.stageIds === undefined || (
+            Array.isArray(value.stageIds)
+            && value.stageIds.every((stageId) => typeof stageId === "string")
+        ));
+}
+
+function isGenerationOpaqueLoraSource(value: unknown) {
+    if (!isRecord(value)) return false;
+    return isNullableString(value.nodeId)
+        && isNullableString(value.loaderClass)
+        && typeof value.reason === "string"
+        && (value.stageId === undefined || typeof value.stageId === "string");
+}
+
+function isGenerationLoraEvidence(value: unknown) {
+    if (!isRecord(value)) return false;
+    return ["complete", "incomplete", "unknown"].includes(String(value.status))
+        && Array.isArray(value.opaqueSources)
+        && value.opaqueSources.every(isGenerationOpaqueLoraSource);
+}
+
 function isGenerationExecutionStage(value: unknown) {
     if (!isRecord(value) || !isRecord(value.fallback)) return false;
+    const presetFallback = value.fallback.preset;
+    const validPresetFallback = presetFallback === undefined || presetFallback === null || (
+        isRecord(presetFallback)
+        && typeof presetFallback.from === "string"
+        && typeof presetFallback.to === "string"
+        && typeof presetFallback.reason === "string"
+    );
     return typeof value.stageId === "string"
         && typeof value.stageKind === "string"
         && ["succeeded", "failed"].includes(String(value.taskResult))
@@ -305,15 +341,109 @@ function isGenerationExecutionStage(value: unknown) {
         && typeof value.fallback.used === "boolean"
         && typeof value.fallback.requestedReferenceMode === "string"
         && typeof value.fallback.effectiveReferenceMode === "string"
+        && validPresetFallback
         && Array.isArray(value.assetVersions)
         && value.assetVersions.every(isGenerationAssetVersion)
+        && Array.isArray(value.actualLoras)
+        && value.actualLoras.every(isGenerationActualLora)
+        && isGenerationLoraEvidence(value.loraEvidence)
         && (value.comfyExecutionSeconds === null || typeof value.comfyExecutionSeconds === "number")
         && isNullableString(value.error);
 }
 
+function loraEvidenceStatus(statuses: string[]) {
+    if (!statuses.length || statuses.includes("unknown")) return "unknown";
+    return statuses.includes("incomplete") ? "incomplete" : "complete";
+}
+
+function sameActualLora(left: Record<string, unknown>, right: Record<string, unknown>) {
+    return left.file === right.file
+        && left.nodeId === right.nodeId
+        && left.loaderClass === right.loaderClass
+        && left.source === right.source
+        && left.strengthModel === right.strengthModel
+        && left.strengthClip === right.strengthClip
+        && JSON.stringify(left.stageIds) === JSON.stringify(right.stageIds);
+}
+
+function sameOpaqueLoraSource(left: Record<string, unknown>, right: Record<string, unknown>) {
+    return left.nodeId === right.nodeId
+        && left.loaderClass === right.loaderClass
+        && left.reason === right.reason
+        && left.stageId === right.stageId;
+}
+
+function hasConsistentLoraEvidence(stage: Record<string, unknown>) {
+    if (!isRecord(stage.loraEvidence)) return false;
+    const status = String(stage.loraEvidence.status);
+    const opaqueSources = stage.loraEvidence.opaqueSources as unknown[];
+    return status === "complete" ? opaqueSources.length === 0 : opaqueSources.length > 0;
+}
+
+function hasConsistentReceiptSemantics(value: Record<string, unknown>) {
+    const stages = value.stages as Array<Record<string, unknown>>;
+    const actual = value.actual as Record<string, unknown>;
+    if (!stages.every(hasConsistentLoraEvidence) || !hasConsistentLoraEvidence(actual)) return false;
+    const primaryStage = stages.find((stage) => stage.stageId === value.primaryStageId);
+    const finalStage = stages.find((stage) => stage.stageId === value.finalStageId);
+    if (!primaryStage || !finalStage) return false;
+
+    const finalFields = [
+        "stageId", "stageKind", "taskResult", "promptId", "baseCapabilityId",
+        "workflowBindingId", "workflowHash", "workflowFile", "templateField",
+        "effectiveReferenceMode", "adapterKind", "mutators", "assetVersions",
+        "comfyExecutionSeconds", "error",
+    ];
+    if (finalFields.some((field) => JSON.stringify(actual[field]) !== JSON.stringify(finalStage[field]))) return false;
+    if (JSON.stringify(actual.fallback) !== JSON.stringify(primaryStage.fallback)) return false;
+    const fallback = primaryStage.fallback as Record<string, unknown>;
+    const presetFallback = fallback.preset;
+    const referenceFallbackUsed = fallback.requestedReferenceMode !== fallback.effectiveReferenceMode;
+    const presetFallbackUsed = isRecord(presetFallback);
+    if (fallback.used !== (referenceFallbackUsed || presetFallbackUsed)) return false;
+    if (presetFallbackUsed) {
+        if (presetFallback.from === presetFallback.to || !String(presetFallback.reason).trim()) return false;
+        if (value.planned && (value.planned as Record<string, unknown>).baseCapabilityId !== `comfy.image.${presetFallback.from}`) return false;
+        if (primaryStage.baseCapabilityId !== `comfy.image.${presetFallback.to}`) return false;
+    } else if ((value.planned as Record<string, unknown>).baseCapabilityId !== primaryStage.baseCapabilityId) return false;
+
+    const aggregatedLoras: Array<Record<string, unknown>> = [];
+    const seenLoras = new Set<string>();
+    const aggregatedOpaqueSources: Array<Record<string, unknown>> = [];
+    for (const stage of stages) {
+        const stageId = String(stage.stageId);
+        for (const rawLora of stage.actualLoras as Array<Record<string, unknown>>) {
+            const key = JSON.stringify([
+                stageId,
+                rawLora.nodeId,
+                rawLora.file,
+                rawLora.loaderClass,
+                rawLora.source,
+                rawLora.strengthModel,
+                rawLora.strengthClip,
+            ]);
+            if (seenLoras.has(key)) continue;
+            seenLoras.add(key);
+            aggregatedLoras.push({ ...rawLora, stageIds: [stageId] });
+        }
+        const evidence = stage.loraEvidence as Record<string, unknown>;
+        for (const rawSource of evidence.opaqueSources as Array<Record<string, unknown>>) {
+            aggregatedOpaqueSources.push({ ...rawSource, stageId });
+        }
+    }
+    const actualLoras = actual.actualLoras as Array<Record<string, unknown>>;
+    const actualEvidence = actual.loraEvidence as Record<string, unknown>;
+    const actualOpaqueSources = actualEvidence.opaqueSources as Array<Record<string, unknown>>;
+    return actualEvidence.status === loraEvidenceStatus(stages.map((stage) => String((stage.loraEvidence as Record<string, unknown>).status)))
+        && actualLoras.length === aggregatedLoras.length
+        && actualLoras.every((lora, index) => sameActualLora(lora, aggregatedLoras[index]))
+        && actualOpaqueSources.length === aggregatedOpaqueSources.length
+        && actualOpaqueSources.every((source, index) => sameOpaqueLoraSource(source, aggregatedOpaqueSources[index]));
+}
+
 function isGenerationExecutionReceipt(value: unknown): value is GenerationExecutionReceipt {
     if (!isRecord(value) || !isRecord(value.planned) || !isRecord(value.actual)) return false;
-    return value.schemaVersion === "1"
+    return value.schemaVersion === "2"
         && typeof value.receiptId === "string"
         && typeof value.planned.baseCapabilityId === "string"
         && isNullableString(value.planned.baseModelId)
@@ -326,7 +456,8 @@ function isGenerationExecutionReceipt(value: unknown): value is GenerationExecut
         && value.stages.length > 0
         && value.stages.every(isGenerationExecutionStage)
         && isGenerationExecutionStage(value.actual)
-        && typeof value.actual.totalComfyExecutionSeconds === "number";
+        && typeof value.actual.totalComfyExecutionSeconds === "number"
+        && hasConsistentReceiptSemantics(value);
 }
 
 export function parseImageResponse(payload: ImageApiResponse): ImageGenerationResult {

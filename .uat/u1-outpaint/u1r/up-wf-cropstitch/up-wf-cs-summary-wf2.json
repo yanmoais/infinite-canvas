@@ -1,0 +1,120 @@
+{
+  "stage": "U1-R-up-wf-cropstitch",
+  "tag": "wf2",
+  "params": {
+    "band": 112,
+    "denoise": 0.52,
+    "seam": 96,
+    "ratio": 0.625,
+    "context_below": 160,
+    "margin_above": 64,
+    "differential_diffusion": true,
+    "loras": [
+      "illustrious-masterpiece-v3",
+      "bss-detail-enhancer-v3",
+      "bss-skin-texture-v2",
+      "eyes-for-illustrious"
+    ]
+  },
+  "finishedAt": "2026-07-17T22:03:06+0800",
+  "matrix": [
+    {
+      "seed": 424242,
+      "caseDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424242-wf2",
+      "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424242-wf2/u1r-up-wf-cs-s424242-result.png",
+      "httpStatus": 200,
+      "elapsedSec": 86.6,
+      "cropWindow": [
+        0,
+        464,
+        1024,
+        784
+      ],
+      "use_dd": true,
+      "provisional": "METRIC_FAIL",
+      "darkPct": 63.9,
+      "farDarkPct": 27.8,
+      "gdom": -2.25,
+      "relDeltaE": 0.0,
+      "protectedCoreDiffRatio": 1.0,
+      "seamWorst": {
+        "name": "seam_up",
+        "lumaDelta": 0.0,
+        "rgbDelta": 0.0,
+        "gradPeak": 0.0
+      },
+      "autoFindings": [
+        [
+          "protect_violation",
+          "FAIL"
+        ]
+      ]
+    },
+    {
+      "seed": 424243,
+      "caseDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424243-wf2",
+      "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424243-wf2/u1r-up-wf-cs-s424243-result.png",
+      "httpStatus": 200,
+      "elapsedSec": 9.8,
+      "cropWindow": [
+        0,
+        464,
+        1024,
+        784
+      ],
+      "use_dd": true,
+      "provisional": "METRIC_FAIL",
+      "darkPct": 63.6,
+      "farDarkPct": 27.2,
+      "gdom": -2.97,
+      "relDeltaE": 0.0,
+      "protectedCoreDiffRatio": 1.0,
+      "seamWorst": {
+        "name": "seam_up",
+        "lumaDelta": 0.0,
+        "rgbDelta": 0.0,
+        "gradPeak": 0.0
+      },
+      "autoFindings": [
+        [
+          "protect_violation",
+          "FAIL"
+        ]
+      ]
+    },
+    {
+      "seed": 777001,
+      "caseDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s777001-wf2",
+      "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s777001-wf2/u1r-up-wf-cs-s777001-result.png",
+      "httpStatus": 200,
+      "elapsedSec": 9.3,
+      "cropWindow": [
+        0,
+        464,
+        1024,
+        784
+      ],
+      "use_dd": true,
+      "provisional": "METRIC_FAIL",
+      "darkPct": 63.0,
+      "farDarkPct": 26.1,
+      "gdom": -1.56,
+      "relDeltaE": 0.0,
+      "protectedCoreDiffRatio": 1.0,
+      "seamWorst": {
+        "name": "seam_up",
+        "lumaDelta": 0.0,
+        "rgbDelta": 0.0,
+        "gradPeak": 0.0
+      },
+      "autoFindings": [
+        [
+          "protect_violation",
+          "FAIL"
+        ]
+      ]
+    }
+  ],
+  "releaseRule": "UP released only if all seeds pass BOSS visual (no hands/second face/hard seam).",
+  "note": "Crop+Stitch workflow experiment inspired by Civitai Inpaint AIO / Fooocus Crop&Stitch."
+}

@@ -1,0 +1,101 @@
+{
+  "direction": "up",
+  "denoise": 0.52,
+  "seam": 96,
+  "size": "1024x320",
+  "protectedRegionDiff": {
+    "differentPixels": 950272,
+    "totalPixels": 950272,
+    "ratio": 1.0
+  },
+  "protectedCoreDiff": {
+    "box": [
+      0,
+      736,
+      1024,
+      1664
+    ],
+    "differentPixels": 950272,
+    "totalPixels": 950272,
+    "ratio": 1.0,
+    "metricName": "protectedCoreDiffRatio"
+  },
+  "generatedRegionMeanRgb": [
+    70.31,
+    63.29,
+    59.41
+  ],
+  "generatedRegionGreenDominance": -1.56,
+  "generatedRegionGreenishPct": 0.2,
+  "generatedRegionWhiteishPct": 19.1,
+  "generatedRegionDarkPct": 63.0,
+  "voidDarkSpatial": {
+    "farDarkPct": 26.1,
+    "farDarkPctAvg": 26.1,
+    "worstRegion": "far_extension",
+    "regions": [
+      {
+        "sampleCount": 81920,
+        "meanRgb": [
+          140.61,
+          126.59,
+          118.81
+        ],
+        "gdom": -3.12,
+        "darkPct": 26.1,
+        "greenishPct": 0.4,
+        "whiteishPct": 38.2,
+        "box": [
+          0,
+          0,
+          1024,
+          320
+        ],
+        "name": "far_extension"
+      }
+    ]
+  },
+  "relativeColor": {
+    "relGdom": 0.0,
+    "relDeltaE": 0.0
+  },
+  "seamContinuity": {
+    "seams": [
+      {
+        "name": "seam_up",
+        "axis": "horizontal",
+        "boundary": 640,
+        "srcMeanRgb": [
+          96.5,
+          83.62,
+          77.68
+        ],
+        "genMeanRgb": [
+          96.5,
+          83.62,
+          77.68
+        ],
+        "lumaDelta": 0.0,
+        "rgbDelta": 0.0,
+        "gradPeak": 0.0
+      }
+    ],
+    "worst": {
+      "name": "seam_up",
+      "lumaDelta": 0.0,
+      "rgbDelta": 0.0,
+      "gradPeak": 0.0
+    }
+  },
+  "sha256": "c45caec19c4b37f4002b37613c5e01702308ffbac0c15a5908d39b20a7bf5972",
+  "provisional": "METRIC_FAIL",
+  "provisionalReasons": [
+    "darkPct>=40.0",
+    "protectedCoreDiff>=0.05",
+    "protectedCoreDiff>0.02"
+  ],
+  "qaReportPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s777001-wf2/qa-report.json",
+  "qaCropsDir": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s777001-wf2/qa-crops",
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17"
+}

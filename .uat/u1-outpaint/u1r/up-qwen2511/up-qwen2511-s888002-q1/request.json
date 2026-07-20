@@ -1,0 +1,29 @@
+{
+  "endpoint": "http://127.0.0.1:8080/nannan/edit-image-local",
+  "model": "the-witness-qwen-edit2511-fidelity",
+  "size": "1024x1344",
+  "prompt": "Expand the camera framing upward only. Continue the same single portrait subject and the same warm indoor room. Keep the original face, hair color, hairstyle, clothing and identity completely unchanged. Above the head, only continue the existing soft out-of-focus wall/ceiling background and ambient light. Do not add another person, second face, hand, arm, fingers, object on head, device, helmet, hair dryer, camera, reflection or duplicate limb. No hard horizontal seam. Match source color temperature and lighting direction.",
+  "image": "padded.png",
+  "extra": {
+    "seed": 888002,
+    "steps": 28,
+    "engine": "qwen-edit-2511"
+  },
+  "geometry": {
+    "mode": "extend",
+    "direction": "up",
+    "sourceWidth": 1024,
+    "sourceHeight": 1024,
+    "targetWidth": 1024,
+    "targetHeight": 1344,
+    "extensionPixels": 320,
+    "seamOverlapPixels": 72,
+    "sourceScale": 1,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 320,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "case": "U1-R-up-qwen2511-s888002",
+  "hypothesis": "Qwen-2511 instruction expand + force stitch protect; small-step up"
+}

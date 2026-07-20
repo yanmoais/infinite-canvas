@@ -1,0 +1,175 @@
+{
+  "schemaVersion": "u1-qa-v1",
+  "qaProfileVersion": "u1-qa-profile-v1",
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17",
+  "direction": "up",
+  "denoise": 0.58,
+  "seam": 112,
+  "size": "1024x1664",
+  "geometry": {
+    "targetWidth": 1024,
+    "targetHeight": 1664,
+    "extensionPixels": 640,
+    "seamOverlapPixels": 112,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 640,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "sizeMismatch": null,
+  "protectedCoreDiff": {
+    "box": [
+      0,
+      752,
+      1024,
+      1664
+    ],
+    "differentPixels": 0,
+    "totalPixels": 933888,
+    "ratio": 0.0,
+    "metricName": "protectedCoreDiffRatio"
+  },
+  "protectedRegionDiff": {
+    "differentPixels": 0,
+    "totalPixels": 933888,
+    "ratio": 0.0
+  },
+  "generatedRegionMeanRgb": [
+    160.98,
+    156.16,
+    150.66
+  ],
+  "generatedRegionGreenDominance": 0.34,
+  "generatedRegionGreenishPct": 0.0,
+  "generatedRegionWhiteishPct": 49.6,
+  "generatedRegionDarkPct": 4.0,
+  "extensionStats": {
+    "sampleCount": 163840,
+    "meanRgb": [
+      160.98,
+      156.16,
+      150.66
+    ],
+    "gdom": 0.34,
+    "darkPct": 4.0,
+    "greenishPct": 0.0,
+    "whiteishPct": 49.6,
+    "box": [
+      0,
+      0,
+      1024,
+      640
+    ]
+  },
+  "voidDarkSpatial": {
+    "farDarkPct": 6.7,
+    "farDarkPctAvg": 6.7,
+    "worstRegion": "far_extension",
+    "regions": [
+      {
+        "sampleCount": 81920,
+        "meanRgb": [
+          144.43,
+          141.54,
+          136.75
+        ],
+        "gdom": 0.95,
+        "darkPct": 6.7,
+        "greenishPct": 0.0,
+        "whiteishPct": 37.8,
+        "box": [
+          0,
+          0,
+          1024,
+          320
+        ],
+        "name": "far_extension"
+      }
+    ]
+  },
+  "relativeColor": {
+    "sourceBand": {
+      "sampleCount": 14336,
+      "meanRgb": [
+        106.38,
+        95.99,
+        90.9
+      ],
+      "gdom": -2.64,
+      "darkPct": 46.0,
+      "greenishPct": 0.0,
+      "whiteishPct": 23.0,
+      "box": [
+        0,
+        640,
+        1024,
+        696
+      ]
+    },
+    "generatedBand": {
+      "sampleCount": 14336,
+      "meanRgb": [
+        178.71,
+        162.82,
+        153.26
+      ],
+      "gdom": -3.16,
+      "darkPct": 5.3,
+      "greenishPct": 0.0,
+      "whiteishPct": 58.7,
+      "box": [
+        0,
+        584,
+        1024,
+        640
+      ]
+    },
+    "relGdom": -0.52,
+    "relDeltaE": 71.38
+  },
+  "seamContinuity": {
+    "seams": [
+      {
+        "name": "seam_up",
+        "axis": "horizontal",
+        "boundary": 640,
+        "srcMeanRgb": [
+          163.53,
+          149.11,
+          139.96
+        ],
+        "genMeanRgb": [
+          134.0,
+          124.01,
+          119.13
+        ],
+        "lumaDelta": 25.73,
+        "rgbDelta": 44.0,
+        "gradPeak": 27.44
+      }
+    ],
+    "worst": {
+      "name": "seam_up",
+      "lumaDelta": 25.73,
+      "rgbDelta": 44.0,
+      "gradPeak": 27.44
+    }
+  },
+  "sha256": "436b7e76dfd170760e87a76f9a0cc9af619df8badac407c55a4446c045edd493",
+  "sourcePromptId": "3e8a8865-0a15-497b-91cf-47dad2079a2a",
+  "windowsOutput": null,
+  "recoveredFromServer": null,
+  "provisional": "METRIC_FAIL",
+  "provisionalReasons": [
+    "seamRgbDeltaWarn",
+    "relDeltaE>=35.0",
+    "relDeltaE>=22.0"
+  ],
+  "seed": 777001,
+  "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-hybrid-matrix/up-hybrid-s777001-gate2/u1r-up-hybrid-s777001-result.png",
+  "basePath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-hybrid-matrix/up-hybrid-s777001-gate2/up-hybrid-base-1024x1664.png",
+  "resultSha256": "436b7e76dfd170760e87a76f9a0cc9af619df8badac407c55a4446c045edd493",
+  "baseSha256": "33084ab6c75389843308556708ad35d5abb695b8c3c2ceb49e099ca4a990cf04",
+  "requestSha256": "e6b23510b4ab75247da018718ad0187f6df84f419e68edfd593c73274b27e379"
+}

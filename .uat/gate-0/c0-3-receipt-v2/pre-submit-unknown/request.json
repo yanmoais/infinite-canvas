@@ -1,0 +1,13 @@
+{
+  "model": "comfy/zimage-union-controlnet",
+  "prompt": "C0-3 pre-submit receipt probe",
+  "n": 1,
+  "size": "512x512",
+  "extra": {
+    "prompt_optimize": false,
+    "reference_mode": "none",
+    "face_detailer": false,
+    "seed": 424244,
+    "lora_keys": []
+  }
+}

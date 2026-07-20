@@ -1,0 +1,212 @@
+{
+  "stage": "U1-A",
+  "baseline": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/baseline/u1-character-baseline.png",
+  "seed": 424242,
+  "model": "comfy/illustrious-mmmix-v8",
+  "loras": [
+    "illustrious-masterpiece-v3",
+    "bss-detail-enhancer-v3",
+    "bss-visual-enhancer-v3",
+    "bss-skin-texture-v2",
+    "eyes-for-illustrious",
+    "dramatic-lighting-slider"
+  ],
+  "extensionRatio": 0.625,
+  "finishedAt": "2026-07-16T22:48:48+0800",
+  "matrix": [
+    {
+      "direction": "up",
+      "denoise": 0.78,
+      "seam": 112,
+      "size": "1024x1664",
+      "darkPct": 85.8,
+      "gdom": 31.28,
+      "whitePct": 2.6,
+      "protectRatio": 0.0,
+      "promptId": "fab4d197-d01f-417a-be40-6d8293654777",
+      "output": "illustrious-mmmix-v8-inpaint_00060_.png",
+      "provisional": "METRIC_FAIL"
+    },
+    {
+      "direction": "down",
+      "denoise": 0.6,
+      "seam": 96,
+      "size": "1024x1664",
+      "darkPct": 12.6,
+      "gdom": -5.21,
+      "whitePct": 22.6,
+      "protectRatio": 0.0,
+      "promptId": "6879b96b-51ef-4e17-8200-85c2597f2980",
+      "output": "illustrious-mmmix-v8-inpaint_00061_.png",
+      "provisional": "METRIC_PASS_PENDING_VISUAL"
+    },
+    {
+      "direction": "left",
+      "denoise": 0.7,
+      "seam": 112,
+      "size": "1664x1024",
+      "darkPct": 47.3,
+      "gdom": -29.85,
+      "whitePct": 17.4,
+      "protectRatio": 0.0,
+      "promptId": "ead6cb1b-a64c-4e18-aaf0-27034f0470d7",
+      "output": "illustrious-mmmix-v8-inpaint_00063_.png",
+      "provisional": "METRIC_WARN_PENDING_VISUAL"
+    },
+    {
+      "direction": "right",
+      "denoise": 0.7,
+      "seam": 112,
+      "size": "1664x1024",
+      "darkPct": 37.6,
+      "gdom": 18.41,
+      "whitePct": 15.7,
+      "protectRatio": 0.0,
+      "promptId": "f12eaa5a-3f5e-421a-a2d5-4e16eab9813f",
+      "output": "illustrious-mmmix-v8-inpaint_00065_.png",
+      "provisional": "METRIC_WARN_PENDING_VISUAL"
+    },
+    {
+      "direction": "outward",
+      "denoise": 0.78,
+      "seam": 104,
+      "size": "1664x1664",
+      "darkPct": 56.9,
+      "gdom": 54.4,
+      "whitePct": 2.0,
+      "protectRatio": 0.0,
+      "promptId": "0c39f360-420a-4144-91b4-2f19cc0b7aad",
+      "output": "illustrious-mmmix-v8-inpaint_00066_.png",
+      "provisional": "METRIC_WARN_PENDING_VISUAL"
+    }
+  ],
+  "cases": [
+    {
+      "direction": "up",
+      "denoise": 0.78,
+      "seam": 112,
+      "size": "1024x1664",
+      "protectedRegionDiff": {
+        "differentPixels": 0,
+        "totalPixels": 933888,
+        "ratio": 0.0
+      },
+      "generatedRegionMeanRgb": [
+        30.33,
+        52.85,
+        12.82
+      ],
+      "generatedRegionGreenDominance": 31.28,
+      "generatedRegionGreenishPct": 73.3,
+      "generatedRegionWhiteishPct": 2.6,
+      "generatedRegionDarkPct": 85.8,
+      "sha256": "01f187c6b9628cb3cd4f10cee53f0b122ad526933ca1a01a79a9ca06cccd8b36",
+      "sourcePromptId": "fab4d197-d01f-417a-be40-6d8293654777",
+      "mutators": [
+        "canvas_inpaint"
+      ],
+      "windowsOutput": "illustrious-mmmix-v8-inpaint_00060_.png",
+      "recoveredFromServer": true
+    },
+    {
+      "protectedRegionDiff": {
+        "differentPixels": 0,
+        "totalPixels": 950272,
+        "ratio": 0.0
+      },
+      "generatedRegionMeanRgb": [
+        175.89,
+        145.67,
+        125.86
+      ],
+      "generatedRegionGreenDominance": -5.21,
+      "generatedRegionGreenishPct": 8.0,
+      "generatedRegionWhiteishPct": 22.6,
+      "generatedRegionDarkPct": 12.6,
+      "direction": "down",
+      "denoise": 0.6,
+      "seam": 96,
+      "size": "1024x1664",
+      "sha256": "be9ee0c15297474c2aab956c277f5ce9d04b50281879a6e5f9cba7e6166035f0",
+      "sourcePromptId": "6879b96b-51ef-4e17-8200-85c2597f2980",
+      "windowsOutput": "illustrious-mmmix-v8-inpaint_00061_.png",
+      "recoveredFromServer": true
+    },
+    {
+      "protectedRegionDiff": {
+        "differentPixels": 0,
+        "totalPixels": 933888,
+        "ratio": 0.0
+      },
+      "generatedRegionMeanRgb": [
+        133.53,
+        64.21,
+        54.59
+      ],
+      "generatedRegionGreenDominance": -29.85,
+      "generatedRegionGreenishPct": 2.9,
+      "generatedRegionWhiteishPct": 17.4,
+      "generatedRegionDarkPct": 47.3,
+      "direction": "left",
+      "denoise": 0.7,
+      "seam": 112,
+      "size": "1664x1024",
+      "sha256": "11b02fb5fe064f51f152fe0e838ffa8e71f7d9d798b0e72bf2054305af6b15cd",
+      "sourcePromptId": "ead6cb1b-a64c-4e18-aaf0-27034f0470d7",
+      "windowsOutput": "illustrious-mmmix-v8-inpaint_00063_.png",
+      "recoveredFromServer": false,
+      "elapsedSec": 25.5
+    },
+    {
+      "protectedRegionDiff": {
+        "differentPixels": 0,
+        "totalPixels": 933888,
+        "ratio": 0.0
+      },
+      "generatedRegionMeanRgb": [
+        136.29,
+        124.53,
+        75.94
+      ],
+      "generatedRegionGreenDominance": 18.41,
+      "generatedRegionGreenishPct": 21.0,
+      "generatedRegionWhiteishPct": 15.7,
+      "generatedRegionDarkPct": 37.6,
+      "direction": "right",
+      "denoise": 0.7,
+      "seam": 112,
+      "size": "1664x1024",
+      "sha256": "655f6b9078fee9a4a3c0f7b18ec288917a3d52f4f0367f708234e7386d9d2b50",
+      "sourcePromptId": "f12eaa5a-3f5e-421a-a2d5-4e16eab9813f",
+      "windowsOutput": "illustrious-mmmix-v8-inpaint_00065_.png",
+      "recoveredFromServer": false,
+      "elapsedSec": 43.3
+    },
+    {
+      "direction": "outward",
+      "denoise": 0.78,
+      "seam": 104,
+      "size": "1664x1664",
+      "protectedRegionDiff": {
+        "differentPixels": 0,
+        "totalPixels": 665856,
+        "ratio": 0.0
+      },
+      "generatedRegionMeanRgb": [
+        54.88,
+        112.9,
+        62.13
+      ],
+      "generatedRegionGreenDominance": 54.4,
+      "generatedRegionGreenishPct": 50.1,
+      "generatedRegionWhiteishPct": 2.0,
+      "generatedRegionDarkPct": 56.9,
+      "sha256": "07cbffa69b83b8cd1a51245331d41fb9b79172584f90da9500afcda8cdf1b5c3",
+      "sourcePromptId": "0c39f360-420a-4144-91b4-2f19cc0b7aad",
+      "windowsOutput": "illustrious-mmmix-v8-inpaint_00066_.png",
+      "sampledExtensionPixels": 430080,
+      "recoveredFromServer": true
+    }
+  ],
+  "note": "Metrics-only provisional. BOSS visual acceptance still required for U1 close."
+}

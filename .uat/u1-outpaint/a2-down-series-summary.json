@@ -1,0 +1,32 @@
+{
+  "series": [
+    {
+      "id": "a2r5",
+      "gdom": 79.87,
+      "note": "honor denoise still green"
+    },
+    {
+      "id": "a2r6",
+      "gdom": 74.73,
+      "note": "robust pad still green"
+    },
+    {
+      "id": "a2r7",
+      "gdom": 25.5,
+      "note": "colorlock partial"
+    },
+    {
+      "id": "a2r8b",
+      "gdom": 10.35,
+      "darkPct": 62.7,
+      "note": "clothpad+promptboost, green fixed, dark void"
+    },
+    {
+      "id": "a2r9",
+      "gdom": 0.33,
+      "darkPct": 24.6,
+      "whitePct": 16.1,
+      "note": "voidneg+denoise0.60"
+    }
+  ]
+}

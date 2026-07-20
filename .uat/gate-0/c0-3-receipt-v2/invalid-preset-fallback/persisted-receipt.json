@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "2",
+  "receiptId": "ad748509-de69-40eb-9e1f-b46bbae8efe4",
+  "planned": {
+    "baseCapabilityId": "comfy.image.not-a-real-preset",
+    "baseModelId": null,
+    "requestedReferenceMode": "none",
+    "workflowBindingId": null,
+    "templateField": "txt2img_template"
+  },
+  "primaryStageId": "primary",
+  "finalStageId": "primary",
+  "stages": [
+    {
+      "stageId": "primary",
+      "stageKind": "primary",
+      "taskResult": "succeeded",
+      "promptId": "ad748509-de69-40eb-9e1f-b46bbae8efe4",
+      "baseCapabilityId": "comfy.image.wai",
+      "workflowBindingId": "comfy.image.wai:txt2img_template",
+      "workflowHash": "dcd4e212079257311b1f4c5b4ad6390387fde02bdeebf8bed2251423998ede0f",
+      "workflowFile": "wai-simple-api.json",
+      "templateField": "txt2img_template",
+      "effectiveReferenceMode": "none",
+      "adapterKind": null,
+      "mutators": [],
+      "fallback": {
+        "used": true,
+        "requestedReferenceMode": "none",
+        "effectiveReferenceMode": "none",
+        "preset": {
+          "from": "not-a-real-preset",
+          "to": "wai",
+          "reason": "requested_preset_unavailable"
+        }
+      },
+      "assetVersions": [
+        {
+          "assetId": "models/checkpoints/waiIllustriousSDXL_v80.safetensors",
+          "sha256": "63e5c28bf8ae348136c9f9cdbfde14d8a4a5daa13306e09a7752104b2fae2006",
+          "hashStatus": "registered"
+        }
+      ],
+      "actualLoras": [],
+      "loraEvidence": {
+        "status": "complete",
+        "opaqueSources": []
+      },
+      "comfyExecutionSeconds": 13.9,
+      "error": null
+    }
+  ],
+  "actual": {
+    "stageId": "primary",
+    "stageKind": "primary",
+    "taskResult": "succeeded",
+    "promptId": "ad748509-de69-40eb-9e1f-b46bbae8efe4",
+    "baseCapabilityId": "comfy.image.wai",
+    "workflowBindingId": "comfy.image.wai:txt2img_template",
+    "workflowHash": "dcd4e212079257311b1f4c5b4ad6390387fde02bdeebf8bed2251423998ede0f",
+    "workflowFile": "wai-simple-api.json",
+    "templateField": "txt2img_template",
+    "effectiveReferenceMode": "none",
+    "adapterKind": null,
+    "mutators": [],
+    "fallback": {
+      "used": true,
+      "requestedReferenceMode": "none",
+      "effectiveReferenceMode": "none",
+      "preset": {
+        "from": "not-a-real-preset",
+        "to": "wai",
+        "reason": "requested_preset_unavailable"
+      }
+    },
+    "assetVersions": [
+      {
+        "assetId": "models/checkpoints/waiIllustriousSDXL_v80.safetensors",
+        "sha256": "63e5c28bf8ae348136c9f9cdbfde14d8a4a5daa13306e09a7752104b2fae2006",
+        "hashStatus": "registered"
+      }
+    ],
+    "actualLoras": [],
+    "loraEvidence": {
+      "status": "complete",
+      "opaqueSources": []
+    },
+    "comfyExecutionSeconds": 13.9,
+    "error": null,
+    "totalComfyExecutionSeconds": 13.9
+  }
+}

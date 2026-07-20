@@ -1,0 +1,183 @@
+{
+  "schemaVersion": "u1-qa-v1",
+  "qaProfileVersion": "u1-qa-profile-v1",
+  "thresholdProfileVersion": "u1-qa-threshold-v1",
+  "generatorVersion": "u1_qa.py@2026-07-17",
+  "direction": "up",
+  "denoise": 0.62,
+  "seam": 112,
+  "size": "2752x1024",
+  "geometry": {
+    "targetWidth": 1024,
+    "targetHeight": 1664,
+    "extensionPixels": 640,
+    "seamOverlapPixels": 112,
+    "sourceOffsetX": 0,
+    "sourceOffsetY": 640,
+    "sourceDrawWidth": 1024,
+    "sourceDrawHeight": 1024
+  },
+  "sizeMismatch": {
+    "expected": [
+      1024,
+      1664
+    ],
+    "actual": [
+      2752,
+      1024
+    ]
+  },
+  "protectedCoreDiff": {
+    "box": [
+      0,
+      752,
+      1024,
+      1664
+    ],
+    "differentPixels": 932190,
+    "totalPixels": 933888,
+    "ratio": 0.998182,
+    "metricName": "protectedCoreDiffRatio"
+  },
+  "protectedRegionDiff": {
+    "differentPixels": 932190,
+    "totalPixels": 933888,
+    "ratio": 0.998182
+  },
+  "generatedRegionMeanRgb": [
+    121.07,
+    117.06,
+    114.22
+  ],
+  "generatedRegionGreenDominance": -0.59,
+  "generatedRegionGreenishPct": 0.0,
+  "generatedRegionWhiteishPct": 28.6,
+  "generatedRegionDarkPct": 28.9,
+  "extensionStats": {
+    "sampleCount": 163840,
+    "meanRgb": [
+      121.07,
+      117.06,
+      114.22
+    ],
+    "gdom": -0.59,
+    "darkPct": 28.9,
+    "greenishPct": 0.0,
+    "whiteishPct": 28.6,
+    "box": [
+      0,
+      0,
+      1024,
+      640
+    ]
+  },
+  "voidDarkSpatial": {
+    "farDarkPct": 13.7,
+    "farDarkPctAvg": 13.7,
+    "worstRegion": "far_extension",
+    "regions": [
+      {
+        "sampleCount": 81920,
+        "meanRgb": [
+          139.59,
+          132.07,
+          126.08
+        ],
+        "gdom": -0.76,
+        "darkPct": 13.7,
+        "greenishPct": 0.0,
+        "whiteishPct": 28.1,
+        "box": [
+          0,
+          0,
+          1024,
+          320
+        ],
+        "name": "far_extension"
+      }
+    ]
+  },
+  "relativeColor": {
+    "sourceBand": {
+      "sampleCount": 14336,
+      "meanRgb": [
+        69.32,
+        68.86,
+        68.67
+      ],
+      "gdom": -0.13,
+      "darkPct": 66.0,
+      "greenishPct": 0.0,
+      "whiteishPct": 14.5,
+      "box": [
+        0,
+        640,
+        1024,
+        696
+      ]
+    },
+    "generatedBand": {
+      "sampleCount": 14336,
+      "meanRgb": [
+        77.18,
+        75.71,
+        74.91
+      ],
+      "gdom": -0.34,
+      "darkPct": 57.1,
+      "greenishPct": 0.0,
+      "whiteishPct": 14.0,
+      "box": [
+        0,
+        584,
+        1024,
+        640
+      ]
+    },
+    "relGdom": -0.21,
+    "relDeltaE": 7.34
+  },
+  "seamContinuity": {
+    "seams": [
+      {
+        "name": "seam_up",
+        "axis": "horizontal",
+        "boundary": 640,
+        "srcMeanRgb": [
+          115.58,
+          103.86,
+          96.98
+        ],
+        "genMeanRgb": [
+          115.5,
+          103.62,
+          96.66
+        ],
+        "lumaDelta": 0.21,
+        "rgbDelta": 0.41,
+        "gradPeak": 0.72
+      }
+    ],
+    "worst": {
+      "name": "seam_up",
+      "lumaDelta": 0.21,
+      "rgbDelta": 0.41,
+      "gradPeak": 0.72
+    }
+  },
+  "sha256": "c1ec71ec7454ae273b0571ca788f4bca9bf82587f1b6307f866b1246fcfefb51",
+  "sourcePromptId": "d212a117-f149-4692-b4a6-a8ff52a0ac4c",
+  "windowsOutput": null,
+  "recoveredFromServer": null,
+  "provisional": "METRIC_FAIL",
+  "provisionalReasons": [
+    "protectedCoreDiff>=0.05",
+    "protectedCoreDiff>0.02"
+  ],
+  "seed": 424243,
+  "resultPath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424243-wf1/crop-result.png",
+  "basePath": "/Users/zhenbao/.codex/local-tools/infinite-canvas/.uat/u1-outpaint/u1r/up-wf-cropstitch/up-wf-cs-s424243-wf1/full-canvas-before.png",
+  "resultSha256": "c1ec71ec7454ae273b0571ca788f4bca9bf82587f1b6307f866b1246fcfefb51",
+  "baseSha256": "af823f64d07e30e09711ff57da0c902f350aa440caeade2d693d4cc7625db4ae",
+  "requestSha256": "7ea61c6e0ed696bbeb4690aeaaae34fe00d096d057bffa5ead6672d7301394c6"
+}

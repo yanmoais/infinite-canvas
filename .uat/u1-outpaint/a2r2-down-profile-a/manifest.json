@@ -1,0 +1,94 @@
+{
+  "caseId": "U1-A2R2-A-down-conservative-profile",
+  "stage": "U1-A2R2",
+  "verdict": "FAIL_WITH_DIAGNOSIS",
+  "input": {
+    "baseline": ".uat/u1-outpaint/baseline/u1-character-baseline.png",
+    "baselineSha256": "e42321da229f440ffe100df64a4080dbba719ba9b7e2b4813fa7d9d01ab36b80",
+    "seed": 424242,
+    "size": "1024x1664",
+    "seamOverlapPixels": 96
+  },
+  "variant": {
+    "operationProfileId": "illustrious-mmmix-v8-outpaint-conservative",
+    "loras": [
+      "illustrious-masterpiece-v3",
+      "bss-detail-enhancer-v3",
+      "bss-skin-texture-v2",
+      "eyes-for-illustrious"
+    ],
+    "managedDenoise": 0.74,
+    "excludedLoras": [
+      "bss-visual-enhancer-v3",
+      "dramatic-lighting-slider"
+    ]
+  },
+  "execution": {
+    "receiptId": "033af917-4abf-41e3-bc29-f9b4917ad268",
+    "promptId": "033af917-4abf-41e3-bc29-f9b4917ad268",
+    "comfyExecutionSeconds": 31.3,
+    "mutators": [
+      "canvas_inpaint",
+      "operation_profile:illustrious-mmmix-v8-outpaint-conservative"
+    ],
+    "assetVersions": [
+      {
+        "assetId": "models/checkpoints/illustriousxlMmmix_v80.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/illustrious_masterpieces_v3.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/bss_detail_enhancer_v3.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/bss_skin_texture_v2.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      },
+      {
+        "assetId": "models/loras/eyes_for_illustrious.safetensors",
+        "sha256": "",
+        "hashStatus": "unregistered"
+      }
+    ]
+  },
+  "result": {
+    "file": ".uat/u1-outpaint/a2r2-down-profile-a/a2r2-down-result.png",
+    "resultSha256": "6333b3d31204d4ad55f5cc84fb5c7ff21b5fa74ea248d77031f838802163ddba",
+    "metrics": {
+      "protectedRegionDiff": {
+        "differentPixels": 95024,
+        "totalPixels": 1048576,
+        "ratio": 0.090622,
+        "changedYRange": [
+          929,
+          1023
+        ],
+        "changedRows": 95
+      },
+      "generatedRegionMeanRgb": [
+        41.07,
+        101.27,
+        34.85
+      ],
+      "generatedRegionGreenDominance": 63.31
+    },
+    "findings": [
+      "回执确认请求中的 6 个 LoRA 已被操作级 profile 替换为 4 个保守 LoRA",
+      "畸形手臂消失，但白衣仍在 seam 后突变为高饱和绿色服装",
+      "保护区变化保持在 95 行 seam 范围",
+      "该 profile 不满足 U1 视觉验收，已在 Registry 标记 uat_rejected 并停用"
+    ]
+  },
+  "nextHypothesis": {
+    "id": "U1-A2R3",
+    "action": "修复新增区底图铺底 latent；避免把含青色发丝的底边条带拉伸到整个新增区"
+  }
+}

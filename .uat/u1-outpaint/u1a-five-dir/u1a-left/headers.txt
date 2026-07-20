@@ -1,0 +1,128 @@
+HTTP/1.1 405 Method Not Allowed
+Transfer-Encoding: chunked
+Allow: GET, HEAD
+Cache-Control: no-cache, private
+Connection: keep-alive
+Content-Type: text/html; charset=UTF-8
+Date: Thu, 16 Jul 2026 14:43:20 GMT
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Server: nginx/1.30.2
+X-Powered-By: PHP/8.2.27
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 301 Moved Permanently
+Content-Length: 169
+Connection: keep-alive
+Content-Type: text/html
+Date: Thu, 16 Jul 2026 14:43:24 GMT
+Keep-Alive: timeout=4
+Location: https://readme.md/
+Proxy-Connection: keep-alive
+Server: nginx/1.30.2
+
+HTTP/1.1 301 Moved Permanently
+Content-Length: 162
+Connection: keep-alive
+Content-Type: text/html
+Date: Thu, 16 Jul 2026 14:43:25 GMT
+Keep-Alive: timeout=4
+Location: https://security.md/
+Proxy-Connection: keep-alive
+Server: nginx
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+
+HTTP/1.1 502 Bad Gateway
+Connection: keep-alive
+Keep-Alive: timeout=4
+Proxy-Connection: keep-alive
+Content-Length: 0
+

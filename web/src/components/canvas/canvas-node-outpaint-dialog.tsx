@@ -3,9 +3,12 @@ import type { ReactNode } from "react";
 import { Button, Input, Modal, Segmented, Slider } from "antd";
 import { ArrowDownToLine, ArrowLeftToLine, ArrowRightToLine, ArrowUpToLine, ChevronDown, Frame, LockKeyhole, Maximize2, Move, ScanLine, ShieldCheck, Sparkles, WandSparkles, X } from "lucide-react";
 
+import { ModelPicker } from "@/components/model-picker";
 import { calculateDownwardOutpaintGeometry, defaultSeamOverlapForDirection, EXTEND_DEFAULT_PROMPT_BY_DIRECTION, extendToFullBodyRatio, FULL_BODY_DEFAULT_PROMPT, normalizeOutpaintDirection, suggestOutpaintDirection, suggestOutpaintMode } from "@/lib/canvas/canvas-outpaint-data";
 import { canvasThemes } from "@/lib/canvas-theme";
 import { sourceGenerationRecipeFromMetadata } from "@/lib/canvas/generation-plan";
+import { isComfyModel } from "@/services/api/comfy";
+import type { AiConfig } from "@/stores/use-config-store";
 import { useThemeStore } from "@/stores/use-theme-store";
 import type { CanvasNodeData, CanvasOutpaintDirection, CanvasOutpaintMode } from "@/types/canvas";
 
@@ -17,6 +20,7 @@ export type CanvasImageOutpaintPayload = {
     seamOverlapPixels: number;
     sourceScale: number;
     denoise: number;
+    model: string;
 };
 
 const extendOptionsBase = [
@@ -42,10 +46,12 @@ const directionOptions: { value: CanvasOutpaintDirection; label: string; hint: s
 const fullBodyPrompt = FULL_BODY_DEFAULT_PROMPT;
 const extendPromptByDirection = EXTEND_DEFAULT_PROMPT_BY_DIRECTION;
 
-export function CanvasNodeOutpaintDialog({ node, open, onClose, onConfirm }: { node: CanvasNodeData | null; open: boolean; onClose: () => void; onConfirm: (payload: CanvasImageOutpaintPayload) => void }) {
+export function CanvasNodeOutpaintDialog({ node, config, open, onClose, onConfirm }: { node: CanvasNodeData | null; config: AiConfig; open: boolean; onClose: () => void; onConfirm: (payload: CanvasImageOutpaintPayload) => Promise<void> }) {
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
     const sourceWidth = node?.metadata?.naturalWidth || Math.round(node?.width || 0);
     const sourceHeight = node?.metadata?.naturalHeight || Math.round(node?.height || 0);
+    const sourceRecipe = useMemo(() => sourceGenerationRecipeFromMetadata(node?.metadata), [node?.metadata]);
+    const preferredModel = (isComfyModel(config.imageModel) ? config.imageModel : sourceRecipe.model) || config.imageModel || config.model;
     const suggestedMode: CanvasOutpaintMode = suggestOutpaintMode(sourceWidth, sourceHeight);
     const suggestedDirection: CanvasOutpaintDirection = suggestOutpaintDirection(sourceWidth, sourceHeight);
     const suggestedExtendRatio = sourceWidth && sourceHeight
@@ -58,8 +64,9 @@ export function CanvasNodeOutpaintDialog({ node, open, onClose, onConfirm }: { n
     const [seamOverlapPixels, setSeamOverlapPixels] = useState(() => defaultSeamOverlapForDirection(suggestedDirection));
     const [sourceScale, setSourceScale] = useState(0.58);
     const [denoise, setDenoise] = useState(0.60);
+    const [model, setModel] = useState(preferredModel);
     const [error, setError] = useState("");
-    const sourceRecipe = useMemo(() => sourceGenerationRecipeFromMetadata(node?.metadata), [node?.metadata]);
+    const [submitting, setSubmitting] = useState(false);
     const extendOptions = useMemo(() => {
         const fullBodyRatio = sourceWidth && sourceHeight ? extendToFullBodyRatio(sourceWidth, sourceHeight) : 0.75;
         if (sourceWidth && sourceHeight && sourceHeight / sourceWidth < 1.45) {
@@ -97,8 +104,10 @@ export function CanvasNodeOutpaintDialog({ node, open, onClose, onConfirm }: { n
         setSeamOverlapPixels(nextMode === "full_body" ? 64 : defaultSeamOverlapForDirection(nextDirection));
         setSourceScale(0.58);
         setDenoise(nextMode === "full_body" ? 0.72 : 0.60);
+        setModel(preferredModel);
         setError("");
-    }, [node?.id, open, sourceHeight, sourceWidth]);
+        setSubmitting(false);
+    }, [node?.id, open, preferredModel, sourceHeight, sourceWidth]);
 
     const switchMode = (nextMode: CanvasOutpaintMode) => {
         setMode(nextMode);
@@ -137,26 +146,47 @@ export function CanvasNodeOutpaintDialog({ node, open, onClose, onConfirm }: { n
         setError("");
     };
 
-    const submit = () => {
+    const submit = async () => {
+        if (submitting) return;
         const nextPrompt = prompt.trim();
         if (!nextPrompt) return setError("请输入希望补全的服装、姿势或背景要求");
+        if (!isComfyModel(model)) return setError("续接模型必须选择本地 ComfyUI 模型");
         if (!geometry) return setError(mode === "full_body" ? "当前图片尺寸无法继续全身重构" : "当前图片尺寸无法继续原图续接");
-        onConfirm({ prompt: nextPrompt, mode, direction: mode === "full_body" ? "down" : direction, extensionRatio, seamOverlapPixels, sourceScale, denoise });
+        setSubmitting(true);
+        try {
+            await onConfirm({ prompt: nextPrompt, mode, direction: mode === "full_body" ? "down" : direction, extensionRatio, seamOverlapPixels, sourceScale, denoise, model });
+        } finally {
+            setSubmitting(false);
+        }
     };
 
-    const compactModel =
-        sourceRecipe.model
-            ?.split("::")
-            .pop()
-            ?.replace(/^comfy\//, "") || "历史配方未知";
-    const recipeText = loraCount === undefined ? "LoRA 配方未知" : loraCount ? `继承 ${loraCount} 个 LoRA` : "源图未使用 LoRA";
+    const compactModel = model
+        ?.split("::")
+        .pop()
+        ?.replace(/^comfy\//, "") || "未选择";
+    const modelOverride = Boolean(sourceRecipe.model && model !== sourceRecipe.model);
+    const recipeText = modelOverride ? "跨模型续接 · 不继承源 LoRA" : loraCount === undefined ? "LoRA 配方未知" : loraCount ? `继承 ${loraCount} 个 LoRA` : "源图未使用 LoRA";
     const directionMeta = directionOptions.find((item) => item.value === direction) || directionOptions[1];
     const directionLabel = directionMeta.label;
     const directionHint = directionMeta.hint;
     const directionVerb = direction === "outward" ? "向四周" : direction === "up" ? "向上" : direction === "left" ? "向左" : direction === "right" ? "向右" : "向下";
 
     return (
-        <Modal title={null} open={open && Boolean(node?.metadata?.content)} onCancel={onClose} footer={null} width={920} centered destroyOnHidden styles={{ body: { maxHeight: "82vh", overflowY: "auto", padding: 24 } }}>
+        <Modal
+            title={null}
+            open={open && Boolean(node?.metadata?.content)}
+            onCancel={() => {
+                if (!submitting) onClose();
+            }}
+            closable={!submitting}
+            maskClosable={!submitting}
+            keyboard={!submitting}
+            footer={null}
+            width={920}
+            centered
+            destroyOnHidden
+            styles={{ body: { maxHeight: "82vh", overflowY: "auto", padding: 24 } }}
+        >
             <div style={{ color: theme.node.text }}>
                 <header className="flex items-start gap-4 border-b pb-5" style={{ borderColor: theme.node.stroke }}>
                     <span className="grid size-11 shrink-0 place-items-center rounded-2xl" style={{ background: theme.toolbar.activeBg, color: theme.toolbar.activeText }}>
@@ -239,6 +269,25 @@ export function CanvasNodeOutpaintDialog({ node, open, onClose, onConfirm }: { n
                                 </div>
                             </div>
                         ) : null}
+
+                        <div className="rounded-2xl border p-4" style={{ borderColor: theme.node.stroke, background: theme.node.panel }}>
+                            <div className="text-sm font-semibold">续接模型 / 画风</div>
+                            <div className="mt-1 text-xs leading-5" style={{ color: theme.node.muted }}>
+                                只替换负责新增区域的生成模型，方向、软蒙版、接缝融合和原图像素回贴保持不变。跨模型续接不会加载源图 LoRA。
+                            </div>
+                            <ModelPicker
+                                className="mt-3"
+                                config={config}
+                                value={model}
+                                capability="image"
+                                fullWidth
+                                placeholder="选择本地 ComfyUI 续接模型"
+                                onChange={(value) => {
+                                    setModel(value);
+                                    setError("");
+                                }}
+                            />
+                        </div>
 
                         <div className="rounded-2xl border p-4" style={{ borderColor: theme.node.stroke, background: theme.node.panel }}>
                             <div className="flex items-center justify-between gap-3">
@@ -351,7 +400,7 @@ export function CanvasNodeOutpaintDialog({ node, open, onClose, onConfirm }: { n
                                 这些配置是什么意思？
                             </summary>
                             <div className="mt-2 space-y-2 leading-5">
-                                <p>模型与 LoRA：自动继承源图配方，避免画风突然变化。</p>
+                                <p>模型与 LoRA：可沿用源图模型，也可切到 WAI / Illustrious；跨模型时清空源 LoRA，避免架构不兼容和画风污染。</p>
                                 <p>全身重构：主图 soft 参考 + EmptyLatent 重生成，不保证锁脸；FaceDetailer 关闭。</p>
                                 <p>原图续接：蒙版局部重绘 + 像素回贴；支持一键外扩（四边）或单方向补全。</p>
                             </div>
@@ -364,10 +413,10 @@ export function CanvasNodeOutpaintDialog({ node, open, onClose, onConfirm }: { n
                         {mode === "full_body" ? "建议生成后检查：头是否完整入镜、双脚是否可见、腿长是否正常、裙摆是否保持。" : `建议生成后检查：${directionHint}是否补全、接缝是否自然、原图主体是否保持不动。`}
                     </div>
                     <div className="flex gap-2">
-                        <Button icon={<X className="size-4" />} onClick={onClose}>
+                        <Button icon={<X className="size-4" />} disabled={submitting} onClick={onClose}>
                             取消
                         </Button>
-                        <Button type="primary" icon={<WandSparkles className="size-4" />} onClick={submit}>
+                        <Button type="primary" icon={<WandSparkles className="size-4" />} loading={submitting} onClick={() => void submit()}>
                             {mode === "full_body" ? "开始生成完整全身" : `开始${directionLabel}`}
                         </Button>
                     </div>
