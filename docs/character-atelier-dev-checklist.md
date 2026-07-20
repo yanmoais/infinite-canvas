@@ -29,7 +29,7 @@
 ## 当前域状态（Gate F 阻塞）
 
 - **P0A 评测集定稿作废**：角色形象尚未固定，原 34 张评测集失效（A1 改 ❌、A3 转 ⛔）；atelier.db 中 34 行 source_images 与已入库资产先留档不删，重筛时再决定清理或复用（删除需 BOSS 确认）。
-- **跨域前置未完成**：Gate 0 已 DONE（C0-1~C0-Z），Gate A 仍因真实 U1-R0 `manifest.json` 未冻结而暂停；历史代码回归、U1-A 五方向结果和 U1-QA 工具只作证据保留。U1-R0 合同/schema/模板与语义门已由 C0-6/C0-Z 落盘，真实实验 `manifest.json` 尚未冻结（receipt v2 证据合同已在 C0-3 冻结）。X5 继续保持 🟨，不得把历史矩阵当成产品已通过。
+- **跨域前置未完成**：Gate 0 已 DONE；Gate A 进入 U1-R0（真实 `manifest.json` 已 FROZEN，18 cells 尚未提交）。历史代码回归、U1-A 五方向结果和 U1-QA 工具只作证据保留。X5 继续保持 🟨，不得把历史矩阵当成产品已通过。
 - **启动条件**：只有统一总控按顺序完成 Gate A–E 并激活 Gate F 后，才重筛 P0A 评测集并按本清单推进域内验收；本文件不建立平行入口。
 - **保留复用（不作废）**：A2 R18 隔离机制、A4 评测工装（CCIP/wd14 venv）、B1 SQLite 15 表、B2 CAS 资产目录。
 
@@ -132,7 +132,7 @@
 | X2 | 显存调度（单 GPU 串行队列/OOM 降级/分辨率上限/健康检查） | ⬜ | §7.3 |
 | X3 | 文档同步：每阶段出口更新本清单 + 设计文档相关小节 | 🟨 | 设计文档已到 v0.4，并接入统一总开发计划；后续跨域状态只在总计划维护，本清单只维护 Atelier 验收 |
 | X4 | 无限画布普通生图与提示词组合器隔离 | ✅ | 2026-07-14 完整 review：direct/composer 请求分流；普通生图不再执行 smart-compose；full body 不触发 FaceID；无脸自动降级；参考图不上传云端提示词模型；U+0008 正则修复。详见 `Mission_manager/docs/infinite-canvas-prompt-composer-full-review-2026-07-14.md` |
-| X5 | 近脸参考→全身角色的身份/画风保真 | 🟨 | 历史 full_body 与五方向 Outpaint 实现/证据保留；Gate 0 已 DONE，当前受 Gate A 阻塞。须完成 U1-R0 归因、U1-R 回修和 U1-Z 后，才决定固定角色基线。 |
+| X5 | 近脸参考→全身角色的身份/画风保真 | 🟨 | 历史 full_body 与五方向 Outpaint 实现/证据保留；Gate A 进行中（U1-R0-P 已冻结）。须完成 U1-R0 18 cells 归因、U1-R 回修和 U1-Z 后，才决定固定角色基线。 |
 | X6 | 配置域隔离（Manual / Composer / Outpaint / Inpaint / Atelier / Replay） | 🟨 | 已落地 ManualNodeSettings / SourceGenerationRecipe / OperationProfile / ExecutionPlan，执行计划记录字段来源；空 LoRA `[]` 可持久化，Exact Replay 不再自动补推荐 LoRA；Outpaint/Inpaint 已走托管配置。待高级覆盖 UI 与 Atelier 路由接入 |
 | X7 | 共享人体骨骼与姿势控制底座 | ⬜ | 实现与验收统一按 `pose-control-development-plan.md` v0.2；P0 默认单人，Atelier 只在 P4 复用 PoseAsset/Adapter，并在接入时使旧 RegionObservation 作废 |
 | X8 | 共享运行时能力池 | 🟨 | 通用 CapabilityRegistry/WorkflowBinding 与画布 Preflight 已接；Qwen Edit、Florence2、BiRefNet、Upscale 的能力专用引用字段、自动注入和运行后回执仍待完成，见 B9–B12 |

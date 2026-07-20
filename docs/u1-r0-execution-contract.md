@@ -18,9 +18,9 @@
 
 | 阶段 | 当前 | 说明 |
 |---|---|---|
-| U1-R0-P 预注册合同 | `READY`（C0-6 合同/schema 已落盘） | 本文件 + `.uat/u1-outpaint/u1-r0/schemas/*` + `manifest.template.json` |
-| 实验用 `manifest.json` | **未冻结** | 须写入真实 source/checkpoint/LoRA/pad-mask/workflow/code 指纹后才算预注册完成 |
-| U1-R0 实验 | `BLOCKED / PRE_REG_INCOMPLETE` | 真实 manifest 未落盘、A/B 资产 SHA 未冻结前禁止提交 18 cells |
+| U1-R0-P 预注册合同 | `DONE` | 本文件 + schemas + template + 真实 `manifest.json`（FROZEN） |
+| 实验用 `manifest.json` | **已冻结** | `.uat/u1-outpaint/u1-r0/manifest.json`；证据 `docs/gate-a-u1-r0-p-manifest-freeze.md` |
+| U1-R0 实验 | `READY` | 可按冻结 manifest 提交 18 cells；B 侧仍须 complete 空 LoRA 回执 |
 | 空 LoRA 可证明性 | **协议已具备**（C0-3） | bare 样本 `5d440fec…` 证明 `actualLoras=[] + loraEvidence.status=complete`；开跑时每个 B cell 仍须各自拿到 complete 空集合回执 |
 
 历史 A2R2 只是请求级线索：旧 receipt 无 completeness，不得替代本矩阵，也不得写成「LoRA 已被排除」的因果结论。
@@ -29,7 +29,7 @@
 
 | 路径 | 用途 |
 |---|---|
-| `.uat/u1-outpaint/u1-r0/manifest.json` | 实验冻结 manifest（**尚未创建**；生成后禁止中途改参） |
+| `.uat/u1-outpaint/u1-r0/manifest.json` | 实验冻结 manifest（**已 FROZEN**；禁止中途改参） |
 | `.uat/u1-outpaint/u1-r0/manifest.template.json` | 结构模板与 plannedCells 骨架，不含真实资产 SHA |
 | `.uat/u1-outpaint/u1-r0/schemas/` | JSON Schema：manifest / request-hash-input / attempts / pairs / taxonomy / pair-report |
 | `.uat/u1-outpaint/u1_qa/` | U1-QA v1 工具与 `threshold_profile_v1.json` |
@@ -227,7 +227,7 @@ C0-3 已用可复算 bare 样本证明协议能力；**不等于**本矩阵 18 c
 
 - C0-6 出口：本专项合同 + schema + 模板 + 离线合同测试落盘；状态与 TODO/pending-test/CHANGELOG/Atelier 同步。  
 - **不**在 C0-6 生成带真实资产 SHA 的 `manifest.json`，**不**提交 GPU cells。  
-- C0-Z / Gate 0 已 DONE；Gate A 下一步进入 U1-R0-P「生成并冻结真实 manifest」与 18 cells。  
+- C0-Z / Gate 0 已 DONE；U1-R0-P 真实 manifest 已 FROZEN；Gate A 下一步提交 18 cells。  
 - U1-B/C 默认等 U1-Z；U1-R0 单项结论不自动解除。
 
 ## 11. 测试合流边界

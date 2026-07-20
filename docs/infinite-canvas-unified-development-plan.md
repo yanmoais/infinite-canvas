@@ -1,7 +1,7 @@
 # Infinite Canvas 统一设计与开发计划 v1.0
 
 > **文档性质**：跨 Infinite Canvas、Mission_manager Gateway、Windows ComfyUI 的唯一总控计划  
-> **当前主线**：Gate 0 已 DONE → Gate A Outpaint（先冻结真实 U1-R0 manifest）  
+> **当前主线**：Gate A Outpaint（U1-R0-P 已冻结；下一步 18 cells）  
 > **领域文档**：`story-workflow-prd.md`、`pose-control-development-plan.md`、`character-atelier-design.md`
 
 ---
@@ -93,7 +93,7 @@ Gate 严格按顺序推进。维护性文档整理和明确缺陷修复不得改
 | Gate | 状态 | 目标 | 前置 / 出口 | 当前动作 |
 |---|---|---|---|---|
 | **Gate 0 / C0 收敛** | `DONE` | 收敛主线、PoC 与共享 Gateway，建立无污染开发基线 | 出口：交叉文件合流、Gateway 结论纠偏、测试与独立 review 通过 | C0-Z 已关闭；见 `docs/gate-0-c0-z-acceptance.md` |
-| **Gate A / U1 Outpaint** | `BLOCKED` | 完成裸模归因、方向回修与 BOSS 终验 | 前置：Gate 0；出口：`QUALIFIED` / `PARTIAL` / `REJECTED` | Gate 0 后冻结 U1-R0 manifest |
+| **Gate A / U1 Outpaint** | `IN_PROGRESS` | 完成裸模归因、方向回修与 BOSS 终验 | 前置：Gate 0；出口：`QUALIFIED` / `PARTIAL` / `REJECTED` | U1-R0-P 已冻结；提交 18 cells |
 | **Gate B / U2-E Windows edit smoke** | `BLOCKED` | 验证 mask/inpaint、FaceID fallback、framing retry、part refine | 前置：Gate A 已取得 `QUALIFIED` / `PARTIAL` / `REJECTED` 合法出口；工程已完成但 UAT 受 Gate A 阻塞 | 收集真实回执与视觉证据 |
 | **Gate C / U2-D 自动引用** | `BLOCKED` | Qwen Edit、BiRefNet、Florence2 自动消费能力专用引用 | 前置：Gate A 有角色基线或失败清单；Gate B 完成 | 冻结引用角色与字段映射 |
 | **Gate D / U3 Pose Runtime** | `BLOCKED` | 证明 FaceID × ControlNet 真实生产组合可运行 | 前置：Gate C；出口：四格矩阵与回退证据 | 运行时探针与插件迁移评估 |
@@ -174,8 +174,8 @@ C0-1 → C0-2 → C0-3 → C0-4 → C0-5 → C0-6 → C0-Z
 |---|---|---|---|
 | U1-A 历史五方向矩阵 | `DONE` | 五方向已提交；BOSS 已否定整包，不再重复终验 | 仅作为被否决的失败基线 |
 | U1-QA 结构化验收工具 | `DONE` | geometry crops、seam continuity、空间暗区、相对色偏、qa-report v1 已落地 | 作为后续统一证据基线 |
-| U1-R0-P 裸模预注册 | `READY`（合同/schema） / `PRE_REG_INCOMPLETE`（真实 manifest） | C0-6/C0-Z 已落盘专项合同、JSON Schema、`manifest.template.json`、语义门与离线测试；真实资产 SHA / request hash 的 `manifest.json` 尚未生成 | 冻结真实 `manifest.json` 并通过 `validateFrozenManifestSemantics` |
-| U1-R0 裸模 A/B | `BLOCKED` | 真实 manifest 未冻结；不允许用历史 A2R2 或仅请求级空 LoRA 替代 | 真实 manifest 冻结后提交 18 cells |
+| U1-R0-P 裸模预注册 | `DONE` | 真实 `manifest.json` 已 `FROZEN`；Ajv + `validateFrozenManifestSemantics` 通过；证据见 `docs/gate-a-u1-r0-p-manifest-freeze.md` | 禁止改参后复用同一 manifestId |
+| U1-R0 裸模 A/B | `READY` | 冻结 manifest 已就绪；历史 A2R2 仍不得替代；B cell 运行时仍须 complete 空 LoRA | 提交首轮 18 cells |
 | U1-R 定向回修 | `BLOCKED` | up 多轮与 workflow 实验仍未放行；等待 U1-R0 归因结论 | 先完成 U1-R0 预注册与 18 cells，再按方向继续 |
 | U1-Z BOSS 终验 | `BLOCKED` | 只看 U1-R 后候选、失败清单、总尝试分母与原图证据 | U1-R 收口后执行 |
 | U1-B 全身重构 / U1-C 对抗矩阵 | `BLOCKED` | 不因 U1-R0 单项结论自动解除 | 默认等待 U1-Z |

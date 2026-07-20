@@ -46,10 +46,10 @@
 
 - C0-6 = `DONE`（含 C0-Z 复审合同修复）  
 - C0-Z = `DONE` / 见 `docs/gate-0-c0-z-acceptance.md`  
-- U1-R0-P 合同/schema = 已落盘；真实 `manifest.json` = 未冻结  
-- U1-R0 实验 = 仍 `BLOCKED / PRE_REG_INCOMPLETE`  
+- U1-R0-P 合同/schema = 已落盘；真实 `manifest.json` = **已 FROZEN**（见 `docs/gate-a-u1-r0-p-manifest-freeze.md`）  
+- U1-R0 实验 = `READY`（可提交 18 cells）  
 - Gate 0 = `DONE`  
-- Gate A = 仍 `BLOCKED` 至真实 U1-R0 manifest 冻结  
+- Gate A = `IN_PROGRESS`  
 
 按项目规则：本批可不跑全量 `npm test` / build；合同测试可按需单独执行  
 `cd web && npx tsx --test tests/u1-r0-contract.test.ts`。

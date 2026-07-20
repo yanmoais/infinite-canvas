@@ -593,7 +593,7 @@ compose 链路：**slot → token → smart-compose**，不另起词库中心。
 - `full_body` 的身份和脸部精修参数由托管 OperationProfile 决定；不把节点手动 reference mode 覆盖托管策略。
 - 默认继承源图实际 GenerationRecipe，而不是自动添加推荐 LoRA。
 - 中文画面要求在提交前经文本模型整理为英文单语；失败时回落英文 fallback。
-- 当前状态：历史上/下/左/右/外扩实现、专项测试与失败证据保留；产品能力尚未放行。Gate 0 的 C0-1~C0-Z 已完成（U1-R0 合同/schema/语义门已落盘，真实 manifest 未冻结）；下一步执行 U1-R0 归因、U1-R 回修与 U1-Z BOSS 终验。合同入口：`docs/u1-r0-execution-contract.md`。
+- 当前状态：历史上/下/左/右/外扩实现、专项测试与失败证据保留；产品能力尚未放行。Gate 0 已 DONE；U1-R0-P 真实 manifest 已 FROZEN；下一步提交 18 cells 归因、U1-R 回修与 U1-Z BOSS 终验。合同入口：`docs/u1-r0-execution-contract.md`。
 
 #### D. 局部蒙版编辑
 

@@ -29,4 +29,4 @@
 
 ## 状态
 
-C0-5 = `DONE`；C0-6 = `DONE`；C0-Z = `DONE`；Gate 0 = `DONE`；Gate A 仍 `BLOCKED`（待真实 U1-R0 manifest）。
+C0-5 = `DONE`；C0-6 = `DONE`；C0-Z = `DONE`；Gate 0 = `DONE`；Gate A = `IN_PROGRESS`（U1-R0-P 已冻结）。

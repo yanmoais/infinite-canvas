@@ -3,6 +3,7 @@
 ## Unreleased
 
 - [新增] 无限画布接入「几乎原图复刻」独立参考模式 `identity_clone`：Mission_manager 模板 `sdxl-identity-clone-api.json`（FaceID PLUS V2 + IPAdapter 风格构图 + Canny/Tile + denoise 0.22），`illustrious-mmmix-v8` 支持该模式，画布 Comfy 设置下拉可直接选择。
+- [调整] Gate A / U1-R0-P：真实实验 `manifest.json` 已冻结（18 cells / 9 pairs、资产 SHA、compiled prompt、workflow/mutator/code 指纹）；Ajv 与 `validateFrozenManifestSemantics` 通过；18 cells 尚未提交。
 - [调整] Gate 0 / C0-Z 独立验收通过：约定测试 7/7、diff check 与五轮独立 review 终轮 PASS；加固 U1-R0 FROZEN schema/语义门（固定矩阵身份、顶层对齐、A/B 仅 LoRA 差异、目标尺寸冻结）；Gate 0 = DONE，真实 U1-R0 manifest 与 18 cells 仍未开跑。
 - [调整] Gate 0 / C0-6 测试与文档：U1-R0 执行合同与 schema 落盘至主线（manifest 模板 / request hash / attempts / pairs / taxonomy）；新增离线合同测试；真实实验 manifest 与 18 cells 仍未开跑。
 - [调整] Gate 0 / C0-5 UI 调用链合流：Outpaint 支持续接模型选择、source lock 与跨模型显式空 LoRA；提交前走 `preflightComfyOutpaint`，主线提示词编译后写入 Shared ExecutionPlan。

@@ -19,9 +19,14 @@ description: 当前项目后续值得处理的事项
 6. **C0-6 测试与文档（✅）**：U1-R0 完整执行合同与 schema 已落盘（`docs/u1-r0-execution-contract.md`、`.uat/u1-outpaint/u1-r0/`）；离线合同测试 `web/tests/u1-r0-contract.test.ts` 通过；PoC Fooocus recipe 测试明确不合入产品路径。真实实验 `manifest.json` 仍未冻结。证据见 [`gate-0-c0-6-tests-and-docs.md`](../../../gate-0-c0-6-tests-and-docs.md)。
 7. **C0-Z 独立验收（✅）**：约定测试 7/7 PASS；diff check 确认 C0-4/C0-5 合流语义在位；多轮独立 review 关闭全部 Blocking/P0/P1（终轮 PASS）。证据见 [`gate-0-c0-z-acceptance.md`](../../../gate-0-c0-z-acceptance.md)。Gate 0 = `DONE`。
 
+## 当前批次：Gate A / U1 Outpaint
+
+1. **U1-R0-P 真实 manifest 冻结（✅）**：`.uat/u1-outpaint/u1-r0/manifest.json` 已 `FROZEN`；Ajv + `validateFrozenManifestSemantics` 通过。证据见 [`gate-a-u1-r0-p-manifest-freeze.md`](../../../gate-a-u1-r0-p-manifest-freeze.md)。
+2. **U1-R0 18 cells（可开工）**：按冻结 manifest 提交首轮 up/down/outward × 3 seeds × A/B；B 侧须 complete 空 LoRA 回执。
+3. **U1-R / U1-Z**：取 U1-R0 归因后再定向回修与 BOSS 终验。
+
 ## 后续入口
 
-- **Gate A / U1 Outpaint（可开工前置仍缺真实 manifest）**：Gate 0 已 DONE；下一步基于 C0-6 合同生成并冻结真实 U1-R0 `manifest.json`（填齐资产 SHA + 通过 `validateFrozenManifestSemantics`），再提交首轮 18 cells；之后完成 U1-R 和 U1-Z。
 - **Gate B→G**：必须等待 Gate A 取得 `QUALIFIED`、`PARTIAL` 或 `REJECTED` 合法出口；随后按 Windows edit smoke → 自动引用 → Pose Runtime → Pose MVP → Character Atelier → Story P0 严格推进。
 
 已实现但等待用户验证的功能记录在[待测试](/docs/progress/pending-test)。未实现计划不得写入待测试。
