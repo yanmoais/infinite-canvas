@@ -15,7 +15,8 @@ export function parseChangelog(content: string): ReleaseInfo[] {
                 version: version.trim(),
                 date: date.trim(),
                 items: lines
-                    .map((line) => line.trim().match(/^\+\s+\[(.+?)\]\s+(.+)$/))
+                    // 官方 CHANGELOG 用 "+ [类型]"；二开 Unreleased 常用 "- [类型]"
+                    .map((line) => line.trim().match(/^[+*-]\s+\[(.+?)\]\s+(.+)$/))
                     .filter((match): match is RegExpMatchArray => Boolean(match))
                     .map((match) => ({ type: match[1], content: match[2] })),
             };
