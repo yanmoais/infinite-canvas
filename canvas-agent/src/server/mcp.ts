@@ -4,11 +4,12 @@ import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-import { AGENT_PROMPT, loadConfig, type CanvasAgentConfig, VERSION } from "./config.js";
-import { toolDescriptions, toolInputSchemas, toolNames, type ToolName } from "./schemas.js";
+import { toolDescriptions, toolInputSchemas, toolNames, type ToolName } from "../canvas/schemas.js";
+import { AGENT_PROMPT, loadConfig, type CanvasAgentConfig, VERSION } from "../config.js";
 
 type CanvasAgentToolResponse = { ok?: boolean; result?: unknown; error?: string };
 
+/** 启动通过标准输入输出通信的 MCP 服务。 */
 export async function startMcpServer() {
     const config = loadConfig(true);
     await ensureHttpAgentRunning(config);
@@ -17,6 +18,7 @@ export async function startMcpServer() {
     await server.connect(new StdioServerTransport());
 }
 
+/** 向 MCP Server 注册单个 Canvas Agent 工具。 */
 function registerCanvasTool(server: McpServer, config: CanvasAgentConfig, name: ToolName) {
     const schema = toolInputSchemas[name];
     server.registerTool(name, { description: toolDescriptions[name], inputSchema: schema.shape }, async (input: unknown) => {
@@ -25,6 +27,7 @@ function registerCanvasTool(server: McpServer, config: CanvasAgentConfig, name: 
     });
 }
 
+/** 将 MCP 工具调用转发到本地 Canvas Agent HTTP 服务。 */
 async function postCanvasAgentTool(config: CanvasAgentConfig, name: ToolName, input: unknown) {
     let res: Response;
     try {
